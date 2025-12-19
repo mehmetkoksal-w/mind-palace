@@ -40,37 +40,38 @@ go run ./cmd/palace verify
 ```
 
 ## Install (no Go toolchain required)
-Set once for copy/paste:
+
+### Via Go (developer machines)
 ```sh
-OWNER_REPO="mehmetkoksal-w/mind-palace"
+go install github.com/mehmetkoksal-w/mind-palace/cmd/palace@latest
 ```
 
-### Latest release
+### Latest release (binaries)
 - macOS arm64:
   ```sh
-  curl -L https://github.com/${OWNER_REPO}/releases/latest/download/palace-darwin-arm64 -o palace
+  curl -L https://github.com/mehmetkoksal-w/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
 - Linux amd64:
   ```sh
-  curl -L https://github.com/${OWNER_REPO}/releases/latest/download/palace-linux-amd64 -o palace
+  curl -L https://github.com/mehmetkoksal-w/mind-palace/releases/latest/download/palace-linux-amd64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
-- Windows amd64: download `https://github.com/${OWNER_REPO}/releases/latest/download/palace-windows-amd64.exe` and place on PATH.
+- Windows amd64: download `https://github.com/mehmetkoksal-w/mind-palace/releases/latest/download/palace-windows-amd64.exe` and place on PATH.
 
 ### Pinned version (recommended for CI)
 Replace `${VERSION}` (e.g., `v0.0.1-rc1`):
 - macOS arm64:
   ```sh
-  curl -L https://github.com/${OWNER_REPO}/releases/download/${VERSION}/palace-darwin-arm64 -o palace
+  curl -L https://github.com/mehmetkoksal-w/mind-palace/releases/download/${VERSION}/palace-darwin-arm64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
 - Linux amd64:
   ```sh
-  curl -L https://github.com/${OWNER_REPO}/releases/download/${VERSION}/palace-linux-amd64 -o palace
+  curl -L https://github.com/mehmetkoksal-w/mind-palace/releases/download/${VERSION}/palace-linux-amd64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
-- Windows amd64: download `https://github.com/${OWNER_REPO}/releases/download/${VERSION}/palace-windows-amd64.exe`.
+- Windows amd64: download `https://github.com/mehmetkoksal-w/mind-palace/releases/download/${VERSION}/palace-windows-amd64.exe`.
 
 ### Checksums
 Each release includes `SHA256SUMS`.
