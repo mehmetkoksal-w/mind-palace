@@ -1,0 +1,26 @@
+{
+  // Palace core configuration
+  "schemaVersion": "1.0.0",
+  "kind": "palace/config",
+  "project": {
+    "name": "mind-palace",
+    "language": "go"
+  },
+  "defaultRoom": "project-overview",
+  "guardrails": {
+    "doNotTouchGlobs": [
+      ".git/**",
+      ".palace/**",
+      "node_modules/**",
+      "vendor/**"
+    ]
+  },
+  "outputs": {
+    "contextPackPath": ".palace/outputs/context-pack.json",
+    "indexPath": ".palace/index/palace.db"
+  },
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "2025-12-19T06:36:13Z"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/context-pack",
+  "goal": "{{goal}}",
+  "roomsVisited": [],
+  "filesReferenced": [],
+  "symbolsReferenced": [],
+  "findings": [],
+  "plan": [],
+  "verification": [],
+  "scanId": "",
+  "scanHash": "",
+  "scanTime": "{{timestamp}}",
+  "provenance": {
+    "createdBy": "palace plan",
+    "createdAt": "{{timestamp}}"
+  }
+}

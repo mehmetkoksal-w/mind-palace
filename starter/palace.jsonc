@@ -1,0 +1,26 @@
+{
+  // Palace core configuration
+  "schemaVersion": "1.0.0",
+  "kind": "palace/config",
+  "project": {
+    "name": "{{projectName}}",
+    "language": "{{language}}"
+  },
+  "defaultRoom": "project-overview",
+  "guardrails": {
+    "doNotTouchGlobs": [
+      ".git/**",
+      ".palace/**",
+      "node_modules/**",
+      "vendor/**"
+    ]
+  },
+  "outputs": {
+    "contextPackPath": ".palace/outputs/context-pack.json",
+    "indexPath": ".palace/index/palace.db"
+  },
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}
