@@ -18,37 +18,38 @@ Mind Palace is a deterministic CLI for constructing and maintaining a structured
 - **Ignored outputs**: `.palace/index` and `.palace/outputs` are generated so runs remain reproducible and diffs stay clean.
 
 ## Installation
-Set once for copy/paste:
+
+### Via Go (developer machines)
 ```sh
-OWNER_REPO="koksalmehmet/mind-palace"
+go install github.com/koksalmehmet/mind-palace/cmd/palace@latest
 ```
 
 ### Latest release (no Go toolchain required)
 - macOS arm64:
   ```sh
-  curl -L https://github.com/${OWNER_REPO}/releases/latest/download/palace-darwin-arm64 -o palace
+  curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
 - Linux amd64:
   ```sh
-  curl -L https://github.com/${OWNER_REPO}/releases/latest/download/palace-linux-amd64 -o palace
+  curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-linux-amd64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
-- Windows amd64: download `https://github.com/${OWNER_REPO}/releases/latest/download/palace-windows-amd64.exe` and place on PATH.
+- Windows amd64: download `https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-windows-amd64.exe` and place on PATH.
 
 ### Pinned version (recommended for CI)
 Replace `${VERSION}` (e.g., `v0.0.1-rc1`):
 - macOS arm64:
   ```sh
-  curl -L https://github.com/${OWNER_REPO}/releases/download/${VERSION}/palace-darwin-arm64 -o palace
+  curl -L https://github.com/koksalmehmet/mind-palace/releases/download/${VERSION}/palace-darwin-arm64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
 - Linux amd64:
   ```sh
-  curl -L https://github.com/${OWNER_REPO}/releases/download/${VERSION}/palace-linux-amd64 -o palace
+  curl -L https://github.com/koksalmehmet/mind-palace/releases/download/${VERSION}/palace-linux-amd64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
-- Windows amd64: download `https://github.com/${OWNER_REPO}/releases/download/${VERSION}/palace-windows-amd64.exe`.
+- Windows amd64: download `https://github.com/koksalmehmet/mind-palace/releases/download/${VERSION}/palace-windows-amd64.exe`.
 
 ### Checksums
 Each release includes `SHA256SUMS`.
@@ -84,4 +85,4 @@ Commit/ignore rules, team workflows, and CI guidance are in `./collaboration.md`
 How to add rooms/playbooks and evolve schemas safely is in `./extensibility.md`.
 
 ## Documentation & GitHub Pages
-Docs live under `/docs` in Markdown. Recommended GitHub Pages configuration is described in `./pages.md`. Use `/docs` as the Pages source and trigger deployments on `master` when docs or `README.md` change.
+Docs live under `/docs` in Markdown. Recommended GitHub Pages configuration is described in `./pages.md`. Use `/docs` as the Pages source and trigger deployments on `main` when docs or `README.md` change.

@@ -36,7 +36,7 @@ Mind Palace is built for agent-assisted work. Agents must treat schemas and arti
 
 ## CLI vs IDE agents
 - **CLI agents (Codex/Claude/Gemini/Cursor CLI)**: run `palace plan/collect/verify/signal` as needed, never mutate generated artifacts directly, and obey guardrails when proposing patches.
-- **IDE agents (Cursor/Windsurf/Copilot)**: load curated files + context-pack; avoid auto-saving changes in `.palace/index` or `.palace/outputs`; surface verification results to the user before proceeding.
+- **IDE agents (Cursor/Windsurf/Copilot/Antigravity)**: load curated files + context-pack; avoid auto-saving changes in `.palace/index` or `.palace/outputs`; surface verification results to the user before proceeding.
 
 ## Schema contract
 - Embedded JSON Schemas are the single source of truth. Assume validation will run in CI.
