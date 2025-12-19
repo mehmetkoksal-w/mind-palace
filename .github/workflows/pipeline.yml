@@ -1,0 +1,168 @@
+name: Pipeline
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pipeline-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Validate VERSION format
+        run: |
+          if [ ! -f VERSION ]; then
+            echo "::error::VERSION file missing"
+            exit 1
+          fi
+          VER=$(cat VERSION | tr -d '[:space:]')
+          if [[ ! "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "::error::Invalid VERSION format: $VER (expected X.Y.Z or X.Y.Z-rc1)"
+            exit 1
+          fi
+          echo "Detected version: $VER"
+      - name: Go build
+        run: go build -v ./cmd/palace
+      - name: Go vet
+        run: go vet ./...
+      - name: Go test
+        run: go test -v ./...
+
+  docs:
+    if: github.event_name == 'push'
+    needs: ci
+    runs-on: ubuntu-latest
+    environment:
+      name: production-docs
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  release-check:
+    if: github.event_name == 'push'
+    needs: ci
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version_tag: ${{ steps.check.outputs.version_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        run: |
+          VER=$(cat VERSION | tr -d '[:space:]')
+          TAG="v$VER"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping release."
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $TAG missing. Release required."
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version_tag=$TAG" >> $GITHUB_OUTPUT
+          fi
+
+  publish:
+    needs: [release-check, docs]
+    if: needs.release-check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    environment: production-release
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: amd64
+            asset: palace-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            asset: palace-darwin-arm64
+          - goos: linux
+            goarch: amd64
+            asset: palace-linux-amd64
+          - goos: linux
+            goarch: arm64
+            asset: palace-linux-arm64
+          - goos: windows
+            goarch: amd64
+            asset: palace-windows-amd64.exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build ${{ matrix.asset }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+          VERSION: ${{ needs.release-check.outputs.version_tag }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${BUILD_DATE}"
+          go build -ldflags "$ldflags" -o "${{ matrix.asset }}" ./cmd/palace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+
+  finalize-release:
+    needs: [publish, release-check]
+    if: needs.release-check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create Release on GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release-check.outputs.version_tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create and push tag
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+          # Generate checksums
+          cd dist
+          sha256sum palace-* > SHA256SUMS
+          cd ..
+
+          # Create GitHub Release
+          gh release create "$TAG" ./dist/* --title "$TAG" --generate-notes
