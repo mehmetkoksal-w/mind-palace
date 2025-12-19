@@ -30,6 +30,9 @@ type ScanSummary struct {
 	ID          int64
 	Root        string
 	ScanHash    string
+	FileCount   int
+	ChunkCount  int
+	StartedAt   time.Time
 	CompletedAt time.Time
 }
 
@@ -147,6 +150,7 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 	}
 
 	now := time.Now().UTC()
+	chunkCount := 0
 	fileStmt, err := tx.Prepare(`INSERT INTO files(path, hash, size, mod_time, indexed_at) VALUES(?, ?, ?, ?, ?);`)
 	if err != nil {
 		return ScanSummary{}, err
@@ -170,6 +174,7 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 			return ScanSummary{}, fmt.Errorf("insert file %s: %w", r.Path, err)
 		}
 		for _, c := range r.Chunks {
+			chunkCount++
 			if _, err := chunkStmt.Exec(r.Path, c.Index, c.StartLine, c.EndLine, c.Content); err != nil {
 				return ScanSummary{}, fmt.Errorf("insert chunk %s:%d: %w", r.Path, c.Index, err)
 			}
@@ -190,7 +195,15 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 		return ScanSummary{}, err
 	}
 
-	return ScanSummary{ID: scanID, Root: root, ScanHash: scanHash, CompletedAt: now}, nil
+	return ScanSummary{
+		ID:          scanID,
+		Root:        root,
+		ScanHash:    scanHash,
+		FileCount:   len(records),
+		ChunkCount:  chunkCount,
+		StartedAt:   startedAt.UTC(),
+		CompletedAt: now,
+	}, nil
 }
 
 func computeScanHash(records []FileRecord) string {
@@ -278,6 +291,7 @@ func SearchChunks(db *sql.DB, query string, limit int) ([]ChunkHit, error) {
 	if limit <= 0 {
 		limit = 20
 	}
+	escaped := sanitizeFTSQuery(query)
 	rows, err := db.Query(`
         SELECT c.path, c.chunk_index, c.start_line, c.end_line, c.content
         FROM chunks_fts
@@ -285,7 +299,7 @@ func SearchChunks(db *sql.DB, query string, limit int) ([]ChunkHit, error) {
         WHERE chunks_fts MATCH ?
         ORDER BY c.path, c.chunk_index
         LIMIT ?;
-    `, query, limit)
+    `, escaped, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -299,6 +313,13 @@ func SearchChunks(db *sql.DB, query string, limit int) ([]ChunkHit, error) {
 		hits = append(hits, h)
 	}
 	return hits, rows.Err()
+}
+
+// sanitizeFTSQuery wraps the query in quotes and escapes embedded quotes to keep MATCH syntax stable.
+func sanitizeFTSQuery(q string) string {
+	trimmed := strings.TrimSpace(q)
+	trimmed = strings.ReplaceAll(trimmed, "\"", "\"\"")
+	return fmt.Sprintf("\"%s\"", trimmed)
 }
 
 // GetChunksForFile retrieves chunks for a file.

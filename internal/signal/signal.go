@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -47,6 +49,8 @@ func Generate(root string, diffRange string) (model.ChangeSignal, error) {
 		},
 	}
 
+	sort.Slice(sig.Changes, func(i, j int) bool { return sig.Changes[i].Path < sig.Changes[j].Path })
+
 	outPath := filepath.Join(rootPath, ".palace", "outputs", "change-signal.json")
 	if err := model.WriteChangeSignal(outPath, sig); err != nil {
 		return model.ChangeSignal{}, err
@@ -74,26 +78,29 @@ func gitChanges(rootPath, diffRange string, guardrails config.Guardrails) ([]mod
 		if len(parts) < 2 {
 			continue
 		}
-		status := string(parts[0])
-		path := filepath.ToSlash(string(parts[1]))
+		statusToken := string(parts[0])
+		status := parseStatus(statusToken)
+		pathIdx := 1
+		if strings.HasPrefix(statusToken, "R") || strings.HasPrefix(statusToken, "C") {
+			if len(parts) >= 3 {
+				pathIdx = 2
+			}
+		}
+		if pathIdx >= len(parts) {
+			continue
+		}
+		path := filepath.ToSlash(string(parts[pathIdx]))
 		if fsutil.MatchesGuardrail(path, guardrails) {
 			continue
 		}
-		change := model.Change{Path: path}
-		switch status {
-		case "A":
-			change.Status = "added"
-		case "M":
-			change.Status = "modified"
-		case "D":
-			change.Status = "deleted"
-		default:
-			change.Status = "modified"
-		}
+		change := model.Change{Path: path, Status: status}
 		if change.Status != "deleted" {
 			abs := filepath.Join(rootPath, path)
 			h, err := fsutil.HashFile(abs)
 			if err != nil {
+				if errors.Is(err, fsutil.ErrNotFound) || os.IsNotExist(err) {
+					return nil, fmt.Errorf("hash %s: file not found for diff range %s", path, diffRange)
+				}
 				return nil, fmt.Errorf("hash %s: %w", path, err)
 			}
 			change.Hash = h
@@ -101,4 +108,19 @@ func gitChanges(rootPath, diffRange string, guardrails config.Guardrails) ([]mod
 		changes = append(changes, change)
 	}
 	return changes, nil
+}
+
+func parseStatus(token string) string {
+	switch token {
+	case "A":
+		return "added"
+	case "M":
+		return "modified"
+	case "D":
+		return "deleted"
+	}
+	if strings.HasPrefix(token, "R") || strings.HasPrefix(token, "C") {
+		return "modified"
+	}
+	return "modified"
 }

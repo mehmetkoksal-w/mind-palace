@@ -27,6 +27,8 @@ func Run(args []string) error {
 		return usage()
 	}
 	switch args[0] {
+	case "version", "--version", "-v":
+		return cmdVersion()
 	case "init":
 		return cmdInit(args[1:])
 	case "detect":
@@ -43,6 +45,8 @@ func Run(args []string) error {
 		return cmdCollect(args[1:])
 	case "signal":
 		return cmdSignal(args[1:])
+	case "explain":
+		return cmdExplain(args[1:])
 	case "help", "-h", "--help":
 		return usage()
 	default:
@@ -51,7 +55,14 @@ func Run(args []string) error {
 }
 
 func usage() error {
-	fmt.Println("palace commands: init | detect | scan | lint | verify | plan | collect | signal")
+	fmt.Println(`palace commands: init | detect | scan | lint | verify | plan | collect | signal | explain
+
+Examples:
+  palace init
+  palace scan
+  palace verify --diff HEAD~1..HEAD
+  palace collect --diff HEAD~1..HEAD
+  palace explain verify`)
 	return nil
 }
 
@@ -187,6 +198,7 @@ func cmdScan(args []string) error {
 		return err
 	}
 	fmt.Printf("indexed %d files; scan hash %s\n", fileCount, summary.ScanHash)
+	fmt.Printf("scan artifact written to %s\n", filepath.Join(summary.Root, ".palace", "index", "scan.json"))
 	return nil
 }
 
@@ -213,8 +225,8 @@ func cmdVerify(args []string) error {
 	diff := fs.String("diff", "", "diff range for scoped verification")
 	var fastFlag boolFlag
 	var strictFlag boolFlag
-	fs.Var(&fastFlag, "fast", "fast mode (mtime/size with selective hashing)")
-	fs.Var(&strictFlag, "strict", "strict mode (hash all)")
+	fs.Var(&fastFlag, "fast", "fast mode (default; mtime/size with selective hashing)")
+	fs.Var(&strictFlag, "strict", "strict mode (hash all; disables fast)")
 	fastFlag.value = true // default fast
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -251,20 +263,28 @@ func cmdVerify(args []string) error {
 		return err
 	}
 
-	stale, fallback, err := verify.Run(db, verify.Options{Root: rootPath, DiffRange: *diff, Mode: mode})
+	staleList, fullScope, source, candidateCount, err := verify.Run(db, verify.Options{Root: rootPath, DiffRange: *diff, Mode: mode})
 	if err != nil {
 		return err
 	}
-	if *diff != "" && fallback {
-		fmt.Println("git diff not available; verified entire workspace")
-	}
-	if len(stale) > 0 {
+
+	printScope("verify", fullScope, source, *diff, candidateCount, rootPath)
+
+	if len(staleList) > 0 {
 		fmt.Println("stale artifacts detected:")
-		for _, s := range stale {
+		preview := staleList
+		if len(preview) > 20 {
+			preview = preview[:20]
+		}
+		for _, s := range preview {
 			fmt.Printf("- %s\n", s)
+		}
+		if len(staleList) > len(preview) {
+			fmt.Printf("... and %d more\n", len(staleList)-len(preview))
 		}
 		return errors.New("index is stale; rerun palace scan")
 	}
+
 	fmt.Printf("verify ok; latest scan %s at %s\n", summary.ScanHash, summary.CompletedAt.Format(time.RFC3339))
 	return nil
 }
@@ -330,13 +350,23 @@ func cmdCollect(args []string) error {
 	fs := flag.NewFlagSet("collect", flag.ContinueOnError)
 	root := fs.String("root", ".", "workspace root")
 	diff := fs.String("diff", "", "optional diff range or matching change signal")
+	allowStale := fs.Bool("allow-stale", false, "allow collecting even if the index is stale (full scope only)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	cp, err := collect.Run(*root, *diff)
+
+	fullScope := strings.TrimSpace(*diff) == ""
+	cp, err := collect.Run(*root, *diff, collect.Options{AllowStale: *allowStale})
 	if err != nil {
 		return err
 	}
+
+	source := ""
+	if cp.Scope != nil {
+		source = cp.Scope.Source
+	}
+	printScope("collect", fullScope, source, *diff, scopeFileCount(cp), mustAbs(*root))
+
 	fmt.Printf("context pack updated from scan %s\n", cp.ScanHash)
 	return nil
 }
@@ -356,4 +386,146 @@ func cmdSignal(args []string) error {
 	}
 	fmt.Println("change signal written to .palace/outputs/change-signal.json")
 	return nil
+}
+
+func cmdExplain(args []string) error {
+	topic := "all"
+	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+		topic = strings.TrimSpace(args[0])
+	}
+	switch topic {
+	case "all":
+		fmt.Println(explainAll())
+	case "scan":
+		fmt.Println(explainScan())
+	case "collect":
+		fmt.Println(explainCollect())
+	case "verify":
+		fmt.Println(explainVerify())
+	case "signal":
+		fmt.Println(explainSignal())
+	case "artifacts":
+		fmt.Println(explainArtifacts())
+	default:
+		return fmt.Errorf("unknown explain topic: %s (try: scan|collect|verify|signal|artifacts|all)", topic)
+	}
+	return nil
+}
+
+// --- helpers ---
+
+func printScope(cmd string, fullScope bool, source string, diffRange string, fileCount int, rootPath string) {
+	mode := "diff"
+	if fullScope {
+		mode = "full"
+	}
+	if source == "" {
+		if fullScope {
+			source = "full-scan"
+		} else {
+			source = "git-diff/change-signal"
+		}
+	}
+	fmt.Printf("Scope (%s):\n", cmd)
+	fmt.Printf("  root: %s\n", rootPath)
+	fmt.Printf("  mode: %s\n", mode)
+	fmt.Printf("  source: %s\n", source)
+	fmt.Printf("  fileCount: %d\n", fileCount)
+	if !fullScope {
+		fmt.Printf("  diffRange: %s\n", strings.TrimSpace(diffRange))
+	}
+}
+
+func mustAbs(p string) string {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return p
+	}
+	return abs
+}
+
+func scopeFileCount(cp model.ContextPack) int {
+	if cp.Scope == nil {
+		return 0
+	}
+	return cp.Scope.FileCount
+}
+
+// --- explain text ---
+
+func explainAll() string {
+	return strings.Join([]string{
+		explainScan(),
+		"",
+		explainCollect(),
+		"",
+		explainVerify(),
+		"",
+		explainSignal(),
+		"",
+		explainArtifacts(),
+	}, "\n")
+}
+
+func explainScan() string {
+	return `scan
+  Purpose: Build/refresh the Tier-0 SQLite index and emit an auditable scan summary.
+  Inputs: workspace files (excluding guardrails)
+  Outputs:
+    - .palace/index/palace.db (SQLite WAL + FTS)
+    - .palace/index/scan.json (validated, includes UUID + dbScanId + counts + hash)
+  Behavior:
+    - Always rebuilds index from disk; deterministic chunking + hashing.`
+}
+
+func explainCollect() string {
+	return `collect
+  Purpose: Refresh .palace/outputs/context-pack.json using existing index + curated manifests.
+  Inputs:
+    - .palace/index/palace.db (must exist)
+    - curated manifests (.palace/palace.jsonc, rooms, playbooks)
+  Outputs:
+    - .palace/outputs/context-pack.json (validated)
+  Freshness:
+    - Full scope (no --diff): fails if index is stale unless --allow-stale.
+    - Diff scope (--diff): uses git diff or a matching change-signal, never widens scope silently.`
+}
+
+func explainVerify() string {
+	return `verify
+  Purpose: Detect staleness between workspace and the latest indexed metadata.
+  Modes:
+    - --fast  (default): mtime/size shortcut with selective hashing
+    - --strict: hash all candidates
+  Scope:
+    - No --diff: verifies full workspace against stored index.
+    - With --diff: verifies only changed paths (git diff or matching change-signal).
+  Diff behavior:
+    - If diff cannot be computed, verify returns an error (no widening).`
+}
+
+func explainSignal() string {
+	return `signal
+  Purpose: Generate a deterministic change-signal artifact from a git diff range.
+  Inputs:
+    - git diff --name-status <range>
+  Outputs:
+    - .palace/outputs/change-signal.json (validated)
+  Notes:
+    - Handles rename/copy formats; hashes non-deleted files; normalizes paths; sorts changes.`
+}
+
+func explainArtifacts() string {
+	return `artifacts
+  Curated (commit):
+    - .palace/palace.jsonc
+    - .palace/rooms/*.jsonc
+    - .palace/playbooks/*.jsonc
+    - .palace/project-profile.json
+    - .palace/schemas/* (export-only for transparency; embedded are canonical)
+  Generated (ignore):
+    - .palace/index/*
+    - .palace/outputs/*
+    - .palace/sessions/* (if present)
+    - *.db artifacts`
 }

@@ -2,7 +2,6 @@ package verify
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -12,6 +11,7 @@ import (
 	"mind-palace/internal/fsutil"
 	"mind-palace/internal/index"
 	"mind-palace/internal/signal"
+	"mind-palace/internal/stale"
 )
 
 // Mode defines staleness verification mode.
@@ -29,113 +29,69 @@ type Options struct {
 	Mode      Mode
 }
 
-// Run performs staleness verification according to options. It returns whether the diff range was ignored.
-func Run(db *sql.DB, opts Options) ([]string, bool, error) {
+// Run performs staleness verification according to options.
+// Returns (staleEntries, usedFullScope, scopeSource, candidateCount, error).
+func Run(db *sql.DB, opts Options) ([]string, bool, string, int, error) {
 	rootPath, err := filepath.Abs(opts.Root)
 	if err != nil {
-		return nil, false, err
+		return nil, false, "", 0, err
 	}
 
 	guardrails := config.LoadGuardrails(rootPath)
 	stored, err := index.LoadFileMetadata(db)
 	if err != nil {
-		return nil, false, err
+		return nil, false, "", 0, err
 	}
 
-	candidates, fallbackAll, err := diffCandidates(rootPath, guardrails, opts.DiffRange)
+	candidates, fullScope, source, err := scopeCandidates(rootPath, guardrails, opts.DiffRange)
 	if err != nil {
-		return nil, false, err
+		return nil, false, "", 0, err
 	}
 
-	if fallbackAll {
+	// Full scope = all files in workspace.
+	if fullScope {
 		candidates, err = fsutil.ListFiles(rootPath, guardrails)
 		if err != nil {
-			return nil, false, err
+			return nil, false, "", 0, err
 		}
 	}
+	scopeCount := len(candidates)
 
-	stale := detectStale(rootPath, candidates, stored, guardrails, opts.Mode, fallbackAll)
+	mode := stale.ModeFast
+	if opts.Mode == ModeStrict {
+		mode = stale.ModeStrict
+	}
 
-	sort.Strings(stale)
-	return stale, fallbackAll, nil
+	// includeMissing when full scope; in diff scope, only check candidates.
+	includeMissing := fullScope
+	staleList := stale.Detect(rootPath, candidates, stored, guardrails, mode, includeMissing)
+
+	sort.Strings(staleList)
+
+	return staleList, fullScope, source, scopeCount, nil
 }
 
-func detectStale(rootPath string, candidates []string, stored map[string]index.FileMetadata, guardrails config.Guardrails, mode Mode, includeMissing bool) []string {
-	var stale []string
-	seen := make(map[string]struct{})
-	for _, rel := range candidates {
-		rel = filepath.ToSlash(rel)
-		if fsutil.MatchesGuardrail(rel, guardrails) {
-			continue
-		}
-		seen[rel] = struct{}{}
-		abs := filepath.Join(rootPath, rel)
-		stat, err := fsutil.StatFile(abs)
-		if err != nil {
-			if errors.Is(err, fsutil.ErrNotFound) {
-				stale = append(stale, fmt.Sprintf("missing file %s", rel))
-				continue
-			}
-			stale = append(stale, fmt.Sprintf("error reading %s: %v", rel, err))
-			continue
-		}
-		storedMeta, ok := stored[rel]
-		if !ok {
-			stale = append(stale, fmt.Sprintf("new file %s", rel))
-			continue
-		}
-
-		if mode == ModeStrict {
-			h, err := fsutil.HashFile(abs)
-			if err != nil {
-				stale = append(stale, fmt.Sprintf("hash %s: %v", rel, err))
-				continue
-			}
-			if h != storedMeta.Hash {
-				stale = append(stale, fmt.Sprintf("changed file %s", rel))
-			}
-			continue
-		}
-
-		if stat.Size == storedMeta.Size && stat.ModTime.Equal(storedMeta.ModTime) {
-			continue
-		}
-
-		h, err := fsutil.HashFile(abs)
-		if err != nil {
-			stale = append(stale, fmt.Sprintf("hash %s: %v", rel, err))
-			continue
-		}
-		if h != storedMeta.Hash {
-			stale = append(stale, fmt.Sprintf("changed file %s", rel))
-		}
-	}
-
-	if includeMissing {
-		for rel := range stored {
-			if _, ok := seen[rel]; ok {
-				continue
-			}
-			stale = append(stale, fmt.Sprintf("missing file %s", rel))
-		}
-	}
-
-	return stale
-}
-
-func diffCandidates(root string, guardrails config.Guardrails, diffRange string) ([]string, bool, error) {
+// scopeCandidates returns candidate paths and whether scope is full.
+// Also returns a source string for reporting: "full-scan" | "git-diff" | "change-signal".
+func scopeCandidates(rootPath string, guardrails config.Guardrails, diffRange string) ([]string, bool, string, error) {
 	if strings.TrimSpace(diffRange) == "" {
-		return nil, true, nil
+		return nil, true, "full-scan", nil
 	}
-	paths, fromSignal, err := signal.Paths(root, diffRange, guardrails)
-	if err != nil && fromSignal {
-		return nil, false, err
-	}
-	if err != nil && !fromSignal {
-		return nil, true, nil
+
+	paths, fromSignal, err := signal.Paths(rootPath, diffRange, guardrails)
+	if err != nil {
+		// Diff mode must be strict: do not widen.
+		return nil, false, "", fmt.Errorf("diff unavailable for %q: %w", diffRange, err)
 	}
 	if len(paths) == 0 {
-		return nil, true, nil
+		return []string{}, false, sourceFrom(fromSignal), nil
 	}
-	return paths, false, nil
+	return paths, false, sourceFrom(fromSignal), nil
+}
+
+func sourceFrom(fromSignal bool) string {
+	if fromSignal {
+		return "change-signal"
+	}
+	return "git-diff"
 }

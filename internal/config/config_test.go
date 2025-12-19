@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"mind-palace/schemas"
 )
 
 func TestLoadGuardrailsMergeExtendsDefaults(t *testing.T) {
@@ -68,4 +70,38 @@ func equalSlices(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func TestCopySchemasRefreshesDrift(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := EnsureLayout(dir); err != nil {
+		t.Fatalf("ensure layout: %v", err)
+	}
+	schemaDir := filepath.Join(dir, ".palace", "schemas")
+	if err := os.MkdirAll(schemaDir, 0o755); err != nil {
+		t.Fatalf("mkdir schemas: %v", err)
+	}
+
+	// Write a drifted schema copy.
+	dest := filepath.Join(schemaDir, "context-pack.schema.json")
+	if err := os.WriteFile(dest, []byte("{}"), 0o644); err != nil {
+		t.Fatalf("write drifted: %v", err)
+	}
+
+	if err := CopySchemas(dir, false); err != nil {
+		t.Fatalf("copy schemas: %v", err)
+	}
+
+	embedded, err := schemas.List()
+	if err != nil {
+		t.Fatalf("list schemas: %v", err)
+	}
+	want := embedded["context-pack"]
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("read dest: %v", err)
+	}
+	if string(got) != string(want) {
+		t.Fatalf("schema not refreshed to embedded copy")
+	}
 }

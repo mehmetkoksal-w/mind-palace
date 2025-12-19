@@ -8,15 +8,22 @@ import (
 	"time"
 
 	"mind-palace/internal/config"
+	"mind-palace/internal/fsutil"
 	"mind-palace/internal/index"
 	"mind-palace/internal/jsonc"
 	"mind-palace/internal/model"
 	"mind-palace/internal/signal"
+	"mind-palace/internal/stale"
 	"mind-palace/internal/validate"
 )
 
+// Options controls collect behavior.
+type Options struct {
+	AllowStale bool
+}
+
 // Run assembles a context pack using the latest index and curated manifests.
-func Run(root string, diffRange string) (model.ContextPack, error) {
+func Run(root string, diffRange string, opts Options) (model.ContextPack, error) {
 	rootPath, err := filepath.Abs(root)
 	if err != nil {
 		return model.ContextPack{}, err
@@ -58,15 +65,64 @@ func Run(root string, diffRange string) (model.ContextPack, error) {
 	cp.Provenance.UpdatedBy = "palace collect"
 	cp.Provenance.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 
+	guardrails := config.LoadGuardrails(rootPath)
 	storedMeta, err := index.LoadFileMetadata(db)
 	if err != nil {
 		return model.ContextPack{}, err
 	}
 
-	guardrails := config.LoadGuardrails(rootPath)
-	changedPaths, err := changedFiles(rootPath, diffRange, guardrails)
-	if err != nil {
-		return model.ContextPack{}, err
+	// Determine scope candidates.
+	fullScope := strings.TrimSpace(diffRange) == ""
+	scopeSource := "full-scan"
+	var candidates []string
+
+	if fullScope {
+		candidates, err = fsutil.ListFiles(rootPath, guardrails)
+		if err != nil {
+			return model.ContextPack{}, err
+		}
+
+		// Freshness enforcement in full scope unless allow-stale.
+		if !opts.AllowStale {
+			staleList := stale.Detect(rootPath, candidates, storedMeta, guardrails, stale.ModeFast, true)
+			if len(staleList) > 0 {
+				msg := "index is stale; run palace scan"
+				// Provide a bounded preview.
+				preview := staleList
+				if len(preview) > 20 {
+					preview = preview[:20]
+				}
+				return model.ContextPack{}, fmt.Errorf("%s\nstale artifacts detected (showing %d/%d):\n- %s",
+					msg, len(preview), len(staleList), strings.Join(preview, "\n- "))
+			}
+		}
+	} else {
+		paths, fromSignal, err := signal.Paths(rootPath, diffRange, guardrails)
+		if err != nil {
+			return model.ContextPack{}, fmt.Errorf("diff unavailable for %q: %w", diffRange, err)
+		}
+		candidates = paths
+		if fromSignal {
+			scopeSource = "change-signal"
+		} else {
+			scopeSource = "git-diff"
+		}
+	}
+
+	cp.Scope = &model.ScopeInfo{
+		Mode:      map[bool]string{true: "full", false: "diff"}[fullScope],
+		Source:    scopeSource,
+		FileCount: len(candidates),
+		DiffRange: strings.TrimSpace(diffRange),
+	}
+	if fullScope {
+		cp.Scope.DiffRange = ""
+	}
+
+	// changedPaths are used for FilesReferenced ordering priority.
+	changedPaths := []string{}
+	if !fullScope {
+		changedPaths = candidates
 	}
 
 	roomEntries := collectEntryPoints(rootPath, palaceCfg.DefaultRoom)
@@ -75,6 +131,8 @@ func Run(root string, diffRange string) (model.ContextPack, error) {
 		cp.RoomsVisited = []string{palaceCfg.DefaultRoom}
 	}
 
+	// In full scope, keep FilesReferenced deterministic: entry points first, then (optionally) diff candidates.
+	// In diff scope, prioritize changed paths, then room entrypoints that exist in the index.
 	cp.FilesReferenced = mergeOrderedUnique(changedPaths, filterExisting(roomEntries, storedMeta))
 
 	if strings.TrimSpace(cp.Goal) == "" {
@@ -156,17 +214,6 @@ func mergeOrderedUnique(primary, secondary []string) []string {
 	appendList(primary)
 	appendList(secondary)
 	return out
-}
-
-func changedFiles(rootPath, diffRange string, guardrails config.Guardrails) ([]string, error) {
-	if strings.TrimSpace(diffRange) == "" {
-		return nil, nil
-	}
-	paths, _, err := signal.Paths(rootPath, diffRange, guardrails)
-	if err != nil {
-		return nil, err
-	}
-	return paths, nil
 }
 
 func prioritizeHits(hits []index.ChunkHit, changedPaths []string) []index.ChunkHit {
