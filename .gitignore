@@ -23,3 +23,19 @@ go.work.sum
 
 # env file
 .env
+
+# Mind Palace generated artifacts
+.palace/index/
+.palace/outputs/
+.palace/maps/
+.palace/sessions/
+
+# SQLite / generated data
+*.db
+*.db-wal
+*.db-shm
+
+# Release / dist artifacts
+dist/
+palace
+palace-*
