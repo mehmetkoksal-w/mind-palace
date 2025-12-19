@@ -37,6 +37,11 @@ go install github.com/koksalmehmet/mind-palace/cmd/palace@latest
   ```
 - Windows amd64: download `https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-windows-amd64.exe` and place on PATH.
 
+Asset names (no extensions except Windows):
+- macOS: `palace-darwin-arm64`
+- Linux: `palace-linux-amd64`
+- Windows: `palace-windows-amd64.exe`
+
 ### Pinned version (recommended for CI)
 Replace `${VERSION}` (e.g., `v0.0.1-rc1`):
 - macOS arm64:
