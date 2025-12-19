@@ -13,14 +13,14 @@ The canonical documentation lives in this repository under `/docs` (Markdown onl
 - `/docs/pages.md`: this deployment guide.
 
 ## Recommended Pages configuration
-- **Source**: `/docs` folder in the repository (GitHub Pages “Deploy from a branch”, branch `master`, folder `/docs`).
+- **Source**: `/docs` folder in the repository (GitHub Pages “Deploy from a branch”, branch `main`, folder `/docs`).
 - **Format**: Plain Markdown; no JS frameworks required.
 - **Theme**: Optional GitHub Pages theme (or none) since content is Markdown-only.
 
 ## Deployment triggers (implemented)
 - GitHub Actions workflow: `.github/workflows/docs.yml`.
 - Triggers:
-  - Push to `master` when `docs/**` or `README.md` changes.
+  - Push to `main` when `docs/**` or `README.md` changes.
   - Manual `workflow_dispatch`.
 - Steps: checkout → configure-pages → upload-pages-artifact (`path: docs`) → deploy-pages.
 - Permissions: `contents: read`, `pages: write`, `id-token: write`.
