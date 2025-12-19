@@ -29,6 +29,14 @@ type ProjectProfile struct {
 	Provenance    map[string]string     `json:"provenance"`
 }
 
+// ScopeInfo describes what inputs were considered for an operation.
+type ScopeInfo struct {
+	Mode      string `json:"mode"`                // "full" | "diff"
+	Source    string `json:"source"`              // "full-scan" | "git-diff" | "change-signal"
+	FileCount int    `json:"fileCount"`           // candidate count (full or diff)
+	DiffRange string `json:"diffRange,omitempty"` // when mode="diff"
+}
+
 // ContextPack is the authoritative context artifact.
 type ContextPack struct {
 	SchemaVersion     string               `json:"schemaVersion"`
@@ -40,10 +48,14 @@ type ContextPack struct {
 	Findings          []Finding            `json:"findings"`
 	Plan              []PlanStep           `json:"plan"`
 	Verification      []VerificationResult `json:"verification"`
-	ScanID            string               `json:"scanId"`
-	ScanHash          string               `json:"scanHash"`
-	ScanTime          string               `json:"scanTime"`
-	Provenance        Provenance           `json:"provenance"`
+
+	Scope *ScopeInfo `json:"scope,omitempty"`
+
+	ScanID   string `json:"scanId"`
+	ScanHash string `json:"scanHash"`
+	ScanTime string `json:"scanTime"`
+
+	Provenance Provenance `json:"provenance"`
 }
 
 // Finding captures deterministic findings.
@@ -79,11 +91,14 @@ type Provenance struct {
 
 // Room describes a curated room manifest.
 type Room struct {
-	SchemaVersion string   `json:"schemaVersion"`
-	Kind          string   `json:"kind"`
-	Name          string   `json:"name"`
-	Summary       string   `json:"summary"`
-	EntryPoints   []string `json:"entryPoints"`
+	SchemaVersion string         `json:"schemaVersion"`
+	Kind          string         `json:"kind"`
+	Name          string         `json:"name"`
+	Summary       string         `json:"summary"`
+	EntryPoints   []string       `json:"entryPoints"`
+	Artifacts     []RoomArtifact `json:"artifacts,omitempty"`
+	Capabilities  []string       `json:"capabilities,omitempty"`
+	Steps         []RoomStep     `json:"steps,omitempty"`
 }
 
 // Playbook describes a curated playbook manifest.
@@ -93,6 +108,21 @@ type Playbook struct {
 	Name          string   `json:"name"`
 	Summary       string   `json:"summary"`
 	Rooms         []string `json:"rooms"`
+}
+
+// RoomArtifact captures declared artifacts in a room.
+type RoomArtifact struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	PathHint    string `json:"pathHint,omitempty"`
+}
+
+// RoomStep captures declared steps in a room.
+type RoomStep struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Capability  string `json:"capability,omitempty"`
+	Evidence    string `json:"evidence,omitempty"`
 }
 
 // LoadContextPack reads a context pack from disk.
@@ -130,6 +160,7 @@ func NewContextPack(goal string) ContextPack {
 		Findings:          []Finding{},
 		Plan:              []PlanStep{},
 		Verification:      []VerificationResult{},
+		Scope:             nil,
 		ScanID:            "",
 		ScanHash:          "",
 		ScanTime:          now,

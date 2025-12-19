@@ -15,10 +15,6 @@
       "vendor/**"
     ]
   },
-  "outputs": {
-    "contextPackPath": ".palace/outputs/context-pack.json",
-    "indexPath": ".palace/index/palace.db"
-  },
   "provenance": {
     "createdBy": "palace init",
     "createdAt": "{{createdAt}}"

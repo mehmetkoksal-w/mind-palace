@@ -2,60 +2,35 @@
   "schemaVersion": "1.0.0",
   "kind": "palace/project-profile",
   "projectRoot": ".",
-  "languages": [
-    "go"
-  ],
+  "languages": ["go"],
   "capabilities": {
-    "graph.deps": {
-      "command": "go list -deps ./...",
-      "description": "List project dependencies"
-    },
-    "lint.run": {
-      "command": "go vet ./...",
-      "description": "Run project lint"
+    "search.text": {
+      "command": "rg --no-heading --line-number --color never \"{{query}}\" {{paths}}",
+      "description": "Text search via ripgrep"
     },
     "read.file": {
       "command": "cat {{path}}",
       "description": "Read a single file"
     },
-    "search.text": {
-      "command": "rg --no-heading --line-number --color never \"{{query}}\" {{paths}}",
-      "description": "Text search via ripgrep"
-    },
-    "symbols.lookup": {
-      "command": "echo symbols lookup not configured",
-      "description": "Symbol lookup is not configured"
+    "graph.deps": {
+      "command": "go list -deps ./...",
+      "description": "List module dependencies"
     },
     "tests.run": {
       "command": "go test ./...",
-      "description": "Run project tests"
+      "description": "Run all Go tests"
+    },
+    "lint.run": {
+      "command": "echo lint not configured",
+      "description": "Stub lint command"
+    },
+    "symbols.lookup": {
+      "command": "echo symbols lookup not configured",
+      "description": "Stub symbol lookup"
     }
   },
-  "guardrails": {
-    "doNotTouchGlobs": [
-      ".git/**",
-      ".palace/**",
-      "node_modules/**",
-      "vendor/**",
-      "dist/**",
-      "build/**",
-      "coverage/**",
-      "target/**",
-      ".dart_tool/**",
-      ".next/**",
-      ".turbo/**",
-      ".nx/**",
-      ".gradle/**",
-      ".idea/**",
-      ".vscode/**",
-      "**/*.min.*",
-      "**/*.lock",
-      "**/*.generated.*",
-      "**/*.g.*"
-    ]
-  },
   "provenance": {
-    "createdAt": "2025-12-19T08:13:58Z",
-    "createdBy": "palace detect"
+    "createdBy": "palace detect",
+    "createdAt": "2025-12-19T11:40:12Z"
   }
 }

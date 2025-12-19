@@ -37,5 +37,6 @@ go.work.sum
 
 # Release / dist artifacts
 dist/
-palace
-palace-*
+# Ignore built binaries only at repo root (not cmd/palace/)
+./palace
+./palace-*

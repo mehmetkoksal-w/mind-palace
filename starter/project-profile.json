@@ -29,14 +29,6 @@
       "description": "Stub symbol lookup"
     }
   },
-  "guardrails": {
-    "doNotTouchGlobs": [
-      ".git/**",
-      ".palace/**",
-      "node_modules/**",
-      "vendor/**"
-    ]
-  },
   "provenance": {
     "createdBy": "palace detect",
     "createdAt": "{{createdAt}}"

@@ -31,11 +31,7 @@ type PalaceConfig struct {
 	} `json:"project"`
 	DefaultRoom string     `json:"defaultRoom"`
 	Guardrails  Guardrails `json:"guardrails"`
-	Outputs     struct {
-		ContextPackPath string `json:"contextPackPath"`
-		IndexPath       string `json:"indexPath"`
-	} `json:"outputs"`
-	Provenance any `json:"provenance"`
+	Provenance  any        `json:"provenance"`
 }
 
 // EnsureLayout creates the .palace directory hierarchy.
@@ -164,9 +160,10 @@ func normalizeGlob(g string) string {
 // CopySchemas exports embedded schema files into the workspace at .palace/schemas for transparency.
 // The embedded schemas under /schemas remain the canonical source for validation.
 func CopySchemas(root string, allowOverwrite bool) error {
+	_ = allowOverwrite // schemas are always refreshed to match embedded versions
 	schemaDir := filepath.Join(root, ".palace", "schemas")
-	if _, err := os.ReadDir(schemaDir); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("read schema dir: %w", err)
+	if err := os.MkdirAll(schemaDir, 0o755); err != nil {
+		return fmt.Errorf("ensure schema dir: %w", err)
 	}
 
 	schemaMap, err := loadEmbeddedSchemas()
@@ -175,8 +172,10 @@ func CopySchemas(root string, allowOverwrite bool) error {
 	}
 	for name, data := range schemaMap {
 		dest := filepath.Join(schemaDir, fmt.Sprintf("%s.schema.json", name))
-		if _, err := os.Stat(dest); err == nil && !allowOverwrite {
-			continue
+		if existing, err := os.ReadFile(dest); err == nil && len(existing) > 0 {
+			if string(existing) == string(data) {
+				continue // already canonical
+			}
 		}
 		if err := os.WriteFile(dest, data, 0o644); err != nil {
 			return fmt.Errorf("write %s: %w", dest, err)
