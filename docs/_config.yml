@@ -4,8 +4,7 @@ remote_theme: pmarsceill/just-the-docs
 
 # Visuals
 color_scheme: dark
-callouts:
-  level: quiet
+callouts_level: quiet
 
 # UX Features
 search_enabled: true
