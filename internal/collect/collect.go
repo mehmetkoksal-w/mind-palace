@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"mind-palace/internal/config"
-	"mind-palace/internal/fsutil"
-	"mind-palace/internal/index"
-	"mind-palace/internal/jsonc"
-	"mind-palace/internal/model"
-	"mind-palace/internal/signal"
-	"mind-palace/internal/stale"
-	"mind-palace/internal/validate"
+	"github.com/koksalmehmet/mind-palace/internal/config"
+	"github.com/koksalmehmet/mind-palace/internal/fsutil"
+	"github.com/koksalmehmet/mind-palace/internal/index"
+	"github.com/koksalmehmet/mind-palace/internal/jsonc"
+	"github.com/koksalmehmet/mind-palace/internal/model"
+	"github.com/koksalmehmet/mind-palace/internal/signal"
+	"github.com/koksalmehmet/mind-palace/internal/stale"
+	"github.com/koksalmehmet/mind-palace/internal/validate"
 )
 
 // Options controls collect behavior.

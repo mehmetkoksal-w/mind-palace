@@ -1,4 +1,4 @@
-module mind-palace
+module github.com/koksalmehmet/mind-palace
 
 go 1.25
 

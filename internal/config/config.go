@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"mind-palace/internal/jsonc"
-	"mind-palace/schemas"
-	"mind-palace/starter"
+	"github.com/koksalmehmet/mind-palace/internal/jsonc"
+	"github.com/koksalmehmet/mind-palace/schemas"
+	"github.com/koksalmehmet/mind-palace/starter"
 )
 
 // Guardrails defines file patterns the CLI should avoid touching.

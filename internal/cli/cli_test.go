@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"mind-palace/internal/verify"
+	"github.com/koksalmehmet/mind-palace/internal/verify"
 )
 
 func TestResolveVerifyModeConflicts(t *testing.T) {

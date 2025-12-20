@@ -12,8 +12,8 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"mind-palace/internal/config"
-	"mind-palace/internal/fsutil"
+	"github.com/koksalmehmet/mind-palace/internal/config"
+	"github.com/koksalmehmet/mind-palace/internal/fsutil"
 )
 
 // FileRecord captures metadata and chunked content for a file.

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"mind-palace/internal/config"
-	"mind-palace/internal/model"
+	"github.com/koksalmehmet/mind-palace/internal/config"
+	"github.com/koksalmehmet/mind-palace/internal/model"
 )
 
 // BuildProfile constructs a project profile with detected languages and guardrails.

@@ -1,8 +1,21 @@
 title: Mind Palace
 description: Deterministic context for AI agents
 remote_theme: pmarsceill/just-the-docs
-color_scheme: dark
 
+# Visuals
+color_scheme: dark
+callouts:
+  level: quiet
+
+# UX Features
 search_enabled: true
+heading_anchors: true
+back_to_top: true
+back_to_top_text: "Back to top"
+
+# Footer
+footer_content: "Copyright &copy; 2025 Mind Palace"
+
+# External
 aux_links:
   "GitHub Repository": https://github.com/koksalmehmet/mind-palace
