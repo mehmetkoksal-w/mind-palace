@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"mind-palace/internal/fsutil"
+	"github.com/koksalmehmet/mind-palace/internal/fsutil"
 )
 
 func TestGenerateChangeSignal(t *testing.T) {

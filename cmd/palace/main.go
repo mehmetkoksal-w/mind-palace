@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"mind-palace/internal/cli"
+	"github.com/koksalmehmet/mind-palace/internal/cli"
 )
 
 var (

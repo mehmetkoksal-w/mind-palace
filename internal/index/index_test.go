@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"mind-palace/internal/fsutil"
+	"github.com/koksalmehmet/mind-palace/internal/fsutil"
 )
 
 func TestSearchChunksHandlesSpaces(t *testing.T) {

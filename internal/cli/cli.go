@@ -9,16 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"mind-palace/internal/collect"
-	"mind-palace/internal/config"
-	"mind-palace/internal/index"
-	"mind-palace/internal/lint"
-	"mind-palace/internal/model"
-	"mind-palace/internal/project"
-	"mind-palace/internal/scan"
-	"mind-palace/internal/signal"
-	"mind-palace/internal/validate"
-	"mind-palace/internal/verify"
+	"github.com/koksalmehmet/mind-palace/internal/collect"
+	"github.com/koksalmehmet/mind-palace/internal/config"
+	"github.com/koksalmehmet/mind-palace/internal/index"
+	"github.com/koksalmehmet/mind-palace/internal/lint"
+	"github.com/koksalmehmet/mind-palace/internal/model"
+	"github.com/koksalmehmet/mind-palace/internal/project"
+	"github.com/koksalmehmet/mind-palace/internal/scan"
+	"github.com/koksalmehmet/mind-palace/internal/signal"
+	"github.com/koksalmehmet/mind-palace/internal/validate"
+	"github.com/koksalmehmet/mind-palace/internal/verify"
 )
 
 // Run dispatches CLI commands.

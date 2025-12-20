@@ -91,35 +91,42 @@ jobs:
             echo "version_tag=$TAG" >> $GITHUB_OUTPUT
           fi
 
-  publish:
+  build-assets:
     needs: [release-check, docs]
     if: needs.release-check.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     environment: production-release
     strategy:
       matrix:
         include:
-          - goos: darwin
+          - os: macos-latest
+            goos: darwin
             goarch: amd64
-            asset: palace-darwin-amd64
-          - goos: darwin
+            asset_name: palace-darwin-amd64
+            pkg_name: mind-palace-darwin-amd64.pkg
+          - os: macos-latest
+            goos: darwin
             goarch: arm64
-            asset: palace-darwin-arm64
-          - goos: linux
+            asset_name: palace-darwin-arm64
+            pkg_name: mind-palace-darwin-arm64.pkg
+          - os: ubuntu-latest
+            goos: linux
             goarch: amd64
-            asset: palace-linux-amd64
-          - goos: linux
+            asset_name: palace-linux-amd64
+          - os: ubuntu-latest
+            goos: linux
             goarch: arm64
-            asset: palace-linux-arm64
-          - goos: windows
+            asset_name: palace-linux-arm64
+          - os: ubuntu-latest
+            goos: windows
             goarch: amd64
-            asset: palace-windows-amd64.exe
+            asset_name: palace-windows-amd64.exe
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: Build ${{ matrix.asset }}
+      - name: Build ${{ matrix.asset_name }}
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -129,24 +136,54 @@ jobs:
         run: |
           BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${BUILD_DATE}"
-          go build -ldflags "$ldflags" -o "${{ matrix.asset }}" ./cmd/palace
+          go build -ldflags "$ldflags" -o "${{ matrix.asset_name }}" ./cmd/palace
+
+      - name: Create macOS Installer (.pkg)
+        if: matrix.goos == 'darwin'
+        run: |
+          mkdir -p staging/usr/local/bin
+          cp ${{ matrix.asset_name }} staging/usr/local/bin/palace
+          VER_NUM=$(echo ${{ needs.release-check.outputs.version_tag }} | sed 's/^v//')
+          pkgbuild --root staging \
+            --identifier "com.koksalmehmet.palace" \
+            --version "$VER_NUM" \
+            --install-location "/" \
+            ${{ matrix.pkg_name }}
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.asset }}
-          path: ${{ matrix.asset }}
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.goos == 'darwin'
+        with:
+          name: ${{ matrix.pkg_name }}
+          path: ${{ matrix.pkg_name }}
 
   finalize-release:
-    needs: [publish, release-check]
+    needs: [build-assets, release-check]
     if: needs.release-check.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
+      - name: Extract release notes
+        env:
+          VERSION: ${{ needs.release-check.outputs.version_tag }}
+        run: |
+          VERSION="${VERSION#v}"
+          go run ./scripts/extract_changelog.go "$VERSION" > release-notes.txt
       - name: Create Release on GitHub
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -165,4 +202,4 @@ jobs:
           cd ..
 
           # Create GitHub Release
-          gh release create "$TAG" ./dist/* --title "$TAG" --generate-notes
+          gh release create "$TAG" ./dist/* --title "$TAG" --notes-file release-notes.txt

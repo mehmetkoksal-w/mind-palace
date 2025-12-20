@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"mind-palace/internal/config"
-	"mind-palace/internal/jsonc"
+	"github.com/koksalmehmet/mind-palace/internal/config"
+	"github.com/koksalmehmet/mind-palace/internal/jsonc"
 )
 
 // Capability represents a runnable command for a capability.
