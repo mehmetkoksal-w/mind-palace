@@ -1,9 +1,9 @@
 package verify
 
 import (
-	"mind-palace/internal/config"
-	"mind-palace/internal/index"
-	"mind-palace/internal/stale"
+	"github.com/mehmetkoksal-w/mind-palace/internal/config"
+	"github.com/mehmetkoksal-w/mind-palace/internal/index"
+	"github.com/mehmetkoksal-w/mind-palace/internal/stale"
 )
 
 // detectStale determines which files in a directory are stale compared to a stored manifest.

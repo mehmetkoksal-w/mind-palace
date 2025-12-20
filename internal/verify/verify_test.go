@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"mind-palace/internal/config"
-	"mind-palace/internal/fsutil"
-	"mind-palace/internal/index"
+	"github.com/mehmetkoksal-w/mind-palace/internal/config"
+	"github.com/mehmetkoksal-w/mind-palace/internal/fsutil"
+	"github.com/mehmetkoksal-w/mind-palace/internal/index"
 )
 
 func TestDetectStaleIgnoresUnchangedFiles(t *testing.T) {

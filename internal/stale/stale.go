@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"mind-palace/internal/config"
-	"mind-palace/internal/fsutil"
-	"mind-palace/internal/index"
+	"github.com/mehmetkoksal-w/mind-palace/internal/config"
+	"github.com/mehmetkoksal-w/mind-palace/internal/fsutil"
+	"github.com/mehmetkoksal-w/mind-palace/internal/index"
 )
 
 // Mode defines staleness verification mode.

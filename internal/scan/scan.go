@@ -6,10 +6,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"mind-palace/internal/config"
-	"mind-palace/internal/index"
-	"mind-palace/internal/model"
-	"mind-palace/internal/validate"
+	"github.com/mehmetkoksal-w/mind-palace/internal/config"
+	"github.com/mehmetkoksal-w/mind-palace/internal/index"
+	"github.com/mehmetkoksal-w/mind-palace/internal/model"
+	"github.com/mehmetkoksal-w/mind-palace/internal/validate"
 )
 
 // Run executes the Tier 0 scan pipeline.

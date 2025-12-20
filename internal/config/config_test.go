@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"mind-palace/schemas"
+	"github.com/mehmetkoksal-w/mind-palace/schemas"
 )
 
 func TestLoadGuardrailsMergeExtendsDefaults(t *testing.T) {

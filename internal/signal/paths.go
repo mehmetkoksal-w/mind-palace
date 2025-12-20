@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"mind-palace/internal/config"
-	"mind-palace/internal/fsutil"
-	"mind-palace/internal/model"
-	"mind-palace/internal/validate"
+	"github.com/mehmetkoksal-w/mind-palace/internal/config"
+	"github.com/mehmetkoksal-w/mind-palace/internal/fsutil"
+	"github.com/mehmetkoksal-w/mind-palace/internal/model"
+	"github.com/mehmetkoksal-w/mind-palace/internal/validate"
 )
 
 // Paths returns changed paths for a diff range, preferring a matching change signal when available.

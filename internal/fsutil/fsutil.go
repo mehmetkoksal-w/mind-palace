@@ -11,7 +11,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 
-	"mind-palace/internal/config"
+	"github.com/mehmetkoksal-w/mind-palace/internal/config"
 )
 
 // Chunk represents a segment of a file for FTS indexing.

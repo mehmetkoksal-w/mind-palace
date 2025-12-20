@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"mind-palace/internal/config"
-	"mind-palace/internal/fsutil"
-	"mind-palace/internal/model"
-	"mind-palace/internal/validate"
+	"github.com/mehmetkoksal-w/mind-palace/internal/config"
+	"github.com/mehmetkoksal-w/mind-palace/internal/fsutil"
+	"github.com/mehmetkoksal-w/mind-palace/internal/model"
+	"github.com/mehmetkoksal-w/mind-palace/internal/validate"
 )
 
 // Generate produces a change signal for the given git diff range and writes it to outputs.

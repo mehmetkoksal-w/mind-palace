@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"mind-palace/internal/validate"
+	"github.com/mehmetkoksal-w/mind-palace/internal/validate"
 )
 
 // Run validates curated palace artifacts using embedded schemas.

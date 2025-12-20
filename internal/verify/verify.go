@@ -7,11 +7,11 @@ import (
 	"sort"
 	"strings"
 
-	"mind-palace/internal/config"
-	"mind-palace/internal/fsutil"
-	"mind-palace/internal/index"
-	"mind-palace/internal/signal"
-	"mind-palace/internal/stale"
+	"github.com/mehmetkoksal-w/mind-palace/internal/config"
+	"github.com/mehmetkoksal-w/mind-palace/internal/fsutil"
+	"github.com/mehmetkoksal-w/mind-palace/internal/index"
+	"github.com/mehmetkoksal-w/mind-palace/internal/signal"
+	"github.com/mehmetkoksal-w/mind-palace/internal/stale"
 )
 
 // Mode defines staleness verification mode.
