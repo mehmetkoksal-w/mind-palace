@@ -1,6 +1,11 @@
 package cli
 
-import "fmt"
+import (
+	"flag"
+	"fmt"
+
+	"github.com/mehmetkoksal-w/mind-palace/internal/update"
+)
 
 var (
 	buildVersion = "dev"
@@ -8,7 +13,6 @@ var (
 	buildDate    = "unknown"
 )
 
-// SetBuildInfo configures build metadata for the CLI.
 func SetBuildInfo(version, commit, date string) {
 	if version != "" {
 		buildVersion = version
@@ -21,7 +25,33 @@ func SetBuildInfo(version, commit, date string) {
 	}
 }
 
-func cmdVersion() error {
+func GetVersion() string {
+	return buildVersion
+}
+
+func cmdVersion(args []string) error {
+	fs := flag.NewFlagSet("version", flag.ContinueOnError)
+	check := fs.Bool("check", false, "check for updates")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
 	fmt.Printf("palace %s (commit %s, built %s)\n", buildVersion, buildCommit, buildDate)
+
+	if *check {
+		result, err := update.Check(buildVersion)
+		if err != nil {
+			fmt.Printf("\nUpdate check failed: %v\n", err)
+			return nil
+		}
+
+		if result.UpdateAvailable {
+			fmt.Printf("\nUpdate available: v%s -> v%s\n", result.CurrentVersion, result.LatestVersion)
+			fmt.Printf("Run 'palace update' to install\n")
+		} else {
+			fmt.Printf("\nYou are running the latest version.\n")
+		}
+	}
+
 	return nil
 }

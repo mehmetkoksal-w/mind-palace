@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Self-Update**: New `palace update` command downloads and installs the latest release from GitHub.
+- **Version Check**: `palace version --check` flag to check for available updates without installing.
+- **Startup Notification**: Automatic update check on CLI startup (cached for 24 hours) with non-blocking notification when a new version is available.
+
 ## [0.0.1-rc2] - 2025-12-21
 
 ### Fixed
