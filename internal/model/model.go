@@ -10,7 +10,6 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/jsonc"
 )
 
-// Capability represents a runnable command for a capability.
 type Capability struct {
 	Command          string            `json:"command"`
 	Description      string            `json:"description"`
@@ -18,7 +17,6 @@ type Capability struct {
 	Env              map[string]string `json:"env,omitempty"`
 }
 
-// ProjectProfile describes detected project capabilities and guardrails.
 type ProjectProfile struct {
 	SchemaVersion string                `json:"schemaVersion"`
 	Kind          string                `json:"kind"`
@@ -29,7 +27,6 @@ type ProjectProfile struct {
 	Provenance    map[string]string     `json:"provenance"`
 }
 
-// ScopeInfo describes what inputs were considered for an operation.
 type ScopeInfo struct {
 	Mode      string `json:"mode"`                // "full" | "diff"
 	Source    string `json:"source"`              // "full-scan" | "git-diff" | "change-signal"
@@ -37,7 +34,6 @@ type ScopeInfo struct {
 	DiffRange string `json:"diffRange,omitempty"` // when mode="diff"
 }
 
-// ContextPack is the authoritative context artifact.
 type ContextPack struct {
 	SchemaVersion     string               `json:"schemaVersion"`
 	Kind              string               `json:"kind"`
@@ -49,7 +45,8 @@ type ContextPack struct {
 	Plan              []PlanStep           `json:"plan"`
 	Verification      []VerificationResult `json:"verification"`
 
-	Scope *ScopeInfo `json:"scope,omitempty"`
+	Scope     *ScopeInfo     `json:"scope,omitempty"`
+	Corridors []CorridorInfo `json:"corridors,omitempty"` // Remote context from neighbors
 
 	ScanID   string `json:"scanId"`
 	ScanHash string `json:"scanHash"`
@@ -58,7 +55,17 @@ type ContextPack struct {
 	Provenance Provenance `json:"provenance"`
 }
 
-// Finding captures deterministic findings.
+type CorridorInfo struct {
+	Name        string   `json:"name"`                  // Neighbor name
+	Source      string   `json:"source"`                // URL or local path
+	Goal        string   `json:"goal,omitempty"`        // Remote pack's goal
+	Files       []string `json:"files"`                 // Namespaced: corridor://{name}/{path}
+	Rooms       []string `json:"rooms,omitempty"`       // Remote room names
+	FromCache   bool     `json:"fromCache"`             // True if loaded from cache
+	FetchedAt   string   `json:"fetchedAt"`             // When this was fetched
+	Error       string   `json:"error,omitempty"`       // Any fetch errors (non-fatal)
+}
+
 type Finding struct {
 	Summary  string `json:"summary"`
 	Detail   string `json:"detail,omitempty"`
@@ -66,20 +73,17 @@ type Finding struct {
 	File     string `json:"file,omitempty"`
 }
 
-// PlanStep tracks execution progress.
 type PlanStep struct {
 	Step   string `json:"step"`
 	Status string `json:"status"`
 }
 
-// VerificationResult tracks verification outcomes.
 type VerificationResult struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
 	Detail string `json:"detail,omitempty"`
 }
 
-// Provenance records who generated the artifact.
 type Provenance struct {
 	CreatedBy        string `json:"createdBy"`
 	CreatedAt        string `json:"createdAt"`
@@ -89,7 +93,6 @@ type Provenance struct {
 	GeneratorVersion string `json:"generatorVersion,omitempty"`
 }
 
-// Room describes a curated room manifest.
 type Room struct {
 	SchemaVersion string         `json:"schemaVersion"`
 	Kind          string         `json:"kind"`
@@ -101,7 +104,6 @@ type Room struct {
 	Steps         []RoomStep     `json:"steps,omitempty"`
 }
 
-// Playbook describes a curated playbook manifest.
 type Playbook struct {
 	SchemaVersion string   `json:"schemaVersion"`
 	Kind          string   `json:"kind"`
@@ -110,14 +112,12 @@ type Playbook struct {
 	Rooms         []string `json:"rooms"`
 }
 
-// RoomArtifact captures declared artifacts in a room.
 type RoomArtifact struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 	PathHint    string `json:"pathHint,omitempty"`
 }
 
-// RoomStep captures declared steps in a room.
 type RoomStep struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
@@ -125,7 +125,6 @@ type RoomStep struct {
 	Evidence    string `json:"evidence,omitempty"`
 }
 
-// LoadContextPack reads a context pack from disk.
 func LoadContextPack(path string) (ContextPack, error) {
 	var cp ContextPack
 	if err := jsonc.DecodeFile(path, &cp); err != nil {
@@ -134,7 +133,6 @@ func LoadContextPack(path string) (ContextPack, error) {
 	return cp, nil
 }
 
-// WriteContextPack writes a context pack as JSON.
 func WriteContextPack(path string, cp ContextPack) error {
 	normalizeContextPack(&cp)
 	data, err := json.MarshalIndent(cp, "", "  ")
@@ -147,7 +145,6 @@ func WriteContextPack(path string, cp ContextPack) error {
 	return nil
 }
 
-// NewContextPack creates a bare context pack for a goal.
 func NewContextPack(goal string) ContextPack {
 	now := time.Now().UTC().Format(time.RFC3339)
 	return ContextPack{
@@ -171,7 +168,6 @@ func NewContextPack(goal string) ContextPack {
 	}
 }
 
-// Clone returns a shallow copy of the context pack.
 func (cp ContextPack) Clone() ContextPack {
 	return cp
 }

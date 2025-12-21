@@ -9,7 +9,6 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/model"
 )
 
-// BuildProfile constructs a project profile with detected languages and guardrails.
 func BuildProfile(root string) model.ProjectProfile {
 	languages := detectLanguages(root)
 	guardrails := config.LoadGuardrails(root)

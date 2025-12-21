@@ -1,33 +1,138 @@
-# Extensibility & Versioning
+---
+layout: default
+title: Extensibility
+nav_order: 9
+---
 
-Mind Palace is schema-first. Extend behavior by adding curated artifacts or evolving schemas carefully.
+# Extensibility
 
-## Adding rooms
-- Create `.palace/rooms/<name>.jsonc` following the embedded `room` schema.
-- Define entry points and evidence relevant to the capability you want to collect.
-- Reference the room from `palace.jsonc` (`defaultRoom`) or playbooks as needed.
-- Keep paths normalized (forward slashes) to align with guardrails and index paths.
+Mind Palace is schema-first. Extend by adding curated artifacts.
 
-## Adding playbooks
-- Create `.palace/playbooks/<name>.jsonc` using the embedded `playbook` schema.
-- Describe routes through rooms, required evidence, and verification expectations.
-- Playbooks are declarative; they do not execute commands. Keep instructions deterministic.
+---
 
-## Extending schemas safely
-- Embedded schemas are canonical. To propose changes:
-  1. Update the schema under `/schemas/*.schema.json`.
-  2. Update any affected models/validation (if code changes are needed).
-  3. Export via `palace init`/`palace detect` (or `CopySchemas`) to refresh `.palace/schemas/*`.
-  4. Add tests that validate the new contract.
-- Treat new required fields as breaking changes; optional fields (with defaults or clear semantics) are preferred for compatibility.
+## Adding Rooms
 
-## Versioning expectations
-- Schemas include `schemaVersion` and `kind` fields; bump versions when making breaking changes.
-- Context-dependent artifacts (context-pack, change-signal, scan summary) must remain reproducible from input state; avoid non-deterministic fields.
-- Align CLI flags and behavior with schema changes; never silently widen scope or relax validation.
+Create `.palace/rooms/<name>.jsonc`:
 
-## What counts as breaking
-- Removing or renaming existing required fields.
-- Changing semantics of guardrails (e.g., dropping defaults) or diff strictness.
-- Introducing non-deterministic behavior in scan, collect, or verify.
-- Changing file layout under `.palace/` without migration guidance.
+```jsonc
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "payments",
+  "purpose": "Payment processing and billing",
+  "entryPoints": [
+    "src/payments/processor.ts",
+    "src/payments/stripe.ts"
+  ],
+  "includeGlobs": ["src/payments/**"],
+  "excludeGlobs": ["**/*.test.ts"]
+}
+```
+
+### Guidelines
+
+- Entry points should be the "start here" files
+- Use forward slashes in paths
+- Keep Rooms focused (one capability each)
+
+---
+
+## Adding Playbooks
+
+Create `.palace/playbooks/<name>.jsonc`:
+
+```jsonc
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/playbook",
+  "name": "add-api-endpoint",
+  "purpose": "Add a new REST API endpoint",
+  "rooms": ["api", "validation", "tests"],
+  "steps": [
+    "Define route in src/routes/",
+    "Add request validation schema",
+    "Implement handler",
+    "Add integration test",
+    "Update OpenAPI spec"
+  ],
+  "verification": [
+    "palace verify --strict",
+    "npm test"
+  ]
+}
+```
+
+### Guidelines
+
+- Playbooks are declarative (don't run code)
+- Steps should be actionable instructions
+- Reference relevant Rooms
+
+---
+
+## Schema Versioning
+
+All artifacts have `schemaVersion` and `kind`:
+
+```jsonc
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  // ...
+}
+```
+
+### Version Bumps
+
+| Change Type | Version Bump | Example |
+|-------------|--------------|---------|
+| Breaking (remove field) | Major | 1.0.0 → 2.0.0 |
+| New optional field | Minor | 1.0.0 → 1.1.0 |
+| Bug fix | Patch | 1.0.0 → 1.0.1 |
+
+---
+
+## Modifying Schemas
+
+Schemas live in `/schemas/*.schema.json`. To modify:
+
+1. Edit schema file
+2. Update CLI validation code if needed
+3. Run `palace init --force` to re-export
+4. Bump `schemaVersion` if breaking
+
+### Breaking Changes
+
+Avoid if possible. If necessary:
+
+- Provide migration guidance
+- Update all example configs
+- Bump major version
+
+---
+
+## What's Deterministic
+
+These must remain deterministic:
+
+| Component | Guarantee |
+|-----------|-----------|
+| `scan` | Same files → same Index |
+| `collect` | Same Index + Rooms → same context pack |
+| `signal` | Same diff → same change signal |
+| `verify` | Same state → same result |
+
+Non-determinism is a bug.
+
+---
+
+## Future Extension Points
+
+Planned but not implemented:
+
+| Feature | Description |
+|---------|-------------|
+| Custom rankers | Plug-in scoring for Butler |
+| Hooks | Pre/post command scripts |
+| Sessions | Persist agent conversations |
+| Maps | Visual dependency graphs |

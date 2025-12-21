@@ -14,7 +14,6 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/stale"
 )
 
-// Mode defines staleness verification mode.
 type Mode string
 
 const (
@@ -22,15 +21,12 @@ const (
 	ModeStrict Mode = "strict"
 )
 
-// Options controls verification.
 type Options struct {
 	Root      string
 	DiffRange string
 	Mode      Mode
 }
 
-// Run performs staleness verification according to options.
-// Returns (staleEntries, usedFullScope, scopeSource, candidateCount, error).
 func Run(db *sql.DB, opts Options) ([]string, bool, string, int, error) {
 	rootPath, err := filepath.Abs(opts.Root)
 	if err != nil {
@@ -48,7 +44,6 @@ func Run(db *sql.DB, opts Options) ([]string, bool, string, int, error) {
 		return nil, false, "", 0, err
 	}
 
-	// Full scope = all files in workspace.
 	if fullScope {
 		candidates, err = fsutil.ListFiles(rootPath, guardrails)
 		if err != nil {
@@ -62,7 +57,6 @@ func Run(db *sql.DB, opts Options) ([]string, bool, string, int, error) {
 		mode = stale.ModeStrict
 	}
 
-	// includeMissing when full scope; in diff scope, only check candidates.
 	includeMissing := fullScope
 	staleList := stale.Detect(rootPath, candidates, stored, guardrails, mode, includeMissing)
 
@@ -71,8 +65,6 @@ func Run(db *sql.DB, opts Options) ([]string, bool, string, int, error) {
 	return staleList, fullScope, source, scopeCount, nil
 }
 
-// scopeCandidates returns candidate paths and whether scope is full.
-// Also returns a source string for reporting: "full-scan" | "git-diff" | "change-signal".
 func scopeCandidates(rootPath string, guardrails config.Guardrails, diffRange string) ([]string, bool, string, error) {
 	if strings.TrimSpace(diffRange) == "" {
 		return nil, true, "full-scan", nil

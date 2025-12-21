@@ -17,7 +17,6 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/validate"
 )
 
-// Generate produces a change signal for the given git diff range and writes it to outputs.
 func Generate(root string, diffRange string) (model.ChangeSignal, error) {
 	if strings.TrimSpace(diffRange) == "" {
 		return model.ChangeSignal{}, errors.New("signal requires --diff range")

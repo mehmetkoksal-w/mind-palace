@@ -6,13 +6,6 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/stale"
 )
 
-// detectStale determines which files in a directory are stale compared to a stored manifest.
-//
-// Takes: dir, changedFiles, stored metadata, guardrails, mode, normalizeTimestamps
-// Returns: list of stale file paths to be pruned or revalidated.
-//
-// Note: current implementation delegates to internal/stale.Detect.
-// normalizeTimestamps is kept for compatibility (stale.Detect handles timestamp normalization internally).
 func detectStale(
 	dir string,
 	changedFiles []string,

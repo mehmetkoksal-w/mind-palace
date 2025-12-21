@@ -1,42 +1,151 @@
-# End-to-End Workflow
+---
+layout: default
+title: Workflows
+nav_order: 4
+---
 
-This is a realistic daily loop for using Mind Palace on an active repository.
+# Workflows
 
-## 1) Initialize palace
-`palace init` creates `.palace/` scaffolding and exports embedded schemas. Optional `--with-outputs` creates a starter context-pack; defaults avoid generating outputs.
+## Setup (Once)
 
-## 2) Detect project profile
-`palace detect` writes `.palace/project-profile.json` (JSON) based on the current repo. Curated files remain untouched.
+```sh
+palace init          # Create .palace/ structure
+palace detect        # Auto-detect language/framework
+palace scan          # Build initial index
+```
 
-## 3) Scan workspace (Tier-0)
-`palace scan` reads files outside guardrails, chunks content, hashes files, and writes:
-- `.palace/index/palace.db` (SQLite WAL + FTS5)
-- `.palace/index/scan.json` (validated scan summary with IDs/counts/hash)
-Always run scan after meaningful file changes to keep the index fresh.
+## Daily Loop
 
-## 4) Plan with a goal
-`palace plan --goal "<goal>"` seeds or updates the context pack goal and provenance. It does not scan or collect evidence.
+### Terminal
 
-## 5) Collect context
-`palace collect [--diff <range>] [--allow-stale]` assembles `.palace/outputs/context-pack.json` from the existing index + curated manifests.
-- **Full scope (no --diff)**: fails if the index is stale unless `--allow-stale`.
-- **Diff scope (--diff)**: uses git diff or a matching change-signal; never widens scope.
+```sh
+# After changes
+palace scan          # Rebuild index
+palace collect       # Refresh context pack
 
-## 6) Run agent / perform changes
-Use context-pack + rooms/playbooks to guide changes. Agents should not rescan; they should consume the generated artifacts.
+# Before agent work
+palace verify        # Confirm freshness
+palace ask "query"   # Find relevant code
+```
 
-## 7) Capture change signal (diff-scoped work)
-`palace signal --diff <range>` writes `.palace/outputs/change-signal.json` (sorted, hashed for non-deleted paths). Useful for CI, code review, and deterministic agent runs.
+### VS Code (Automatic)
 
-## 8) Verify consistency
-`palace verify [--fast|--strict] [--diff <range>]` runs lint, then staleness checks.
-- **Fast (default)**: mtime/size shortcut with selective hashing.
-- **Strict**: hash all candidates.
-- **Diff strictness**: if diff cannot be computed, verification errors instead of widening scope. Empty diffs verify zero candidates.
+```
+Edit files → Save → Extension runs verify → Auto-heal if stale
+```
 
-## 9) Iterate
-After merges or new changes, rerun scan → collect → verify. Keep curated files in VCS; keep generated outputs ignored but reproducible.
+The Observer extension handles the loop automatically:
 
-## Releasing
-- Tag and push: `git tag v0.1.0 && git push origin v0.1.0`
-- CI builds cross-platform binaries, generates SHA256SUMS, and publishes a GitHub Release automatically.
+1. **Save file** - triggers debounced verify
+2. **If stale** - runs `palace scan && palace collect`
+3. **HUD updates** - green (fresh) or red (stale)
+
+## Diff-Scoped Workflows
+
+Constrain context to only changed files:
+
+```sh
+# Generate change signal
+palace signal --diff HEAD~1..HEAD
+
+# Collect only affected context
+palace collect --diff HEAD~1..HEAD
+
+# Verify only changed files
+palace verify --diff HEAD~1..HEAD
+```
+
+Useful for:
+- CI pipelines (verify only PR changes)
+- Large monorepos (avoid full scans)
+- Focused agent sessions
+
+## CI Integration
+
+```yaml
+# .github/workflows/verify.yml
+- name: Verify Mind Palace
+  run: |
+    palace verify --strict --diff ${{ github.event.pull_request.base.sha }}..${{ github.sha }}
+```
+
+Exit codes:
+- `0` - Fresh, proceed
+- `1` - Stale, fail CI
+- `2` - Config error
+
+## Agent Sessions
+
+### Via MCP (Recommended)
+
+```json
+{
+  "mcpServers": {
+    "mind-palace": {
+      "command": "palace",
+      "args": ["serve", "--root", "/path/to/project"]
+    }
+  }
+}
+```
+
+Agent can then:
+1. Call `search_mind_palace` to find code
+2. Call `list_rooms` to understand structure
+3. Read files via `palace://files/{path}`
+
+### Via Context Pack
+
+```sh
+palace collect --goal "Fix the auth bug"
+# Hand context-pack.json to agent
+```
+
+---
+
+## Command Reference
+
+| Command | Purpose | Key Flags |
+|---------|---------|-----------|
+| `palace init` | Create .palace/ | `--with-outputs` |
+| `palace detect` | Auto-detect project | - |
+| `palace scan` | Build/rebuild index | - |
+| `palace collect` | Assemble context pack | `--diff`, `--goal`, `--allow-stale` |
+| `palace verify` | Check freshness | `--fast`, `--strict`, `--diff` |
+| `palace signal` | Generate change signal | `--diff` |
+| `palace ask` | Search index | `--room` |
+| `palace serve` | Start MCP server | `--root` |
+| `palace lint` | Validate configs | - |
+
+---
+
+## VS Code Extension
+
+### HUD States
+
+| State | Meaning | Action |
+|-------|---------|--------|
+| Green | Index is fresh | None needed |
+| Red | Files changed | Auto-heal or manual scan |
+| Amber | Scanning | Wait |
+
+### Configuration
+
+Settings in `.palace/palace.jsonc` override VS Code settings:
+
+```jsonc
+{
+  "vscode": {
+    "autoSync": true,
+    "autoSyncDelay": 3000,
+    "decorations": { "enabled": true },
+    "sidebar": { "defaultView": "tree" }
+  }
+}
+```
+
+### Sidebar
+
+- **Tree view** - Rooms as folders, files as entries
+- **Graph view** - Cytoscape visualization of connections
+- **Search** - Query Butler directly from sidebar

@@ -14,7 +14,6 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/config"
 )
 
-// Chunk represents a segment of a file for FTS indexing.
 type Chunk struct {
 	Index     int
 	StartLine int
@@ -46,7 +45,6 @@ func MatchesGuardrail(path string, guardrails config.Guardrails) bool {
 	return false
 }
 
-// HashFile returns the SHA-256 hash of the file at the given path.
 func HashFile(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -60,7 +58,6 @@ func HashFile(path string) (string, error) {
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-// ListFiles returns relative file paths under root respecting guardrails.
 func ListFiles(root string, guardrails config.Guardrails) ([]string, error) {
 	var files []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -93,7 +90,6 @@ func ListFiles(root string, guardrails config.Guardrails) ([]string, error) {
 	return files, nil
 }
 
-// ChunkContent splits file content into deterministic chunks.
 func ChunkContent(content string, maxLines int, maxBytes int) []Chunk {
 	if maxLines <= 0 {
 		maxLines = 120
@@ -139,10 +135,8 @@ func ChunkContent(content string, maxLines int, maxBytes int) []Chunk {
 	return chunks
 }
 
-// ErrNotFound indicates a missing file.
 var ErrNotFound = os.ErrNotExist
 
-// FileStat provides lightweight file metadata for staleness checks.
 type FileStat struct {
 	Size    int64
 	ModTime time.Time

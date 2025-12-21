@@ -16,7 +16,6 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/fsutil"
 )
 
-// FileRecord captures metadata and chunked content for a file.
 type FileRecord struct {
 	Path    string
 	Hash    string
@@ -25,7 +24,6 @@ type FileRecord struct {
 	Chunks  []fsutil.Chunk
 }
 
-// ScanSummary describes the last completed scan.
 type ScanSummary struct {
 	ID          int64
 	Root        string
@@ -36,7 +34,6 @@ type ScanSummary struct {
 	CompletedAt time.Time
 }
 
-// Open returns a SQLite connection configured for WAL.
 func Open(dbPath string) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
 		return nil, err
@@ -81,7 +78,12 @@ func ensureSchema(db *sql.DB) error {
             content TEXT NOT NULL,
             FOREIGN KEY(path) REFERENCES files(path) ON DELETE CASCADE
         );`,
-		`CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(path, content, chunk_index);`,
+		`CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
+			path, 
+			content, 
+			chunk_index,
+			tokenize="unicode61 tokenchars '_.:@#$-'"
+		);`,
 		`CREATE TABLE IF NOT EXISTS scans (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             root TEXT NOT NULL,
@@ -91,6 +93,7 @@ func ensureSchema(db *sql.DB) error {
         );`,
 		`CREATE INDEX IF NOT EXISTS idx_chunks_path ON chunks(path);`,
 	}
+
 	for _, stmt := range stmts {
 		if _, err := db.Exec(stmt); err != nil {
 			return fmt.Errorf("ensure schema: %w", err)
@@ -99,7 +102,7 @@ func ensureSchema(db *sql.DB) error {
 	return nil
 }
 
-// BuildFileRecords reads and chunks files under root respecting guardrails.
+
 func BuildFileRecords(root string, guardrails config.Guardrails) ([]FileRecord, error) {
 	files, err := fsutil.ListFiles(root, guardrails)
 	if err != nil {
@@ -130,7 +133,6 @@ func BuildFileRecords(root string, guardrails config.Guardrails) ([]FileRecord, 
 	return records, nil
 }
 
-// WriteScan replaces existing index content with provided records.
 func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Time) (ScanSummary, error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -215,7 +217,6 @@ func computeScanHash(records []FileRecord) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-// LatestScan returns the most recent scan summary.
 func LatestScan(db *sql.DB) (ScanSummary, error) {
 	row := db.QueryRow(`SELECT id, root, scan_hash, completed_at FROM scans ORDER BY id DESC LIMIT 1;`)
 	var id int64
@@ -233,14 +234,12 @@ func LatestScan(db *sql.DB) (ScanSummary, error) {
 	return ScanSummary{ID: id, Root: root, ScanHash: hash, CompletedAt: t}, nil
 }
 
-// FileMetadata represents stored file attributes.
 type FileMetadata struct {
 	Hash    string
 	Size    int64
 	ModTime time.Time
 }
 
-// LoadFileMetadata returns stored metadata keyed by path.
 func LoadFileMetadata(db *sql.DB) (map[string]FileMetadata, error) {
 	rows, err := db.Query(`SELECT path, hash, size, mod_time FROM files;`)
 	if err != nil {
@@ -266,7 +265,6 @@ func LoadFileMetadata(db *sql.DB) (map[string]FileMetadata, error) {
 // DBHandle aliases sql.DB for external packages.
 type DBHandle = sql.DB
 
-// ChunkHit represents an FTS search hit.
 type ChunkHit struct {
 	Path       string
 	ChunkIndex int
@@ -275,7 +273,6 @@ type ChunkHit struct {
 	Content    string
 }
 
-// ChunkRow represents stored chunk content for a file.
 type ChunkRow struct {
 	ChunkIndex int
 	StartLine  int
@@ -283,7 +280,6 @@ type ChunkRow struct {
 	Content    string
 }
 
-// SearchChunks performs a basic full-text search over chunk content.
 func SearchChunks(db *sql.DB, query string, limit int) ([]ChunkHit, error) {
 	if strings.TrimSpace(query) == "" {
 		return nil, nil
@@ -315,14 +311,12 @@ func SearchChunks(db *sql.DB, query string, limit int) ([]ChunkHit, error) {
 	return hits, rows.Err()
 }
 
-// sanitizeFTSQuery wraps the query in quotes and escapes embedded quotes to keep MATCH syntax stable.
 func sanitizeFTSQuery(q string) string {
 	trimmed := strings.TrimSpace(q)
 	trimmed = strings.ReplaceAll(trimmed, "\"", "\"\"")
 	return fmt.Sprintf("\"%s\"", trimmed)
 }
 
-// GetChunksForFile retrieves chunks for a file.
 func GetChunksForFile(db *sql.DB, path string) ([]ChunkRow, error) {
 	rows, err := db.Query(`SELECT chunk_index, start_line, end_line, content FROM chunks WHERE path = ? ORDER BY chunk_index ASC;`, path)
 	if err != nil {

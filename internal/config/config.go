@@ -13,13 +13,28 @@ import (
 	"github.com/koksalmehmet/mind-palace/starter"
 )
 
-// Guardrails defines file patterns the CLI should avoid touching.
 type Guardrails struct {
 	DoNotTouchGlobs []string `json:"doNotTouchGlobs,omitempty"`
 	ReadOnlyGlobs   []string `json:"readOnlyGlobs,omitempty"`
 }
 
-// PalaceConfig mirrors the curated palace.jsonc structure.
+type NeighborConfig struct {
+	URL       string      `json:"url,omitempty"`
+	LocalPath string      `json:"localPath,omitempty"`
+	Auth      *AuthConfig `json:"auth,omitempty"`
+	TTL       string      `json:"ttl,omitempty"`
+	Enabled   *bool       `json:"enabled,omitempty"`
+}
+
+type AuthConfig struct {
+	Type   string `json:"type"`
+	Token  string `json:"token,omitempty"`
+	User   string `json:"user,omitempty"`
+	Pass   string `json:"pass,omitempty"`
+	Header string `json:"header,omitempty"`
+	Value  string `json:"value,omitempty"`
+}
+
 type PalaceConfig struct {
 	SchemaVersion string `json:"schemaVersion"`
 	Kind          string `json:"kind"`
@@ -29,12 +44,12 @@ type PalaceConfig struct {
 		Language    string `json:"language"`
 		Repository  string `json:"repository"`
 	} `json:"project"`
-	DefaultRoom string     `json:"defaultRoom"`
-	Guardrails  Guardrails `json:"guardrails"`
-	Provenance  any        `json:"provenance"`
+	DefaultRoom string                    `json:"defaultRoom"`
+	Guardrails  Guardrails                `json:"guardrails"`
+	Neighbors   map[string]NeighborConfig `json:"neighbors,omitempty"`
+	Provenance  any                       `json:"provenance"`
 }
 
-// EnsureLayout creates the .palace directory hierarchy.
 func EnsureLayout(root string) (string, error) {
 	palaceDir := filepath.Join(root, ".palace")
 	dirs := []string{
@@ -45,6 +60,7 @@ func EnsureLayout(root string) (string, error) {
 		filepath.Join(palaceDir, "schemas"),
 		filepath.Join(palaceDir, "maps"),
 		filepath.Join(palaceDir, "index"),
+		filepath.Join(palaceDir, "cache"),
 	}
 	for _, d := range dirs {
 		if err := os.MkdirAll(d, 0o755); err != nil {
@@ -54,7 +70,6 @@ func EnsureLayout(root string) (string, error) {
 	return palaceDir, nil
 }
 
-// WriteTemplate writes a starter template into the palace directory.
 func WriteTemplate(destPath, templateName string, replacements map[string]string, allowOverwrite bool) error {
 	if _, err := os.Stat(destPath); err == nil && !allowOverwrite {
 		return nil
@@ -75,7 +90,6 @@ func WriteTemplate(destPath, templateName string, replacements map[string]string
 	return nil
 }
 
-// LoadPalaceConfig parses the curated palace.jsonc file if present.
 func LoadPalaceConfig(root string) (*PalaceConfig, error) {
 	path := filepath.Join(root, ".palace", "palace.jsonc")
 	var cfg PalaceConfig
@@ -188,7 +202,6 @@ func loadEmbeddedSchemas() (map[string][]byte, error) {
 	return schemas.List()
 }
 
-// WriteJSON writes JSON (not JSONC) with indentation.
 func WriteJSON(path string, data any) error {
 	b, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {

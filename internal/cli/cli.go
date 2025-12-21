@@ -9,9 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/koksalmehmet/mind-palace/internal/butler"
 	"github.com/koksalmehmet/mind-palace/internal/collect"
 	"github.com/koksalmehmet/mind-palace/internal/config"
 	"github.com/koksalmehmet/mind-palace/internal/index"
+	"github.com/koksalmehmet/mind-palace/internal/jsonc"
 	"github.com/koksalmehmet/mind-palace/internal/lint"
 	"github.com/koksalmehmet/mind-palace/internal/model"
 	"github.com/koksalmehmet/mind-palace/internal/project"
@@ -21,7 +23,10 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/verify"
 )
 
-// Run dispatches CLI commands.
+func init() {
+	butler.SetJSONCDecoder(jsonc.DecodeFile)
+}
+
 func Run(args []string) error {
 	if len(args) == 0 {
 		return usage()
@@ -47,6 +52,10 @@ func Run(args []string) error {
 		return cmdSignal(args[1:])
 	case "explain":
 		return cmdExplain(args[1:])
+	case "ask":
+		return cmdAsk(args[1:])
+	case "serve":
+		return cmdServe(args[1:])
 	case "help", "-h", "--help":
 		return usage()
 	default:
@@ -55,14 +64,19 @@ func Run(args []string) error {
 }
 
 func usage() error {
-	fmt.Println(`palace commands: init | detect | scan | lint | verify | plan | collect | signal | explain
+	fmt.Println(`palace commands: init | detect | scan | lint | verify | plan | collect | signal | explain | ask | serve
 
 Examples:
   palace init
   palace scan
   palace verify --diff HEAD~1..HEAD
   palace collect --diff HEAD~1..HEAD
-  palace explain verify`)
+  palace explain verify
+
+  # Butler:
+  palace ask "where is the auth logic"
+  palace ask --room project-overview "entry points"
+  palace serve   # Start MCP server for AI agents`)
 	return nil
 }
 
@@ -227,7 +241,7 @@ func cmdVerify(args []string) error {
 	var strictFlag boolFlag
 	fs.Var(&fastFlag, "fast", "fast mode (default; mtime/size with selective hashing)")
 	fs.Var(&strictFlag, "strict", "strict mode (hash all; disables fast)")
-	fastFlag.value = true // default fast
+	fastFlag.value = true
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -356,16 +370,21 @@ func cmdCollect(args []string) error {
 	}
 
 	fullScope := strings.TrimSpace(*diff) == ""
-	cp, err := collect.Run(*root, *diff, collect.Options{AllowStale: *allowStale})
+	result, err := collect.Run(*root, *diff, collect.Options{AllowStale: *allowStale})
 	if err != nil {
 		return err
 	}
 
+	cp := result.ContextPack
 	source := ""
 	if cp.Scope != nil {
 		source = cp.Scope.Source
 	}
 	printScope("collect", fullScope, source, *diff, scopeFileCount(cp), mustAbs(*root))
+
+	for _, warning := range result.CorridorWarnings {
+		fmt.Fprintf(os.Stderr, "⚠️  %s\n", warning)
+	}
 
 	fmt.Printf("context pack updated from scan %s\n", cp.ScanHash)
 	return nil
@@ -412,7 +431,6 @@ func cmdExplain(args []string) error {
 	return nil
 }
 
-// --- helpers ---
 
 func printScope(cmd string, fullScope bool, source string, diffRange string, fileCount int, rootPath string) {
 	mode := "diff"
@@ -451,7 +469,6 @@ func scopeFileCount(cp model.ContextPack) int {
 	return cp.Scope.FileCount
 }
 
-// --- explain text ---
 
 func explainAll() string {
 	return strings.Join([]string{
@@ -528,4 +545,132 @@ func explainArtifacts() string {
     - .palace/outputs/*
     - .palace/sessions/* (if present)
     - *.db artifacts`
+}
+
+
+func cmdAsk(args []string) error {
+	fs := flag.NewFlagSet("ask", flag.ContinueOnError)
+	root := fs.String("root", ".", "workspace root")
+	room := fs.String("room", "", "filter to specific room")
+	limit := fs.Int("limit", 10, "maximum results")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	remaining := fs.Args()
+	if len(remaining) == 0 {
+		return errors.New("usage: palace ask <query>")
+	}
+	query := strings.Join(remaining, " ")
+
+	rootPath, err := filepath.Abs(*root)
+	if err != nil {
+		return err
+	}
+
+	dbPath := filepath.Join(rootPath, ".palace", "index", "palace.db")
+	if _, err := os.Stat(dbPath); err != nil {
+		return fmt.Errorf("index missing; run palace scan first: %w", err)
+	}
+	db, err := index.Open(dbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	b, err := butler.New(db, rootPath)
+	if err != nil {
+		return fmt.Errorf("initialize butler: %w", err)
+	}
+
+	results, err := b.Search(query, butler.SearchOptions{
+		Limit:      *limit,
+		RoomFilter: *room,
+	})
+	if err != nil {
+		return fmt.Errorf("search: %w", err)
+	}
+
+	if len(results) == 0 {
+		fmt.Println("No results found.")
+		return nil
+	}
+
+	fmt.Printf("\n🔍 Search results for: \"%s\"\n", query)
+	fmt.Println(strings.Repeat("─", 60))
+
+	for _, group := range results {
+		roomDisplay := group.Room
+		if roomDisplay == "" {
+			roomDisplay = "(ungrouped)"
+		}
+		fmt.Printf("\n📁 Room: %s\n", roomDisplay)
+		if group.Summary != "" {
+			fmt.Printf("   %s\n", group.Summary)
+		}
+		fmt.Println()
+
+		for _, r := range group.Results {
+			entryMark := ""
+			if r.IsEntry {
+				entryMark = " ⭐"
+			}
+			fmt.Printf("  📄 %s%s\n", r.Path, entryMark)
+			fmt.Printf("     Lines %d-%d  (score: %.2f)\n", r.StartLine, r.EndLine, r.Score)
+
+			snippet := r.Snippet
+			lines := strings.Split(snippet, "\n")
+			if len(lines) > 5 {
+				lines = lines[:5]
+				lines = append(lines, "...")
+			}
+			for _, line := range lines {
+				fmt.Printf("     │ %s\n", truncateLine(line, 70))
+			}
+			fmt.Println()
+		}
+	}
+
+	return nil
+}
+
+func cmdServe(args []string) error {
+	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
+	root := fs.String("root", ".", "workspace root")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	rootPath, err := filepath.Abs(*root)
+	if err != nil {
+		return err
+	}
+
+	dbPath := filepath.Join(rootPath, ".palace", "index", "palace.db")
+	if _, err := os.Stat(dbPath); err != nil {
+		return fmt.Errorf("index missing; run palace scan first: %w", err)
+	}
+	db, err := index.Open(dbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	b, err := butler.New(db, rootPath)
+	if err != nil {
+		return fmt.Errorf("initialize butler: %w", err)
+	}
+
+	server := butler.NewMCPServer(b)
+
+	fmt.Fprintln(os.Stderr, "Mind Palace MCP server started. Reading JSON-RPC from stdin...")
+
+	return server.Serve()
+}
+
+func truncateLine(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }

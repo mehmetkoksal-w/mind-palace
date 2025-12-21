@@ -1,232 +1,114 @@
-# Mind Palace — Product Overview & Feature Set
+---
+layout: default
+title: Product
+nav_order: 12
+---
 
-## What Mind Palace Is
+# Product Overview
 
-Mind Palace is a deterministic, schema-first CLI tool for constructing, maintaining, and validating a structured mental model over a codebase.
+Mind Palace is the **contract layer** between a codebase, humans, and AI agents.
 
-It exists to solve a specific, recurring problem in modern development:
+---
 
-Humans and AI agents need shared, reliable context about a repository — and that context must be correct, reproducible, and scoped.
+## Components
 
-Mind Palace provides that context as contracts, not guesses.
+| Component | Role | Interface |
+|-----------|------|-----------|
+| **CLI** | Deterministic engine | Terminal, CI |
+| **Butler** | Intent-based search | `palace ask`, `palace serve` |
+| **Observer** | Visual HUD | VS Code extension |
 
-It does this by:
-- Separating curated intent from derived state
-- Indexing code deterministically
-- Enforcing explicit scope and provenance
-- Producing machine-readable artifacts that agents and CI can trust
+The CLI is the engine. The extension is the interface. Both respect the same contracts.
 
-It is not an agent, an orchestrator, or a heuristic analyzer. It is the ground truth layer agents operate on.
+---
 
-## What Problems It Solves
+## Problems Solved
 
-### 1. Context Drift
+### Context Drift
 
-Large or long-lived repositories change constantly. Without a structured system:
-- Agents operate on stale assumptions
-- Humans forget implicit rules and guardrails
-- Refactors silently widen scope
+Without structure, agents operate on stale assumptions and humans forget implicit rules.
 
-Mind Palace makes context freshness explicit and verifiable.
+**Solution**: Verifiable freshness via `palace verify`.
 
-### 2. Unbounded Agent Scope
+### Unbounded Agent Scope
 
-Most agents either:
-- Rescan entire repositories every time, or
-- Operate on incomplete prompt context
+Agents either rescan everything or operate on incomplete context.
 
-Mind Palace enforces:
-- Full-scope vs diff-scope explicitly
-- No silent widening
-- Guardrails that apply equally to humans, CI, and agents
+**Solution**: Explicit full/diff scope. No silent widening.
 
-### 3. Missing Provenance
+### Missing Provenance
 
-Typical “context” has no answer to:
-- What scan produced this?
-- What files were included?
-- What changed since last time?
+Typical context has no answer to "what produced this?"
 
-Mind Palace embeds:
-- Scan identity (IDs, hashes, timestamps)
-- Scope metadata
-- Change provenance (via change-signal)
+**Solution**: Embedded scan identity, timestamps, and hashes.
 
-### 4. Non-deterministic Tooling
+### Non-Deterministic Tooling
 
-Heuristic tools are hard to trust and impossible to gate in CI.
+Heuristic tools can't be trusted in CI.
 
-Mind Palace is:
-- Deterministic
-- Schema-validated
-- Reproducible from workspace state
+**Solution**: Deterministic, schema-validated, reproducible.
 
-## Core Capabilities (Current Features)
+---
 
-### 1. Curated Project Model
+## Capabilities
 
-Mind Palace introduces a curated model under `.palace/`:
-- `palace.jsonc` — project definition, guardrails, defaults
-- `rooms/*.jsonc` — where to look
-- `playbooks/*.jsonc` — how to execute certain classes of change
-- `project-profile.json` — detected language/framework signals
+| Capability | Description |
+|------------|-------------|
+| **Curated Model** | Rooms, Playbooks, guardrails under `.palace/` |
+| **Tier-0 Index** | SQLite + FTS5, deterministic chunking, SHA-256 hashes |
+| **Context Packs** | Machine-readable context with provenance |
+| **Diff-Scoped Workflows** | Constrain to changed files only |
+| **Staleness Detection** | Fast/strict verification modes |
+| **Butler Search** | BM25 + entry point boosting, grouped by Room |
+| **MCP Server** | JSON-RPC 2.0 for AI agents |
+| **Corridors** | Multi-repo context sharing |
+| **Observer** | VS Code HUD with auto-heal |
 
-These files:
-- Are human-authored
-- Are version-controlled
-- Are validated against embedded JSON Schemas
-
-### 2. Deterministic Workspace Index (Tier-0)
-
-`palace scan` builds a deterministic index:
-- SQLite (WAL + FTS5)
-- Normalized paths
-- Deterministic chunking
-- Hashes + normalized mtimes
-- Validated scan summary
-
-This index is:
-- Generated (ignored in git)
-- Reproducible
-- The single source for derived knowledge
-- Generated outputs live under `.palace/index` and `.palace/outputs`; `.palace/maps` is created by layout as a reserved internal directory.
-
-### 3. Context Pack Generation
-
-`palace collect` assembles a context pack:
-- Goal and provenance
-- Scan identity
-- Explicit scope (full / diff)
-- Referenced files
-- Findings from the index
-
-The context pack is:
-- Validated
-- Machine-readable
-- Designed to be consumed directly by agents
-
-Agents should never invent context outside this pack.
-
-### 4. Diff-Scoped Workflows
-
-Mind Palace supports strict diff-based workflows:
-- Git diff ranges
-- Explicit change-signal artifacts
-- No silent fallback to full scope
-- Empty diffs are valid and verified
-
-This enables:
-- Deterministic agent runs
-- Reproducible CI verification
-- Safer refactors
-
-### 5. Staleness Detection & Verification
-
-`palace verify`:
-- Validates curated manifests
-- Detects stale files vs the index
-- Supports fast and strict modes
-- Errors instead of widening scope
-
-This allows:
-- CI gating
-- Human confidence before running agents
-- Clear remediation steps
-
-### 6. Guardrails as First-Class Contracts
-
-Guardrails:
-- Are defined once
-- Apply everywhere (scan, collect, verify, signal)
-- Protect both humans and agents
-- Cannot be overridden by agents
-
-### 7. Agent-Friendly by Design
-
-Mind Palace is designed to be used by:
-- CLI agents (Codex, Claude, Gemini, Cursor CLI)
-- IDE agents (Cursor, Windsurf, Copilot)
-
-Agents are expected to:
-- Read curated manifests
-- Consume context packs
-- Respect scope and guardrails
-- React to verification failures instead of guessing
+---
 
 ## What Mind Palace Is Not
 
-Explicit non-goals:
-- ❌ Not an agent orchestrator
-- ❌ Not a task runner
-- ❌ Not a language-specific analyzer
-- ❌ Not a replacement for tests or linters
-- ❌ Not heuristic or probabilistic
+| Not This | Because |
+|----------|---------|
+| Agent orchestrator | Provides context, not decisions |
+| Task runner | Declarative, not imperative |
+| Language analyzer | Language-agnostic indexing |
+| Test/lint replacement | Complements, doesn't replace |
+| Heuristic/probabilistic | Deterministic by design |
 
-It provides structure and truth, not decisions.
+---
 
-## Intended Usage Patterns
+## Design Principles
 
-Mind Palace is designed for:
+1. **Determinism beats convenience** - Same input = same output
+2. **Schemas are contracts** - Validation, not suggestions
+3. **Scope must be explicit** - No silent widening
+4. **Generated state is reproducible** - Delete and rebuild anytime
+5. **Agents should never guess** - Contracts over heuristics
+
+---
+
+## Best For
+
 - Agent-assisted refactors
 - Long-lived, evolving repositories
-- CI environments that need deterministic gating
-- Teams that want shared, enforceable project rules
+- CI environments needing deterministic gating
+- Teams wanting shared, enforceable rules
 
-It is less useful for:
+## Less Useful For
+
 - One-off scripts
 - Small throwaway repos
 - Projects without agents or automation
 
-## Planned / Future Features (Intentional, Not Promises)
+---
 
-The following are deliberate next steps, not speculative ideas.
+## Future Directions
 
-### 1. Short-Term / Session Memory (planned)
-- Non-curated, non-committed session artifacts
-- Agent iteration logs
-- Intermediate reasoning snapshots
-- Would live under `.palace/sessions/` (not created today)
-
-Purpose: support multi-step agent workflows without polluting curated state.
-
-### 2. Query & Inspection Commands
-- `palace query "<fts query>"`
-- `palace show <file|chunk>`
-
-Purpose: allow humans to inspect the index directly and debug context selection.
-
-### 3. Richer Planning Output
-- Structured plan steps derived from playbooks
-- Explicit expected evidence per step
-- Deterministic plan artifacts
-
-Purpose: make plan more than goal-setting without becoming orchestration.
-
-### 4. CI-First Enhancements
-- Built-in CI templates
-- Scan/index caching strategies
-- Deterministic verification pipelines
-
-Purpose: make Mind Palace a drop-in CI primitive.
-
-### 5. Versioned Context Packs
-- Explicit compatibility guarantees
-- Tooling to validate older packs
-- Clear migration paths
-
-Purpose: long-term stability for agent tooling.
-
-## Design Philosophy (Summary)
-
-Mind Palace is built on a few hard rules:
-- Determinism beats convenience
-- Schemas are contracts
-- Scope must be explicit
-- Generated state must be reproducible
-- Agents should never guess
-
-Everything in the tool flows from these principles.
-
-## In One Sentence
-
-Mind Palace is the contract layer between a codebase, humans, and AI agents — ensuring everyone operates on the same, verifiable understanding of reality.
+| Feature | Purpose |
+|---------|---------|
+| Sessions | Multi-step agent workflows |
+| Query commands | Direct index inspection |
+| Richer planning | Structured steps from Playbooks |
+| CI templates | Drop-in verification pipelines |
+| Versioned packs | Long-term stability |

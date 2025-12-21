@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/koksalmehmet/mind-palace/internal/config"
+	"github.com/koksalmehmet/mind-palace/internal/corridor"
 	"github.com/koksalmehmet/mind-palace/internal/fsutil"
 	"github.com/koksalmehmet/mind-palace/internal/index"
 	"github.com/koksalmehmet/mind-palace/internal/jsonc"
@@ -17,39 +18,42 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/validate"
 )
 
-// Options controls collect behavior.
 type Options struct {
 	AllowStale bool
 }
 
-// Run assembles a context pack using the latest index and curated manifests.
-func Run(root string, diffRange string, opts Options) (model.ContextPack, error) {
+type Result struct {
+	ContextPack      model.ContextPack
+	CorridorWarnings []string
+}
+
+func Run(root string, diffRange string, opts Options) (Result, error) {
 	rootPath, err := filepath.Abs(root)
 	if err != nil {
-		return model.ContextPack{}, err
+		return Result{}, err
 	}
 	if _, err := config.EnsureLayout(rootPath); err != nil {
-		return model.ContextPack{}, err
+		return Result{}, err
 	}
 
 	dbPath := filepath.Join(rootPath, ".palace", "index", "palace.db")
 	db, err := index.Open(dbPath)
 	if err != nil {
-		return model.ContextPack{}, fmt.Errorf("open index: %w", err)
+		return Result{}, fmt.Errorf("open index: %w", err)
 	}
 	defer db.Close()
 
 	summary, err := index.LatestScan(db)
 	if err != nil {
-		return model.ContextPack{}, err
+		return Result{}, err
 	}
 	if summary.ID == 0 {
-		return model.ContextPack{}, errors.New("no scan records found; run palace scan")
+		return Result{}, errors.New("no scan records found; run palace scan")
 	}
 
 	palaceCfg, err := config.LoadPalaceConfig(rootPath)
 	if err != nil {
-		return model.ContextPack{}, fmt.Errorf("load palace config: %w", err)
+		return Result{}, fmt.Errorf("load palace config: %w", err)
 	}
 
 	cpPath := filepath.Join(rootPath, ".palace", "outputs", "context-pack.json")
@@ -68,10 +72,9 @@ func Run(root string, diffRange string, opts Options) (model.ContextPack, error)
 	guardrails := config.LoadGuardrails(rootPath)
 	storedMeta, err := index.LoadFileMetadata(db)
 	if err != nil {
-		return model.ContextPack{}, err
+		return Result{}, err
 	}
 
-	// Determine scope candidates.
 	fullScope := strings.TrimSpace(diffRange) == ""
 	scopeSource := "full-scan"
 	var candidates []string
@@ -79,27 +82,25 @@ func Run(root string, diffRange string, opts Options) (model.ContextPack, error)
 	if fullScope {
 		candidates, err = fsutil.ListFiles(rootPath, guardrails)
 		if err != nil {
-			return model.ContextPack{}, err
+			return Result{}, err
 		}
 
-		// Freshness enforcement in full scope unless allow-stale.
 		if !opts.AllowStale {
 			staleList := stale.Detect(rootPath, candidates, storedMeta, guardrails, stale.ModeFast, true)
 			if len(staleList) > 0 {
 				msg := "index is stale; run palace scan"
-				// Provide a bounded preview.
 				preview := staleList
 				if len(preview) > 20 {
 					preview = preview[:20]
 				}
-				return model.ContextPack{}, fmt.Errorf("%s\nstale artifacts detected (showing %d/%d):\n- %s",
+				return Result{}, fmt.Errorf("%s\nstale artifacts detected (showing %d/%d):\n- %s",
 					msg, len(preview), len(staleList), strings.Join(preview, "\n- "))
 			}
 		}
 	} else {
 		paths, fromSignal, err := signal.Paths(rootPath, diffRange, guardrails)
 		if err != nil {
-			return model.ContextPack{}, fmt.Errorf("diff unavailable for %q: %w", diffRange, err)
+			return Result{}, fmt.Errorf("diff unavailable for %q: %w", diffRange, err)
 		}
 		candidates = paths
 		if fromSignal {
@@ -119,7 +120,6 @@ func Run(root string, diffRange string, opts Options) (model.ContextPack, error)
 		cp.Scope.DiffRange = ""
 	}
 
-	// changedPaths are used for FilesReferenced ordering priority.
 	changedPaths := []string{}
 	if !fullScope {
 		changedPaths = candidates
@@ -131,8 +131,6 @@ func Run(root string, diffRange string, opts Options) (model.ContextPack, error)
 		cp.RoomsVisited = []string{palaceCfg.DefaultRoom}
 	}
 
-	// In full scope, keep FilesReferenced deterministic: entry points first, then (optionally) diff candidates.
-	// In diff scope, prioritize changed paths, then room entrypoints that exist in the index.
 	cp.FilesReferenced = mergeOrderedUnique(changedPaths, filterExisting(roomEntries, storedMeta))
 
 	if strings.TrimSpace(cp.Goal) == "" {
@@ -159,12 +157,62 @@ func Run(root string, diffRange string, opts Options) (model.ContextPack, error)
 	}
 
 	if err := model.WriteContextPack(cpPath, cp); err != nil {
-		return model.ContextPack{}, err
+		return Result{}, err
 	}
 	if err := validate.JSON(cpPath, "context-pack"); err != nil {
-		return model.ContextPack{}, err
+		return Result{}, err
 	}
-	return cp, nil
+
+	result := Result{ContextPack: cp}
+
+	// Fetch corridor context from neighbors (if configured)
+	if len(palaceCfg.Neighbors) > 0 {
+		cp.Corridors = nil
+		corridorResult, err := corridor.FetchNeighbors(rootPath, palaceCfg.Neighbors)
+		if err != nil {
+			result.CorridorWarnings = append(result.CorridorWarnings,
+				fmt.Sprintf("corridor fetch failed: %v", err))
+		} else {
+			for _, ctx := range corridorResult.Corridors {
+				info := model.CorridorInfo{
+					Name:      ctx.Name,
+					FromCache: ctx.FromCache,
+					FetchedAt: ctx.FetchedAt.Format(time.RFC3339),
+					Error:     ctx.Error,
+				}
+
+				// Collect warnings for CI visibility
+				if ctx.Error != "" {
+					result.CorridorWarnings = append(result.CorridorWarnings,
+						fmt.Sprintf("corridor %q: %s", ctx.Name, ctx.Error))
+				}
+
+				if ctx.ContextPack != nil {
+					info.Goal = ctx.ContextPack.Goal
+					info.Source = ctx.ContextPack.Provenance.CreatedBy
+
+					for _, f := range ctx.ContextPack.FilesReferenced {
+						namespacedPath := corridor.NamespacePath(ctx.Name, f)
+						info.Files = append(info.Files, namespacedPath)
+					}
+				}
+
+				for _, room := range ctx.Rooms {
+					info.Rooms = append(info.Rooms, room.Name)
+				}
+
+				cp.Corridors = append(cp.Corridors, info)
+			}
+		}
+
+		// Re-write context pack with corridors
+		if err := model.WriteContextPack(cpPath, cp); err != nil {
+			return Result{}, err
+		}
+		result.ContextPack = cp
+	}
+
+	return result, nil
 }
 
 func collectEntryPoints(rootPath, roomName string) []string {

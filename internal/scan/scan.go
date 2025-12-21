@@ -12,7 +12,6 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/validate"
 )
 
-// Run executes the Tier 0 scan pipeline.
 func Run(root string) (index.ScanSummary, int, error) {
 	rootPath, err := filepath.Abs(root)
 	if err != nil {
@@ -42,7 +41,6 @@ func Run(root string) (index.ScanSummary, int, error) {
 		return index.ScanSummary{}, 0, err
 	}
 
-	// Emit scan.json (deterministic artifact describing the scan).
 	scanArtifactPath := filepath.Join(rootPath, ".palace", "index", "scan.json")
 	now := time.Now().UTC().Format(time.RFC3339)
 	artifact := model.ScanSummary{

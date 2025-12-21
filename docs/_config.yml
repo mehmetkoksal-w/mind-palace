@@ -17,4 +17,7 @@ footer_content: "Copyright &copy; 2025 Mind Palace"
 
 # External
 aux_links:
-  "GitHub Repository": https://github.com/koksalmehmet/mind-palace
+  "CLI Repository": https://github.com/koksalmehmet/mind-palace
+  "Extension Repository": https://github.com/koksalmehmet/mind-palace-vscode
+
+# Navigation order is controlled by nav_order in front matter
