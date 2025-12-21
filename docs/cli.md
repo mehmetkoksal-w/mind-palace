@@ -23,6 +23,8 @@ All commands are deterministic. Validation uses embedded schemas.
 | `ask` | Query Butler | No |
 | `serve` | Start MCP server | No |
 | `lint` | Validate configs | No |
+| `version` | Show version info | No |
+| `update` | Self-update to latest | Yes |
 
 ---
 
@@ -178,6 +180,57 @@ palace lint
 ```
 
 Checks `palace.jsonc`, `rooms/*.jsonc`, `playbooks/*.jsonc` against embedded schemas.
+
+---
+
+## version
+
+Show version and build info.
+
+```sh
+palace version [--check]
+```
+
+| Flag | Effect |
+|------|--------|
+| `--check` | Query GitHub for latest release |
+
+**Examples**:
+```sh
+palace version
+# palace 0.0.1-rc2 (commit abc123, built 2025-12-21)
+
+palace version --check
+# palace 0.0.1-rc2 (commit abc123, built 2025-12-21)
+# Update available: v0.0.1-rc2 -> v0.0.2
+# Run 'palace update' to install
+```
+
+---
+
+## update
+
+Self-update to the latest release.
+
+```sh
+palace update
+```
+
+Downloads the appropriate binary for your OS/architecture from GitHub releases, verifies SHA256 checksum if available, and replaces the current executable.
+
+**Output**:
+```
+Checking for updates...
+Downloading v0.0.2...
+Verifying checksum...
+Installing update...
+Updated to v0.0.2
+```
+
+**Notes**:
+- Requires write permission to the palace binary location
+- Creates a `.backup` file during update (removed on success)
+- On startup, palace checks for updates (cached 24h) and prints a notification if a new version is available
 
 ---
 
