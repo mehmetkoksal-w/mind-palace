@@ -19,6 +19,7 @@ import (
 	"github.com/koksalmehmet/mind-palace/internal/project"
 	"github.com/koksalmehmet/mind-palace/internal/scan"
 	"github.com/koksalmehmet/mind-palace/internal/signal"
+	"github.com/koksalmehmet/mind-palace/internal/update"
 	"github.com/koksalmehmet/mind-palace/internal/validate"
 	"github.com/koksalmehmet/mind-palace/internal/verify"
 )
@@ -31,9 +32,13 @@ func Run(args []string) error {
 	if len(args) == 0 {
 		return usage()
 	}
+
+	checkForUpdates(args)
 	switch args[0] {
 	case "version", "--version", "-v":
-		return cmdVersion()
+		return cmdVersion(args[1:])
+	case "update":
+		return cmdUpdate(args[1:])
 	case "init":
 		return cmdInit(args[1:])
 	case "detect":
@@ -64,7 +69,7 @@ func Run(args []string) error {
 }
 
 func usage() error {
-	fmt.Println(`palace commands: init | detect | scan | lint | verify | plan | collect | signal | explain | ask | serve
+	fmt.Println(`palace commands: init | detect | scan | lint | verify | plan | collect | signal | explain | ask | serve | update
 
 Examples:
   palace init
@@ -72,12 +77,57 @@ Examples:
   palace verify --diff HEAD~1..HEAD
   palace collect --diff HEAD~1..HEAD
   palace explain verify
+  palace version --check
+  palace update
 
   # Butler:
   palace ask "where is the auth logic"
   palace ask --room project-overview "entry points"
   palace serve   # Start MCP server for AI agents`)
 	return nil
+}
+
+func cmdUpdate(args []string) error {
+	fs := flag.NewFlagSet("update", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	err := update.Update(buildVersion, func(msg string) {
+		fmt.Println(msg)
+	})
+	if err != nil {
+		if err.Error() == "already at latest version" {
+			fmt.Printf("palace %s is already the latest version.\n", buildVersion)
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func checkForUpdates(args []string) {
+	if len(args) == 0 {
+		return
+	}
+	cmd := args[0]
+	if cmd == "version" || cmd == "--version" || cmd == "-v" || cmd == "update" {
+		return
+	}
+
+	cacheDir, err := update.GetCacheDir()
+	if err != nil {
+		return
+	}
+
+	result, err := update.CheckCached(buildVersion, cacheDir)
+	if err != nil {
+		return
+	}
+
+	if result.UpdateAvailable {
+		fmt.Fprintf(os.Stderr, "Update available: v%s -> v%s (run 'palace update')\n\n", result.CurrentVersion, result.LatestVersion)
+	}
 }
 
 type boolFlag struct {
