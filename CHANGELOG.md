@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.1-rc2] - 2025-12-21
+
+### Fixed
+
+- **CLI: Symlink Handling**: Fixed scanner failing on symlinked directories (common in Flutter/iOS projects). Symlinked directories are now skipped gracefully, and broken symlinks are handled without errors.
+- **CLI: Language Detection**: `palace detect` now correctly identifies Flutter/Dart projects (`pubspec.yaml`) along with Rust, Python, Ruby, Java, C#, Swift, and PHP projects instead of returning "unknown".
+- **CLI: Room Template**: Removed Go-specific `go.mod` from default `project-overview.jsonc` template entry points. Now uses only `README.md` which is universal across all project types.
+
+### Changed
+
+- **CLI: Extended Language Support**: Added detection and default commands (test, lint, deps) for 10+ languages:
+  - Dart/Flutter (`pubspec.yaml`)
+  - Rust (`Cargo.toml`)
+  - Python (`pyproject.toml`, `setup.py`, `requirements.txt`)
+  - Ruby (`Gemfile`)
+  - Java/Kotlin (`pom.xml`, `build.gradle`)
+  - C#/.NET (`.csproj`, `.sln`)
+  - Swift (`Package.swift`)
+  - PHP (`composer.json`)
+
 ## [0.0.1-rc1] - 2025-12-21
 
 ### Added

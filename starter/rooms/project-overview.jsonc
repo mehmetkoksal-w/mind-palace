@@ -3,9 +3,10 @@
   "kind": "palace/room",
   "name": "project-overview",
   "summary": "Entry points for understanding the project layout and guardrails.",
+  // Entry points are generic - add project-specific files as needed
+  // (e.g., pubspec.yaml for Dart, package.json for Node, Cargo.toml for Rust)
   "entryPoints": [
-    "README.md",
-    "go.mod"
+    "README.md"
   ],
   "artifacts": [
     {

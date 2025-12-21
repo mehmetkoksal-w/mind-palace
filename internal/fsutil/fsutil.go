@@ -62,6 +62,10 @@ func ListFiles(root string, guardrails config.Guardrails) ([]string, error) {
 	var files []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
+			// Skip permission errors and other access issues gracefully
+			if os.IsPermission(err) {
+				return filepath.SkipDir
+			}
 			return err
 		}
 		if path == root {
@@ -78,6 +82,24 @@ func ListFiles(root string, guardrails config.Guardrails) ([]string, error) {
 			}
 			return nil
 		}
+
+		// Check if entry is a symlink
+		if d.Type()&os.ModeSymlink != 0 {
+			// Resolve symlink to check what it points to
+			target, err := os.Stat(path)
+			if err != nil {
+				// Skip broken symlinks or inaccessible targets
+				return nil
+			}
+			if target.IsDir() {
+				// Skip symlinked directories to avoid following them
+				return filepath.SkipDir
+			}
+			// Symlink to file - include it
+			files = append(files, rel)
+			return nil
+		}
+
 		if d.IsDir() {
 			return nil
 		}
