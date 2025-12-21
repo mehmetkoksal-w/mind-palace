@@ -33,6 +33,8 @@ A deterministic CLI for constructing and maintaining a structured “mind palace
   - Empty diffs verify zero candidates without fallback.
 - `palace signal --diff range`: generates `.palace/outputs/change-signal.json` from git diff output; validation uses embedded schemas.
 - `palace explain [scan|collect|verify|signal|artifacts|all]`: prints behavior, invariants, and outputs.
+- `palace version [--check]`: prints version info; `--check` queries GitHub for latest release.
+- `palace update`: downloads and installs the latest release from GitHub.
 
 ### Butler (Intent-Based Search)
 
@@ -165,6 +167,22 @@ Each release includes `SHA256SUMS`.
 - macOS: `shasum -a 256 palace`
 - Linux: `sha256sum palace`
 - Or verify all: `sha256sum --check SHA256SUMS`
+
+## Updating
+
+Once installed, palace can update itself:
+
+```sh
+palace update
+```
+
+Check for updates without installing:
+
+```sh
+palace version --check
+```
+
+Palace also checks for updates on startup (cached for 24 hours) and notifies you when a new version is available.
 
 ## Releasing
 
