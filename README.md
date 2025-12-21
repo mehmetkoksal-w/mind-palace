@@ -170,3 +170,7 @@ Each release includes `SHA256SUMS`.
 
 - Tag and push: `git tag v0.1.0 && git push origin v0.1.0`
 - CI builds cross-platform binaries, generates SHA256SUMS, and publishes a GitHub Release automatically.
+
+## License
+
+PolyForm Shield 1.0.0 — see [LICENSE](LICENSE) for details.
