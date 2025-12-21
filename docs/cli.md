@@ -1,71 +1,191 @@
-# CLI Command Reference
+---
+layout: default
+title: CLI
+nav_order: 5
+---
 
-Each command is deterministic and schema-driven. Validation always uses embedded schemas.
+# CLI Reference
+
+All commands are deterministic. Validation uses embedded schemas.
+
+---
+
+## Quick Reference
+
+| Command | Purpose | Modifies State |
+|---------|---------|----------------|
+| `init` | Create .palace/ structure | Yes |
+| `detect` | Auto-detect project profile | Yes |
+| `scan` | Build/refresh Index | Yes |
+| `collect` | Assemble context pack | Yes |
+| `verify` | Check freshness | No |
+| `signal` | Generate change signal | Yes |
+| `ask` | Query Butler | No |
+| `serve` | Start MCP server | No |
+| `lint` | Validate configs | No |
+
+---
 
 ## init
-- **Purpose**: Create `.palace/` curated scaffolding and export embedded schemas.
-- **Inputs**: None (reads workspace root).
-- **Outputs**: `.palace/palace.jsonc`, default room/playbook templates, `.palace/project-profile.json` template, `.palace/schemas/*` (export-only). Optional `.palace/outputs/context-pack.json` when `--with-outputs`.
-- **Side effects**: Creates directories. Does not scan or index.
-- **When to use**: First run in a repo. Re-runnable with `--force` to refresh templates.
+
+Create `.palace/` scaffolding.
+
+```sh
+palace init [--with-outputs] [--force]
+```
+
+**Creates**:
+- `palace.jsonc` - Root config
+- `rooms/` - Room templates
+- `playbooks/` - Playbook templates
+- `schemas/` - Exported schemas (read-only copies)
+
+Does not scan or index.
+
+---
 
 ## detect
-- **Purpose**: Generate `.palace/project-profile.json`.
-- **Inputs**: Workspace files (lightweight heuristics only).
-- **Outputs**: JSON project profile (curated; commit it).
-- **Side effects**: None beyond writing the profile.
-- **When to use**: After init, or when project structure changes significantly.
+
+Generate project profile from workspace analysis.
+
+```sh
+palace detect
+```
+
+**Creates**: `.palace/project-profile.json`
+
+Detects language, framework, and structure hints.
+
+---
 
 ## scan
-- **Purpose**: Build/refresh Tier-0 index.
-- **Inputs**: Workspace files outside guardrails.
-- **Outputs**: `.palace/index/palace.db` (SQLite WAL + FTS5) and `.palace/index/scan.json` (validated scan summary with scanId/dbScanId/counts/hash).
-- **Side effects**: Replaces existing index content deterministically.
-- **When to use**: After code changes to refresh the index; before collect/verify if stale.
 
-## lint
-- **Purpose**: Validate curated artifacts only.
-- **Inputs**: `.palace/palace.jsonc`, `.palace/rooms/*.jsonc`, `.palace/playbooks/*.jsonc`, `.palace/project-profile.json`.
-- **Outputs**: None (validation errors on failure).
-- **Side effects**: None.
-- **When to use**: Before verify/collect, or in CI to gate curated edits.
+Build the Index (Tier-0).
 
-## plan
-- **Purpose**: Set or update the context-pack goal and provenance.
-- **Inputs**: Goal string; optionally existing context-pack to preserve fields.
-- **Outputs**: `.palace/outputs/context-pack.json` (goal/provenance updated).
-- **Side effects**: Writes context-pack; does not scan or collect evidence.
-- **When to use**: To declare intent before collect/agent work.
+```sh
+palace scan
+```
+
+**Creates**:
+- `.palace/index/palace.db` - SQLite + FTS5
+- `.palace/index/scan.json` - Scan metadata
+
+Respects guardrails. Deterministic output.
+
+---
 
 ## collect
-- **Purpose**: Assemble `.palace/outputs/context-pack.json` from the existing index + curated manifests.
-- **Inputs**: `.palace/index/palace.db`, curated manifests, optional `--diff <range>`.
-- **Outputs**: Updated context-pack (validated).
-- **Side effects**: None beyond writing context-pack.
-- **When to use**:
-  - Full scope: after scan, to refresh working context (fails if index is stale unless `--allow-stale`).
-  - Diff scope: to focus on changed files via git diff or matching change-signal (no scope widening).
+
+Assemble context pack from Index + Rooms.
+
+```sh
+palace collect [--diff <range>] [--goal "<text>"] [--allow-stale]
+```
+
+| Flag | Effect |
+|------|--------|
+| `--diff` | Scope to changed files only |
+| `--goal` | Set context pack goal |
+| `--allow-stale` | Skip freshness check |
+
+**Creates**: `.palace/outputs/context-pack.json`
+
+With Corridors configured, fetches and merges neighbor context.
+
+---
 
 ## verify
-- **Purpose**: Validate curated state (lint) and check staleness vs the index.
-- **Inputs**: `.palace/index/palace.db`, curated manifests, optional `--diff <range>`.
-- **Outputs**: None on success; lists stale items on failure.
-- **Side effects**: None; does not modify index.
-- **Modes**:
-  - `--fast` (default): mtime/size shortcut; selective hashing for mismatches.
-  - `--strict`: hash all candidates.
-- **Diff strictness**: If diff cannot be computed, verify errors (no fallback); empty diffs verify zero candidates.
-- **When to use**: Before CI gating, before trusting the context, after edits.
+
+Check Index freshness.
+
+```sh
+palace verify [--fast|--strict] [--diff <range>]
+```
+
+| Mode | Behavior |
+|------|----------|
+| `--fast` (default) | mtime/size check, hash only suspects |
+| `--strict` | Hash all indexed files |
+
+**Exit codes**:
+- `0` - Fresh
+- `1` - Stale
+- `2` - Error
+
+---
 
 ## signal
-- **Purpose**: Generate `.palace/outputs/change-signal.json` from git diff output.
-- **Inputs**: `--diff <range>`; reads git repository; respects guardrails on chosen paths.
-- **Outputs**: Validated change-signal with sorted changes and hashes for non-deleted files.
-- **Side effects**: None beyond writing change-signal.
-- **When to use**: For deterministic diff-scoped workflows (agents/CI), or to feed verify/collect diff scope without re-running git.
 
-## explain
-- **Purpose**: Print short behavioral summaries for scan/collect/verify/signal/artifacts.
-- **Inputs/Outputs**: Stdout text only.
-- **Side effects**: None.
-- **When to use**: Quick reference to invariants and artifacts.
+Generate change signal from git diff.
+
+```sh
+palace signal --diff <range>
+```
+
+**Creates**: `.palace/outputs/change-signal.json`
+
+Contains sorted file list with hashes. Enables reproducible diff-scoped workflows.
+
+---
+
+## ask
+
+Query the Index via Butler.
+
+```sh
+palace ask "<query>" [--room <name>] [--limit <n>]
+```
+
+**Examples**:
+```sh
+palace ask "where is authentication"
+palace ask "AuthService"
+palace ask --room api "rate limiting"
+```
+
+**Ranking**: BM25 + entry point boost (3x) + path match boost (2.5x)
+
+Results grouped by Room.
+
+---
+
+## serve
+
+Start MCP server for AI agents.
+
+```sh
+palace serve [--root <path>]
+```
+
+JSON-RPC 2.0 over stdio.
+
+**Tools**:
+- `search_mind_palace` - Query Index
+- `list_rooms` - List Rooms
+
+**Resources**:
+- `palace://files/{path}` - Read file
+- `palace://rooms/{name}` - Read Room manifest
+
+---
+
+## lint
+
+Validate curated configs.
+
+```sh
+palace lint
+```
+
+Checks `palace.jsonc`, `rooms/*.jsonc`, `playbooks/*.jsonc` against embedded schemas.
+
+---
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Stale / Verification failed |
+| 2 | Config or schema error |
+| 3 | File system error |

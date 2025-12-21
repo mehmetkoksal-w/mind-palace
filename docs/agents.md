@@ -1,47 +1,174 @@
-# Agent Integration Guide
+---
+layout: default
+title: Agents
+nav_order: 6
+---
 
-Mind Palace is built for agent-assisted work. Agents must treat schemas and artifacts as contracts, not suggestions.
+# Agent Integration
 
-## What agents should read
-- `.palace/palace.jsonc`: project definition, default room, guardrails.
-- `.palace/rooms/*.jsonc`: entry points and evidence guidance.
-- `.palace/playbooks/*.jsonc`: change procedures and required evidence.
-- `.palace/project-profile.json`: language/framework hints.
-- `.palace/outputs/context-pack.json`: current goal, scan identity, findings, scope.
-- `.palace/outputs/change-signal.json` (if present): authoritative diff.
-- `.palace/index/scan.json`: scan identity and counts (generated).
+Mind Palace treats AI agents as first-class consumers. Schemas are contracts, not suggestions.
 
-## What agents must not touch
-- `.palace/index/*` and `.palace/outputs/*`: generated; never edited directly.
-- `.palace/schemas/*`: export-only copies; validation uses embedded schemas.
-- Files matching guardrails (`.git/**`, `.palace/**`, `node_modules/**`, etc.).
+---
 
-## How to use context-pack.json
-- Treat it as the authoritative working context: goal, scan hash/id/time, scope (full/diff), referenced files, findings.
-- If scope is diff, limit actions to the listed files unless a human broadens scope.
-- If scan hash is stale, request a fresh `palace scan` + `palace collect`.
+## Two Integration Modes
 
-## Respecting guardrails
-- Always check guardrails before reading/writing. Do not propose edits in guarded paths.
-- For path matching, normalize to forward slashes to align with guardrail semantics.
+| Mode | Best For | How |
+|------|----------|-----|
+| **MCP** | Interactive agents (Claude, Cursor) | `palace serve` |
+| **Context Pack** | Batch/CLI agents | `palace collect` |
 
-## Reacting to verify failures
-- If `palace verify` reports stale files: ask the user to run `palace scan` (or do it if permitted), then `palace collect`, then retry.
-- If `palace verify --diff` errors because diff cannot be computed: request a change-signal (`palace signal --diff <range>`) or a valid git diff range.
+---
 
-## Using change-signal
-- Prefer an existing `.palace/outputs/change-signal.json` that matches the target diff range.
-- If absent, request `palace signal --diff <range>` instead of running your own git diff.
-- Use the change-signal paths to scope work; treat deleted files as non-editable.
+## MCP Integration
 
-## CLI vs IDE agents
-- **CLI agents (Codex/Claude/Gemini/Cursor CLI)**: run `palace plan/collect/verify/signal` as needed, never mutate generated artifacts directly, and obey guardrails when proposing patches.
-- **IDE agents (Cursor/Windsurf/Copilot/Antigravity)**: load curated files + context-pack; avoid auto-saving changes in `.palace/index` or `.palace/outputs`; surface verification results to the user before proceeding.
+### Setup (Claude Desktop)
 
-## Schema contract
-- Embedded JSON Schemas are the single source of truth. Assume validation will run in CI.
-- Do not invent fields; treat missing optional fields as absent, not null.
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
-## When unsure
-- Prefer to ask for `palace explain <topic>` to confirm behavior.
-- When diff scope is unclear, request a change-signal or explicit diff range instead of assuming full-scope permission.
+```json
+{
+  "mcpServers": {
+    "mind-palace": {
+      "command": "palace",
+      "args": ["serve", "--root", "/path/to/project"]
+    }
+  }
+}
+```
+
+### Setup (Cursor)
+
+```json
+{
+  "mcp.servers": {
+    "mind-palace": {
+      "command": "palace",
+      "args": ["serve", "--root", "${workspaceFolder}"]
+    }
+  }
+}
+```
+
+### Available Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `search_mind_palace` | `query`, `limit?`, `room?` | Ranked results by Room |
+| `list_rooms` | - | Room names + entry points |
+
+### Available Resources
+
+| URI | Returns |
+|-----|---------|
+| `palace://files/{path}` | File content |
+| `palace://rooms/{name}` | Room manifest JSON |
+
+### Why MCP?
+
+- **Targeted queries** - Search, don't dump
+- **Room-aware** - Results grouped by Room
+- **Entry point boosting** - Important files surface first
+- **Live index** - No stale context packs
+
+---
+
+## Context Pack Integration
+
+For agents that can't use MCP:
+
+```sh
+palace collect --goal "Fix auth bug"
+# Provide .palace/outputs/context-pack.json to agent
+```
+
+The context pack contains:
+- Goal and scope
+- Referenced files with content
+- Room context
+- Provenance (scan ID, timestamp)
+
+---
+
+## Agent Rules
+
+### Must Read
+
+| File | Contains |
+|------|----------|
+| `palace.jsonc` | Project config, guardrails |
+| `rooms/*.jsonc` | Entry points, scope |
+| `context-pack.json` | Current goal, findings |
+
+### Must Not Touch
+
+| Path | Reason |
+|------|--------|
+| `.palace/index/*` | Generated by CLI |
+| `.palace/outputs/*` | Generated by CLI |
+| Files matching guardrails | Protected |
+
+### Scope Discipline
+
+```
+If scope is "diff":
+  Only modify files in the diff
+  Request broader scope explicitly if needed
+
+If scope is "full":
+  Still respect guardrails
+  Prefer Room-scoped changes
+```
+
+---
+
+## Verification Loop
+
+```
+Agent proposes → Human reviews → Save → Observer verifies → Fresh ✓ or Stale ✗
+```
+
+### With Observer (VS Code)
+
+1. Agent queries via MCP or reads context pack
+2. Agent proposes changes
+3. Human saves files
+4. Observer runs `palace verify`
+5. HUD shows Fresh (green) or Stale (red)
+6. If stale, auto-heal runs `scan && collect`
+
+### Without Observer (CLI)
+
+```sh
+# After agent changes
+palace verify --fast
+# If stale:
+palace scan && palace collect
+```
+
+---
+
+## Handling Staleness
+
+When `palace verify` fails:
+
+```
+Agent: "Index is stale. Please run `palace scan && palace collect` or approve auto-heal."
+```
+
+Never proceed with stale context. Request refresh.
+
+---
+
+## Change Signal
+
+For diff-scoped work:
+
+```sh
+palace signal --diff HEAD~1..HEAD
+palace collect --diff HEAD~1..HEAD
+```
+
+Agents should:
+1. Check if `change-signal.json` exists
+2. Use its file list to scope work
+3. Treat deleted files as non-editable

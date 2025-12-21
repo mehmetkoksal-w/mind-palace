@@ -27,9 +27,9 @@
       "type": "array",
       "items": {"type": "string"}
     },
-    "provenance": {"$ref": "#/definitions/provenance"}
+    "provenance": {"$ref": "#/$defs/provenance"}
   },
-  "definitions": {
+  "$defs": {
     "provenance": {
       "type": "object",
       "additionalProperties": false,

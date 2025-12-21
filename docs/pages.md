@@ -1,37 +1,94 @@
-# Documentation & GitHub Pages Deployment
+---
+layout: default
+title: Deployment
+nav_order: 13
+---
 
-The canonical documentation lives in this repository under `/docs` (Markdown only). GitHub Pages should publish the `/docs` folder so users always see docs that match the current codebase.
+# GitHub Pages Deployment
 
-## Folder structure
-- `/docs/index.md`: overview, philosophy, setup (landing page for Pages).
-- `/docs/concepts.md`: core concepts.
-- `/docs/workflows.md`: end-to-end workflow.
-- `/docs/cli.md`: command reference.
-- `/docs/agents.md`: agent integration.
-- `/docs/collaboration.md`: git/CI model.
-- `/docs/extensibility.md`: schema/room/playbook evolution.
-- `/docs/pages.md`: this deployment guide.
+Documentation is published from `/docs` via GitHub Pages.
 
-## Recommended Pages configuration
-- **Source**: `/docs` folder in the repository (GitHub Pages “Deploy from a branch”, branch `main`, folder `/docs`).
-- **Format**: Plain Markdown; no JS frameworks required.
-- **Theme**: Optional GitHub Pages theme (or none) since content is Markdown-only.
+---
 
-## Deployment triggers (implemented)
-- GitHub Actions workflow: `.github/workflows/docs.yml`.
-- Triggers:
-  - Push to `main` when `docs/**` or `README.md` changes.
-  - Manual `workflow_dispatch`.
-- Steps: checkout → configure-pages → upload-pages-artifact (`path: docs`) → deploy-pages.
-- Permissions: `contents: read`, `pages: write`, `id-token: write`.
-- Concurrency: group `pages` with `cancel-in-progress: true` to avoid overlapping deploys.
+## Configuration
 
-## Release approvals (environment gate)
-- Releases use `.github/workflows/release.yml` with `environment: release`.
-- Create a GitHub Environment named `release` and enable “Required reviewers” to enforce manual approval before release jobs proceed.
-- The release workflow ignores docs-only changes (`docs/**`, `README.md`) so documentation updates do not trigger releases.
+**GitHub Settings**:
+- Source: `/docs` folder
+- Branch: `main`
+- Theme: just-the-docs (remote)
 
-## Contributor guidance
-- Update `/docs` and/or `README.md` when behavior changes. Keep docs aligned with the current CLI contracts.
-- Do not place generated artifacts (`.palace/index`, `.palace/outputs`) in `/docs`.
-- Keep examples deterministic (avoid timestamps) to prevent noisy diffs.
+**Jekyll Config** (`_config.yml`):
+```yaml
+title: Mind Palace
+description: Deterministic context for AI agents
+remote_theme: pmarsceill/just-the-docs
+color_scheme: dark
+```
+
+---
+
+## Deployment Workflow
+
+`.github/workflows/docs.yml`:
+
+```yaml
+name: Deploy Docs
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'README.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - uses: actions/deploy-pages@v4
+```
+
+---
+
+## Doc Structure
+
+| File | Purpose | nav_order |
+|------|---------|-----------|
+| `index.md` | Landing page | 1 |
+| `ecosystem.md` | Architecture | 2 |
+| `concepts.md` | Core concepts | 3 |
+| `workflows.md` | Usage patterns | 4 |
+| `cli.md` | Command reference | 5 |
+| `agents.md` | AI integration | 6 |
+| `extension.md` | VS Code extension | 7 |
+| `collaboration.md` | Git/CI model | 8 |
+| `extensibility.md` | Schema evolution | 9 |
+| `COMPATIBILITY.md` | Version matrix | 10 |
+| `branding.md` | Visual identity | 11 |
+| `product.md` | Product overview | 12 |
+| `pages.md` | This file | 13 |
+| `errors.md` | Error codes | 14 |
+
+---
+
+## Guidelines
+
+- Update docs when CLI behavior changes
+- Keep examples deterministic (no timestamps)
+- Don't commit generated artifacts to `/docs`
+- Use front matter for navigation order
