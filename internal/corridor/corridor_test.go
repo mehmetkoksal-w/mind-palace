@@ -1,6 +1,7 @@
 package corridor
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -99,12 +100,39 @@ func TestStripJSONComments(t *testing.T) {
 
 	result := stripJSONComments([]byte(input))
 
-	expected := `{
-  "name": "test",
-  "value": 123 
+	// Parse result to verify it's valid JSON with correct values
+	var parsed map[string]interface{}
+	if err := json.Unmarshal(result, &parsed); err != nil {
+		t.Fatalf("stripJSONComments produced invalid JSON: %v\nGot: %s", err, result)
+	}
+
+	if parsed["name"] != "test" {
+		t.Errorf("expected name='test', got %v", parsed["name"])
+	}
+	if parsed["value"] != float64(123) {
+		t.Errorf("expected value=123, got %v", parsed["value"])
+	}
+}
+
+func TestStripJSONCommentsPreservesURLs(t *testing.T) {
+	// This tests that URLs with // in strings are NOT treated as comments
+	input := `{
+  "url": "https://example.com/path",
+  "another": "http://test.com" // this is a comment
 }`
 
-	if string(result) != expected {
-		t.Errorf("stripJSONComments result differs\nGot:\n%s\nWant:\n%s", result, expected)
+	result := stripJSONComments([]byte(input))
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal(result, &parsed); err != nil {
+		t.Fatalf("stripJSONComments produced invalid JSON: %v\nGot: %s", err, result)
+	}
+
+	// Verify URLs are preserved
+	if parsed["url"] != "https://example.com/path" {
+		t.Errorf("URL was incorrectly modified: got %v", parsed["url"])
+	}
+	if parsed["another"] != "http://test.com" {
+		t.Errorf("URL was incorrectly modified: got %v", parsed["another"])
 	}
 }

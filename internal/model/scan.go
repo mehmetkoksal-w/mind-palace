@@ -8,16 +8,18 @@ import (
 
 // ScanSummary is the JSON artifact describing a scan.
 type ScanSummary struct {
-	SchemaVersion string     `json:"schemaVersion"`
-	Kind          string     `json:"kind"`
-	ScanID        string     `json:"scanId"`   // UUID
-	DBScanID      int64      `json:"dbScanId"` // SQLite scans.id
-	StartedAt     string     `json:"startedAt"`
-	CompletedAt   string     `json:"completedAt"`
-	FileCount     int        `json:"fileCount"`
-	ChunkCount    int        `json:"chunkCount"`
-	ScanHash      string     `json:"scanHash"`
-	Provenance    Provenance `json:"provenance"`
+	SchemaVersion     string     `json:"schemaVersion"`
+	Kind              string     `json:"kind"`
+	ScanID            string     `json:"scanId"`   // UUID
+	DBScanID          int64      `json:"dbScanId"` // SQLite scans.id
+	StartedAt         string     `json:"startedAt"`
+	CompletedAt       string     `json:"completedAt"`
+	FileCount         int        `json:"fileCount"`
+	ChunkCount        int        `json:"chunkCount"`
+	SymbolCount       int        `json:"symbolCount"`
+	RelationshipCount int        `json:"relationshipCount"`
+	ScanHash          string     `json:"scanHash"`
+	Provenance        Provenance `json:"provenance"`
 }
 
 // WriteScanSummary writes the summary to disk.

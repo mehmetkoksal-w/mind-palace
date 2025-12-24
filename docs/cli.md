@@ -198,11 +198,11 @@ palace version [--check]
 **Examples**:
 ```sh
 palace version
-# palace 0.0.1-rc2 (commit abc123, built 2025-12-21)
+# palace 0.0.1-alpha (commit abc123, built 2025-12-23)
 
 palace version --check
-# palace 0.0.1-rc2 (commit abc123, built 2025-12-21)
-# Update available: v0.0.1-rc2 -> v0.0.2
+# palace 0.0.1-alpha (commit abc123, built 2025-12-23)
+# Update available: v0.0.1-alpha -> v0.0.1
 # Run 'palace update' to install
 ```
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/koksalmehmet/mind-palace/internal/config"
+	"github.com/koksalmehmet/mind-palace/internal/jsonc"
 	"github.com/koksalmehmet/mind-palace/internal/model"
 )
 
@@ -115,9 +116,10 @@ func fetchFromLocal(root, name, localPath string, cacheDir string) CorridorConte
 	roomsDir := filepath.Join(absPath, ".palace", "rooms")
 	ctx.Rooms = loadRoomsFromDir(roomsDir)
 
-	cacheContextPack(cacheDir, cpData)
-	cacheRooms(cacheDir, ctx.Rooms)
-	writeCacheMeta(cacheDir, CacheMeta{
+	// Cache errors are non-critical - main operation already succeeded
+	_ = cacheContextPack(cacheDir, cpData)
+	_ = cacheRooms(cacheDir, ctx.Rooms)
+	_ = writeCacheMeta(cacheDir, CacheMeta{
 		FetchedAt: ctx.FetchedAt,
 		URL:       "local://" + absPath,
 		TTL:       "0",
@@ -175,8 +177,9 @@ func fetchFromURL(name string, neighbor config.NeighborConfig, cacheDir string) 
 
 	ctx.ContextPack = &cp
 
-	cacheContextPack(cacheDir, body)
-	writeCacheMeta(cacheDir, CacheMeta{
+	// Cache errors are non-critical - main operation already succeeded
+	_ = cacheContextPack(cacheDir, body)
+	_ = writeCacheMeta(cacheDir, CacheMeta{
 		FetchedAt: ctx.FetchedAt,
 		ETag:      resp.Header.Get("ETag"),
 		URL:       neighbor.URL,
@@ -248,22 +251,42 @@ func loadFromCache(cacheDir string) (*model.ContextPack, []model.Room, error) {
 	return &cp, rooms, nil
 }
 
-func cacheContextPack(cacheDir string, data []byte) {
+func cacheContextPack(cacheDir string, data []byte) error {
 	path := filepath.Join(cacheDir, "context-pack.json")
-	os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o644)
 }
 
-func cacheRooms(cacheDir string, rooms []model.Room) {
+func cacheRooms(cacheDir string, rooms []model.Room) error {
+	if len(rooms) == 0 {
+		return nil
+	}
+
 	roomsDir := filepath.Join(cacheDir, "rooms")
-	os.MkdirAll(roomsDir, 0o755)
+	if err := os.MkdirAll(roomsDir, 0o755); err != nil {
+		return err
+	}
+
+	var successCount int
+	var lastErr error
 	for _, room := range rooms {
 		data, err := json.MarshalIndent(room, "", "  ")
 		if err != nil {
+			lastErr = err
 			continue
 		}
 		path := filepath.Join(roomsDir, room.Name+".json")
-		os.WriteFile(path, data, 0o644)
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			lastErr = err
+			continue
+		}
+		successCount++
 	}
+
+	// Return error only if ALL rooms failed to cache
+	if successCount == 0 && lastErr != nil {
+		return fmt.Errorf("failed to cache any rooms: %w", lastErr)
+	}
+	return nil
 }
 
 func loadRoomsFromDir(dir string) []model.Room {
@@ -327,13 +350,13 @@ func loadCacheMeta(cacheDir string) (*CacheMeta, error) {
 	return &meta, nil
 }
 
-func writeCacheMeta(cacheDir string, meta CacheMeta) {
+func writeCacheMeta(cacheDir string, meta CacheMeta) error {
 	data, err := json.MarshalIndent(meta, "", "  ")
 	if err != nil {
-		return
+		return err
 	}
 	path := filepath.Join(cacheDir, ".meta.json")
-	os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o644)
 }
 
 func parseTTL(ttlStr string) time.Duration {
@@ -348,20 +371,8 @@ func parseTTL(ttlStr string) time.Duration {
 }
 
 func stripJSONComments(data []byte) []byte {
-	lines := strings.Split(string(data), "\n")
-	var result []string
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "//") {
-			continue
-		}
-		// Remove inline comments (naive approach)
-		if idx := strings.Index(line, "//"); idx > 0 {
-			line = line[:idx]
-		}
-		result = append(result, line)
-	}
-	return []byte(strings.Join(result, "\n"))
+	// Use the proper JSONC parser that handles strings correctly
+	return jsonc.Clean(data)
 }
 
 func NamespacePath(neighborName, path string) string {

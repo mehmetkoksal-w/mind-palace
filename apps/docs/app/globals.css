@@ -1,0 +1,38 @@
+/* Mind Palace Brand Colors */
+/* Palace Purple: #6B5B95 (HSL: 255, 24%, 47%) */
+/* Memory Blue: #4A90D9 (HSL: 212, 64%, 57%) */
+
+:root {
+  /* Primary color - Memory Blue */
+  --nextra-primary-hue: 212deg;
+  --nextra-primary-saturation: 64%;
+  --nextra-primary-lightness: 57%;
+}
+
+.dark {
+  /* Slightly lighter for dark mode */
+  --nextra-primary-hue: 212deg;
+  --nextra-primary-saturation: 70%;
+  --nextra-primary-lightness: 62%;
+}
+
+/* Banner styling with brand gradient */
+.nextra-banner {
+  background: linear-gradient(135deg, #6B5B95 0%, #4A90D9 100%) !important;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(74, 144, 217, 0.3);
+}
+
+/* Sidebar active item */
+.nextra-sidebar li.active > a {
+  background: rgba(74, 144, 217, 0.1);
+  color: #4A90D9;
+}
+
+.dark .nextra-sidebar li.active > a {
+  background: rgba(74, 144, 217, 0.15);
+  color: #6B9FE8;
+}
