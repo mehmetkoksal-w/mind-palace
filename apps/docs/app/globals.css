@@ -16,9 +16,9 @@
   --nextra-primary-lightness: 62%;
 }
 
-/* Banner styling with brand gradient */
+/* Banner styling with solid brand color */
 .nextra-banner {
-  background: linear-gradient(135deg, #6B5B95 0%, #4A90D9 100%) !important;
+  background: #6b5b95 !important;
 }
 
 /* Selection color */
@@ -29,10 +29,10 @@
 /* Sidebar active item */
 .nextra-sidebar li.active > a {
   background: rgba(74, 144, 217, 0.1);
-  color: #4A90D9;
+  color: #4a90d9;
 }
 
 .dark .nextra-sidebar li.active > a {
   background: rgba(74, 144, 217, 0.15);
-  color: #6B9FE8;
+  color: #6b9fe8;
 }
