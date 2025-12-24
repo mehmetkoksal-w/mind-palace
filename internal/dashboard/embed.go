@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-//go:embed dist/*
+//go:embed all:dist
 var distFS embed.FS
 
 // embeddedAssets provides the embedded dashboard files.
