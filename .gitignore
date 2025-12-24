@@ -57,7 +57,8 @@ apps/dashboard/dist/
 apps/dashboard/node_modules/
 apps/dashboard/.angular/
 apps/palace/palace
-internal/dashboard/dist/
+internal/dashboard/dist/*
+!internal/dashboard/dist/.gitkeep
 
 # Next.js (apps/docs)
 apps/docs/.next/
