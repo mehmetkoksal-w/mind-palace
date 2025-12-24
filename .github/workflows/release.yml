@@ -88,11 +88,11 @@ jobs:
             goos: linux
             goarch: amd64
             name: palace-linux-amd64
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             goos: linux
             goarch: arm64
             name: palace-linux-arm64
-          - os: ubuntu-latest
+          - os: windows-latest
             goos: windows
             goarch: amd64
             name: palace-windows-amd64.exe

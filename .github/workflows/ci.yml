@@ -21,8 +21,8 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out $(go list ./... | grep -v -E '(/apps/|/cmd/)')
+      - name: Run tests with coverage
+        run: go test -v -race -coverprofile=coverage.out ./internal/...
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
