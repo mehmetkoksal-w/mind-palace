@@ -547,7 +547,7 @@ export class GraphComponent implements OnInit, AfterViewInit, OnDestroy {
       .call(d3.drag<SVGGElement, Node>()
         .on('start', (event, d) => this.dragStarted(event, d))
         .on('drag', (event, d) => this.dragged(event, d))
-        .on('end', (event, d) => this.dragEnded(event, d)))
+        .on('end', (event, d) => this.dragEnded(event, d)) as any)
       .on('click', (event, d) => {
         event.stopPropagation();
         this.selectedNode.set(d);
