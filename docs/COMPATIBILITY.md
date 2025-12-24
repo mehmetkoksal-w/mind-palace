@@ -14,8 +14,8 @@ Version compatibility between ecosystem components.
 
 | Component | Version | Schema |
 |-----------|---------|--------|
-| CLI       | 0.0.1-rc1 | 1.0.0 |
-| Extension | 0.0.1-rc1 | 1.0.0 |
+| CLI       | 0.0.1-alpha | 1.0.0 |
+| Extension | 0.0.1-alpha | 1.0.0 |
 
 Versions are **synced** across components.
 
@@ -23,14 +23,14 @@ Versions are **synced** across components.
 
 ## Version Source
 
-Both repos use a `VERSION` file as the single source of truth:
+The monorepo uses a `VERSION` file as the single source of truth:
 
 ```
-mind-palace/VERSION          → CLI version
-mind-palace-vscode/VERSION   → Extension version
+mind-palace/VERSION              → CLI version
+mind-palace/apps/vscode/package.json → Extension version
 ```
 
-CI reads `VERSION` to determine if a release is needed.
+CI reads `VERSION` to determine release version for tags.
 
 ---
 
@@ -41,30 +41,30 @@ CI reads `VERSION` to determine if a release is needed.
 | Major | Breaking changes (CLI output, MCP protocol, schemas) | 1.0.0 → 2.0.0 |
 | Minor | New features, backwards compatible | 0.1.0 → 0.2.0 |
 | Patch | Bug fixes | 0.1.0 → 0.1.1 |
-| Pre-release | Testing releases | 0.1.0-rc1 |
+| Pre-release | Testing releases | 0.1.0-alpha, 0.1.0-beta |
 
 ---
 
 ## Release Process
 
-Both repos use identical automated release pipelines:
+Automated release pipeline triggered by tags:
 
 ```
-VERSION file change → Push to main → CI runs → Review approval → GitHub Release
+Create tag v0.0.1-alpha → Push → CI builds → GitHub Release
 ```
 
 **To release**:
-1. Update `VERSION` file (e.g., `0.2.0`)
+1. Update `VERSION` file
 2. Update `CHANGELOG.md`
-3. Update `package.json` version (extension only)
+3. Update `apps/vscode/package.json` version
 4. Commit and push to `main`
-5. CI detects new version, requests approval
-6. Approve in GitHub Actions
-7. Release created with artifacts
+5. Create and push tag: `git tag v0.0.1-alpha && git push origin v0.0.1-alpha`
+6. CI builds all artifacts and creates release
 
 **Artifacts**:
-- CLI: binaries (darwin/linux/windows) + macOS .pkg installers
+- CLI: binaries (darwin/linux/windows)
 - Extension: `.vsix` file
+- Dashboard: embedded in CLI binary
 
 ---
 
@@ -75,18 +75,28 @@ VERSION file change → Push to main → CI runs → Review approval → GitHub 
 Download from [GitHub Releases](https://github.com/mehmetkoksal-w/mind-palace/releases):
 
 ```sh
-# macOS/Linux
-curl -L https://github.com/mehmetkoksal-w/mind-palace/releases/latest/download/palace-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) -o palace
+# macOS (Apple Silicon)
+curl -L https://github.com/mehmetkoksal-w/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
+chmod +x palace
+sudo mv palace /usr/local/bin/
+
+# macOS (Intel)
+curl -L https://github.com/mehmetkoksal-w/mind-palace/releases/latest/download/palace-darwin-amd64 -o palace
+chmod +x palace
+sudo mv palace /usr/local/bin/
+
+# Linux (amd64)
+curl -L https://github.com/mehmetkoksal-w/mind-palace/releases/latest/download/palace-linux-amd64 -o palace
 chmod +x palace
 sudo mv palace /usr/local/bin/
 ```
 
 ### Extension
 
-Download `.vsix` from [GitHub Releases](https://github.com/mehmetkoksal-w/mind-palace-vscode/releases):
+Download `.vsix` from [GitHub Releases](https://github.com/mehmetkoksal-w/mind-palace/releases):
 
 ```sh
-code --install-extension mind-palace-0.0.1-rc1.vsix
+code --install-extension mind-palace-vscode-0.0.1-alpha.vsix
 ```
 
 ---
@@ -98,7 +108,7 @@ The extension validates CLI version on activation:
 ```typescript
 // src/version.ts
 const COMPATIBILITY_MATRIX = {
-  '0.0.1-rc1': '0.0.1-rc1',  // extension → required CLI
+  '0.0.1-alpha': '0.0.1-alpha',  // extension → required CLI
 };
 ```
 
@@ -108,8 +118,10 @@ Incompatible versions trigger a warning notification.
 
 ## Changelog
 
-### 0.0.1-rc1
+See [CHANGELOG.md](https://github.com/mehmetkoksal-w/mind-palace/blob/main/CHANGELOG.md) for full release history.
 
-- Pre-release
-- Schema version 1.0.0 (preview)
-- MCP tools: `search_mind_palace`, `list_rooms`
+### 0.0.1-alpha
+
+- Initial public release
+- Schema version 1.0.0
+- Full CLI, Dashboard, and VS Code extension

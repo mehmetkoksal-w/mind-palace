@@ -6,12 +6,14 @@ nav_order: 2
 
 # Ecosystem
 
-Mind Palace consists of two repositories working together.
+Mind Palace is a monorepo containing all ecosystem components.
 
-| Repository | Language | Purpose |
-|------------|----------|---------|
-| [mind-palace](https://github.com/mehmetkoksal-w/mind-palace) | Go | CLI + MCP server |
-| [mind-palace-vscode](https://github.com/mehmetkoksal-w/mind-palace-vscode) | TypeScript | VS Code extension |
+| Component | Language | Location |
+|-----------|----------|----------|
+| CLI | Go | `cmd/palace`, `internal/` |
+| Dashboard | Angular | `apps/dashboard` |
+| VS Code Extension | TypeScript | `apps/vscode` |
+| Public API | Go | `pkg/` |
 
 ---
 
@@ -38,6 +40,9 @@ Mind Palace consists of two repositories working together.
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
 │  │  scan    │ │ collect  │ │  verify  │ │   ask    │ │  serve   │  │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘  │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
+│  │ session  │ │  learn   │ │ corridor │ │dashboard │ │  update  │  │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘  │
 └─────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -49,7 +54,7 @@ Mind Palace consists of two repositories working together.
 │  └─────────────────────────────────────────────────────────────┘    │
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │ GENERATED (gitignored)                                      │    │
-│  │  index/palace.db, outputs/context-pack.json                 │    │
+│  │  index/palace.db, outputs/context-pack.json, memory.db      │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -62,9 +67,15 @@ Mind Palace consists of two repositories working together.
 
 ```
 palace.db
-├── files        # path, hash, size, mtime
+├── files        # path, hash, size, mtime, language
 ├── chunks       # file_id, content, line_start, line_end
+├── symbols      # file_id, name, kind, signature
 └── chunks_fts   # FTS5 virtual table for full-text search
+
+memory.db
+├── sessions     # agent sessions
+├── activities   # file edits, tool calls
+└── learnings    # captured knowledge with confidence
 ```
 
 **Why SQLite?**
@@ -146,6 +157,8 @@ Extension defaults    →  Lowest priority
 ```json
 {"method": "tools/call", "params": {"name": "search_mind_palace", "arguments": {"query": "auth"}}}
 {"method": "tools/call", "params": {"name": "list_rooms"}}
+{"method": "tools/call", "params": {"name": "get_session_context"}}
+{"method": "tools/call", "params": {"name": "log_learning", "arguments": {"content": "...", "confidence": 0.8}}}
 ```
 
 ### Resources
@@ -153,6 +166,7 @@ Extension defaults    →  Lowest priority
 ```
 palace://files/src/auth/login.ts  → File content
 palace://rooms/auth               → Room manifest
+palace://session/current          → Current session context
 ```
 
 ---
@@ -161,7 +175,7 @@ palace://rooms/auth               → Room manifest
 
 | CLI | Extension | Schema |
 |-----|-----------|--------|
-| 0.0.1-rc1 | 0.0.1 | 1.0.0 |
+| 0.0.1-alpha | 0.0.1-alpha | 1.0.0 |
 
 Extension checks CLI version on startup. Warns if incompatible.
 

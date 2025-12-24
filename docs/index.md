@@ -83,11 +83,55 @@ palace ask "where is authentication handled"
 | [CLI](./cli.html) | Core engine: `palace scan`, `collect`, `verify`, `ask`, `serve` |
 | [Observer](./extension.html) | VS Code extension: HUD, sidebar, auto-sync |
 | [MCP Server](./agents.html) | AI agent integration via JSON-RPC |
+| [Dashboard](./dashboard.html) | Web UI for visualization and monitoring |
+
+## New Features
+
+### Session Memory
+Track agent work sessions, activities, and learnings. See [Session Memory](./session-memory.html).
+
+```bash
+palace session start --agent claude-code --goal "Add authentication"
+palace learn "Use bcrypt for password hashing"
+palace recall "authentication"
+```
+
+### Corridors
+Share knowledge across projects. See [Corridors](./corridors.html).
+
+```bash
+palace corridor link api-service ~/code/api-service
+palace corridor search "error handling" --all
+```
+
+### Dashboard
+Visual exploration of your codebase. See [Dashboard](./dashboard.html).
+
+```bash
+palace dashboard
+# Opens http://localhost:3001
+```
 
 ---
 
 ## Next
 
+### Getting Started
 - [Concepts](./concepts.html) - Core terminology
 - [Workflows](./workflows.html) - Day-to-day usage
+- [CLI Reference](./cli.html) - Command reference
+
+### Features
+- [Session Memory](./session-memory.html) - Agent sessions and learnings
+- [Corridors](./corridors.html) - Cross-project knowledge
+- [Dashboard](./dashboard.html) - Web UI guide
+- [MCP Integration](./agents.html) - AI agent integration
+
+### Architecture
+- [Architecture](./architecture.html) - System design
 - [Ecosystem](./ecosystem.html) - Architecture details
+- [Public API](./public-api.html) - Go packages for external tools
+
+### Contributing
+- [Development](./development.html) - Development setup
+- [Contributing](./contributing.html) - How to contribute

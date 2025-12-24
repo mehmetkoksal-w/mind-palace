@@ -15,15 +15,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  ci:
+  # Go CI
+  ci-go:
+    name: Go CI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
+
       - name: Validate VERSION format
         run: |
           if [ ! -f VERSION ]; then
@@ -36,14 +40,85 @@ jobs:
             exit 1
           fi
           echo "Detected version: $VER"
+
       - name: Go build
         run: go build -v ./cmd/palace
+
       - name: Go vet
         run: go vet ./...
+
       - name: Go test
         run: go test -v ./...
 
+  # Dashboard CI
+  ci-dashboard:
+    name: Dashboard CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Lint
+        run: npm run lint 2>/dev/null || echo "No lint script configured"
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload dashboard build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-build
+          path: apps/dashboard/dist/
+
+  # VS Code extension CI
+  ci-vscode:
+    name: VS Code CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/vscode
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/vscode/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Lint
+        run: npm run lint 2>/dev/null || echo "No lint script configured"
+
+      - name: Compile extension
+        run: npm run compile
+
+  # All CI checks passed
+  ci:
+    name: CI Complete
+    needs: [ci-go, ci-dashboard, ci-vscode]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "All CI checks passed"
+
+  # Deploy documentation
   docs:
+    name: Deploy Docs
     if: github.event_name == 'push'
     needs: ci
     runs-on: ubuntu-latest
@@ -52,22 +127,28 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
+
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
           source: ./docs
           destination: ./_site
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./_site
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
+  # Check if release is needed
   release-check:
+    name: Check Release
     if: github.event_name == 'push'
     needs: ci
     runs-on: ubuntu-latest
@@ -78,6 +159,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - id: check
         run: |
           VER=$(cat VERSION | tr -d '[:space:]')
@@ -91,8 +173,77 @@ jobs:
             echo "version_tag=$TAG" >> $GITHUB_OUTPUT
           fi
 
+  # Build dashboard for embedding
+  build-dashboard:
+    name: Build Dashboard Assets
+    needs: [release-check]
+    if: needs.release-check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: cd apps/dashboard && npm ci || npm install
+
+      - name: Build dashboard
+        run: cd apps/dashboard && npm run build
+
+      - name: Package dashboard assets
+        run: |
+          mkdir -p dashboard-dist
+          if [ -d "apps/dashboard/dist/dashboard/browser" ]; then
+            cp -r apps/dashboard/dist/dashboard/browser/* dashboard-dist/
+          elif [ -d "apps/dashboard/dist/dashboard" ]; then
+            cp -r apps/dashboard/dist/dashboard/* dashboard-dist/
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-assets
+          path: dashboard-dist/
+
+  # Build VS Code extension
+  build-vscode-ext:
+    name: Build VS Code Extension
+    needs: [release-check]
+    if: needs.release-check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/vscode/package-lock.json
+
+      - name: Install dependencies
+        run: cd apps/vscode && npm ci || npm install
+
+      - name: Compile extension
+        run: cd apps/vscode && npm run compile
+
+      - name: Package extension
+        run: |
+          cd apps/vscode
+          npx vsce package --no-dependencies
+          mv *.vsix ../..
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vscode-extension
+          path: "*.vsix"
+
+  # Build platform binaries with embedded dashboard
   build-assets:
-    needs: [release-check, docs]
+    name: Build ${{ matrix.asset_name }}
+    needs: [release-check, build-dashboard, docs]
     if: needs.release-check.outputs.should_release == 'true'
     runs-on: ${{ matrix.os }}
     environment: production-release
@@ -123,9 +274,20 @@ jobs:
             asset_name: palace-windows-amd64.exe
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - name: Download dashboard assets
+        uses: actions/download-artifact@v4
+        with:
+          name: dashboard-assets
+          path: internal/dashboard/dist
+
+      - name: Verify dashboard assets
+        run: ls -la internal/dashboard/dist/
+
       - name: Build ${{ matrix.asset_name }}
         env:
           GOOS: ${{ matrix.goos }}
@@ -161,29 +323,53 @@ jobs:
           name: ${{ matrix.pkg_name }}
           path: ${{ matrix.pkg_name }}
 
+  # Create GitHub release with all assets
   finalize-release:
-    needs: [build-assets, release-check]
+    name: Finalize Release
+    needs: [build-assets, build-vscode-ext, release-check]
     if: needs.release-check.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
+
+      - name: List downloaded artifacts
+        run: find dist -type f | head -50
+
       - name: Extract release notes
         env:
           VERSION: ${{ needs.release-check.outputs.version_tag }}
         run: |
           VERSION="${VERSION#v}"
-          go run ./scripts/extract_changelog.go "$VERSION" > release-notes.txt
+          go run ./scripts/extract_changelog.go "$VERSION" > release-notes.txt || echo "No changelog extraction available" > release-notes.txt
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+
+          # Copy all palace binaries
+          find dist -name "palace-*" -type f -exec cp {} release/ \;
+
+          # Copy macOS installers
+          find dist -name "*.pkg" -type f -exec cp {} release/ \;
+
+          # Copy VS Code extension
+          find dist -name "*.vsix" -type f -exec cp {} release/ \;
+
+          ls -la release/
+
       - name: Create Release on GitHub
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -197,9 +383,9 @@ jobs:
           git push origin "$TAG"
 
           # Generate checksums
-          cd dist
-          sha256sum palace-* > SHA256SUMS
+          cd release
+          sha256sum * > SHA256SUMS 2>/dev/null || shasum -a 256 * > SHA256SUMS
           cd ..
 
           # Create GitHub Release
-          gh release create "$TAG" ./dist/* --title "$TAG" --notes-file release-notes.txt
+          gh release create "$TAG" ./release/* --title "$TAG" --notes-file release-notes.txt

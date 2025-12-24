@@ -24,11 +24,19 @@ go.work.sum
 # env file
 .env
 
+# IDE / Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
 # Mind Palace generated artifacts
 .palace/index/
 .palace/outputs/
 .palace/maps/
 .palace/sessions/
+.palace/cache/
 
 # SQLite / generated data
 *.db
@@ -38,5 +46,35 @@ go.work.sum
 # Release / dist artifacts
 dist/
 # Ignore built binaries only at repo root (not cmd/palace/)
-./palace
-./palace-*
+/palace
+/palace-*
+
+# Monorepo app artifacts
+apps/vscode/out/
+apps/vscode/*.vsix
+apps/vscode/node_modules/
+apps/dashboard/dist/
+apps/dashboard/node_modules/
+apps/dashboard/.angular/
+apps/palace/palace
+internal/dashboard/dist/
+
+# Next.js (apps/docs)
+apps/docs/.next/
+apps/docs/out/
+apps/docs/node_modules/
+
+# Node
+node_modules/
+npm-debug.log*
+.pnpm-store/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# pkg directory (Go packages)
+pkg/
+
+# OS files
+.DS_Store
+Thumbs.db

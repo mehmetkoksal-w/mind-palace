@@ -1,0 +1,75 @@
+# Introduction
+
+Mind Palace is a deterministic context system for codebases. Unlike RAG or embedding-based approaches, Mind Palace provides **schema-validated, verifiable context** that both humans and AI agents can trust.
+
+## Installation
+
+### macOS / Linux
+
+```sh
+# Download the latest release
+curl -L https://github.com/mehmetkoksal-w/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
+
+# Make it executable
+chmod +x palace
+
+# Move to your PATH
+sudo mv palace /usr/local/bin/
+```
+
+### Windows
+
+Download from the [releases page](https://github.com/mehmetkoksal-w/mind-palace/releases) and add to your PATH.
+
+### Verify Installation
+
+```sh
+palace version
+```
+
+## Quick Start
+
+### 1. Initialize Your Project
+
+```sh
+cd your-project
+palace init
+```
+
+This creates the `.palace/` directory with:
+- `palace.jsonc` - Project configuration
+- `rooms/` - Room definitions
+- `playbooks/` - Workflow templates
+
+### 2. Auto-Detect Project Type
+
+```sh
+palace detect
+```
+
+Mind Palace analyzes your codebase and generates a project profile.
+
+### 3. Build the Index
+
+```sh
+palace scan
+```
+
+This creates a SQLite database with full-text search (FTS5) containing:
+- File metadata and hashes
+- Symbols (functions, types, classes)
+- Call relationships
+
+### 4. Query Your Codebase
+
+```sh
+palace ask "where is authentication handled"
+```
+
+Results are ranked using BM25 with entry-point boosting.
+
+## What's Next
+
+- [Concepts](/getting-started/concepts) - Learn the core terminology
+- [Workflows](/getting-started/workflows) - Day-to-day usage patterns
+- [CLI Reference](/reference/cli) - All available commands

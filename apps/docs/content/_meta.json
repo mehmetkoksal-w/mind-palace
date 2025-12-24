@@ -1,0 +1,18 @@
+{
+  "index": {
+    "title": "Home",
+    "type": "page"
+  },
+  "getting-started": {
+    "title": "Getting Started"
+  },
+  "features": {
+    "title": "Features"
+  },
+  "reference": {
+    "title": "Reference"
+  },
+  "architecture": {
+    "title": "Architecture"
+  }
+}

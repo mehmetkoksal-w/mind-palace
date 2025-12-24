@@ -7,52 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Self-Update**: New `palace update` command downloads and installs the latest release from GitHub.
-- **Version Check**: `palace version --check` flag to check for available updates without installing.
-- **Startup Notification**: Automatic update check on CLI startup (cached for 24 hours) with non-blocking notification when a new version is available.
-
-## [0.0.1-rc2] - 2025-12-21
-
-### Fixed
-
-- **CLI: Symlink Handling**: Fixed scanner failing on symlinked directories (common in Flutter/iOS projects). Symlinked directories are now skipped gracefully, and broken symlinks are handled without errors.
-- **CLI: Language Detection**: `palace detect` now correctly identifies Flutter/Dart projects (`pubspec.yaml`) along with Rust, Python, Ruby, Java, C#, Swift, and PHP projects instead of returning "unknown".
-- **CLI: Room Template**: Removed Go-specific `go.mod` from default `project-overview.jsonc` template entry points. Now uses only `README.md` which is universal across all project types.
-
-### Changed
-
-- **CLI: Extended Language Support**: Added detection and default commands (test, lint, deps) for 10+ languages:
-  - Dart/Flutter (`pubspec.yaml`)
-  - Rust (`Cargo.toml`)
-  - Python (`pyproject.toml`, `setup.py`, `requirements.txt`)
-  - Ruby (`Gemfile`)
-  - Java/Kotlin (`pom.xml`, `build.gradle`)
-  - C#/.NET (`.csproj`, `.sln`)
-  - Swift (`Package.swift`)
-  - PHP (`composer.json`)
-
-## [0.0.1-rc1] - 2025-12-21
+## [0.0.1-alpha] - 2025-12-23
 
 ### Added
 
-- **Mind Palace Initial Release**: A unified workspace for high-fidelity context management.
-- **Butler (Intent Engine)**:
-  - Integrated intent-based search with `palace ask`.
-  - MCP Server (`palace serve`) for deep integration with AI agents like Claude and Cursor.
-  - Advanced ranking using BM25 and structural heuristics (entry points, file types).
-- **Corridors (Distributed Context)**:
-  - Native support for multi-repo architectures via `neighbors` configuration.
-  - Virtualized namespaces (`corridor://`) and resilient remote artifact caching.
-- **CLI Workspace & Lifecycle**:
-  - `init`, `scan`, `collect`, `verify`, `plan`, and `signal` for deterministic context management.
-  - **Palace Verify**: Fast and strict staleness checks for CI/CD safety.
-  - **Palace Lint**: Schema-first validation for all curated artifacts (rooms, playbooks, project profiles).
-  - **Palace Explain**: Built-in inspector for project invariants, behaviors, and expected outputs.
-  - **Palace Signal**: Automated diff-signal generation for strict incremental workflows.
-- **Architecture & Tooling**:
-  - **Tier-0 Index**: SQLite-backed indexing (WAL + FTS5) with full-text search capabilities.
-  - **Embedded Schemas**: Built-in JSON Schema validation for all configuration files.
-  - **Documentation Workflow**: Canonical Markdown docs in `/docs` with ready-to-use GitHub Pages publishing setup.
-  - Curated starter templates for rapid project onboarding.
+- **Mind Palace CLI**: A deterministic context system for codebases
+  - `palace init` - Initialize a new Mind Palace workspace
+  - `palace scan` - Index codebase with full-text search (SQLite FTS5)
+  - `palace scan --incremental` - Fast delta scanning for large codebases
+  - `palace collect` - Generate context packs from rooms
+  - `palace ask` - Intent-based semantic search
+  - `palace verify` - Staleness detection for CI/CD
+  - `palace signal` - Diff-based change signals
+  - `palace lint` - Schema validation for all artifacts
+  - `palace dashboard` - Web UI for visualization
+  - `palace serve` - MCP server for AI agent integration
+  - `palace update` - Self-update from GitHub releases
+
+- **Session Memory**: Track agent sessions and learnings
+  - Session lifecycle (start, pause, resume, end)
+  - Activity logging (file edits, tool calls, decisions)
+  - Learning capture with confidence scoring
+  - Recall API for retrieving past learnings
+
+- **Corridors**: Cross-project knowledge sharing
+  - Link multiple workspaces
+  - Global search across linked projects
+  - Automatic discovery promotion
+
+- **Dashboard**: Web UI for visualization
+  - Codebase graph visualization
+  - Session history browser
+  - File hotspot analysis
+  - Search interface
+
+- **VS Code Extension**: IDE integration
+  - Status bar HUD (Fresh/Stale indicator)
+  - Blueprint sidebar (Rooms, Map views)
+  - Auto-heal on file save
+  - Keyboard shortcuts
+
+- **Multi-Language Analysis**: Code parsing for 15+ languages
+  - Go, TypeScript, JavaScript, Python, Rust
+  - Java, C#, C/C++, Swift, Ruby
+  - SQL, YAML, HCL, Dockerfile, Bash
+
+- **MCP Integration**: AI agent protocol support
+  - Compatible with Claude Desktop, Cursor
+  - Full Butler API exposure via JSON-RPC
