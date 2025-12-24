@@ -11,12 +11,12 @@ Mind Palace provides a **deterministic, schema-validated index** for codebases t
 
 ### Components
 
-| Component | Description |
-|-----------|-------------|
-| **Palace CLI** | Core engine for scanning, indexing, and querying |
-| **Dashboard** | Web UI for visualization and monitoring |
-| **VS Code Extension** | HUD, sidebar, and auto-sync integration |
-| **MCP Server** | AI agent integration via JSON-RPC |
+| Component             | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| **Palace CLI**        | Core engine for scanning, indexing, and querying |
+| **Dashboard**         | Web UI for visualization and monitoring          |
+| **VS Code Extension** | HUD, sidebar, and auto-sync integration          |
+| **MCP Server**        | AI agent integration via JSON-RPC                |
 
 ### Key Features
 
@@ -46,41 +46,29 @@ palace dashboard
 
 Full documentation is available at [koksalmehmet.github.io/mind-palace](https://koksalmehmet.github.io/mind-palace).
 
-- [Concepts](./docs/concepts.md) - Core terminology
-- [Workflows](./docs/workflows.md) - Day-to-day usage
-- [CLI Reference](./docs/cli.md) - Command reference
-- [Session Memory](./docs/session-memory.md) - Agent sessions and learnings
-- [Corridors](./docs/corridors.md) - Cross-project knowledge
-- [Dashboard](./docs/dashboard.md) - Web UI guide
-- [Architecture](./docs/architecture.md) - System design
-- [Development](./docs/development.md) - Development setup
-- [Contributing](./docs/contributing.md) - How to contribute
-
 ## Repository Structure
 
 ```
 mind-palace/
-├── cmd/palace/              # CLI entry point
-├── internal/                # Private Go packages
-│   ├── analysis/            # Language parsers
-│   ├── butler/              # MCP server & coordinator
-│   ├── cli/                 # CLI commands
-│   ├── config/              # Configuration
-│   ├── corridor/            # Cross-workspace sharing
-│   ├── dashboard/           # HTTP server + embedded assets
-│   ├── index/               # Code index & oracle
-│   └── memory/              # Session memory
-├── pkg/                     # Public Go packages (importable)
-│   ├── types/               # Shared type definitions
-│   ├── memory/              # Session memory API
-│   └── corridor/            # Corridor API
-├── apps/
+├── apps/                    # All ecosystem applications
+│   ├── cli/                 # Palace CLI (Go)
+│   │   ├── main.go          # Entry point
+│   │   ├── internal/        # Core engine packages
+│   │   ├── pkg/             # Public Go API
+│   │   ├── schemas/         # JSON schema definitions
+│   │   ├── starter/         # Init templates
+│   │   └── tests/           # Integration tests
 │   ├── dashboard/           # Angular web dashboard
-│   ├── vscode/              # VS Code extension
-│   └── palace/              # CLI build wrapper
-├── schemas/                 # JSON schemas
-├── docs/                    # Documentation
-└── scripts/                 # Build & test scripts
+│   ├── docs/                # Next.js + Nextra documentation
+│   └── vscode/              # VS Code extension
+├── assets/                  # Shared branding assets
+├── packaging/               # Installer scripts (DMG, DEB, MSI)
+├── scripts/                 # Build & CI scripts
+├── CHANGELOG.md
+├── LICENSE
+├── Makefile
+├── README.md
+└── VERSION
 ```
 
 ## Development
@@ -145,24 +133,27 @@ See `make help` for all available targets.
 ### Via Go
 
 ```sh
-go install github.com/koksalmehmet/mind-palace/cmd/palace@latest
+go install github.com/koksalmehmet/mind-palace/apps/cli@latest
 ```
 
 ### Binary Releases
 
 - **macOS (Apple Silicon)**:
+
   ```sh
   curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
 
 - **macOS (Intel)**:
+
   ```sh
   curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-amd64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
 
 - **Linux (amd64)**:
+
   ```sh
   curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-linux-amd64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
@@ -208,9 +199,9 @@ External tools can import Mind Palace packages:
 
 ```go
 import (
-    "github.com/koksalmehmet/mind-palace/pkg/memory"
-    "github.com/koksalmehmet/mind-palace/pkg/corridor"
-    "github.com/koksalmehmet/mind-palace/pkg/types"
+    "github.com/koksalmehmet/mind-palace/apps/cli/pkg/memory"
+    "github.com/koksalmehmet/mind-palace/apps/cli/pkg/corridor"
+    "github.com/koksalmehmet/mind-palace/apps/cli/pkg/types"
 )
 
 // Open workspace memory

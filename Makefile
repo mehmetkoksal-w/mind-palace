@@ -4,7 +4,7 @@
 VERSION ?= $(shell cat VERSION 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS := -ldflags="-s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT) -X main.buildDate=$(DATE)"
+LDFLAGS := -ldflags="-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
 
 # Default target
 all: build
@@ -49,7 +49,7 @@ build: build-dashboard build-vscode build-palace
 # Build palace CLI
 build-palace:
 	@echo "Building palace CLI..."
-	go build $(LDFLAGS) -o palace ./cmd/palace
+	go build $(LDFLAGS) -o palace ./apps/cli
 
 # Build dashboard (Angular)
 build-dashboard:
@@ -57,12 +57,12 @@ build-dashboard:
 	@if [ -d "apps/dashboard/node_modules" ]; then \
 		cd apps/dashboard && npm run build; \
 		echo "Embedding dashboard assets..."; \
-		rm -rf internal/dashboard/dist; \
-		mkdir -p internal/dashboard/dist; \
+		rm -rf apps/cli/internal/dashboard/dist; \
+		mkdir -p apps/cli/internal/dashboard/dist; \
 		if [ -d "dist/dashboard/browser" ]; then \
-			cp -r dist/dashboard/browser/* ../../internal/dashboard/dist/; \
+			cp -r dist/dashboard/browser/* ../../apps/cli/internal/dashboard/dist/; \
 		elif [ -d "dist/dashboard" ]; then \
-			cp -r dist/dashboard/* ../../internal/dashboard/dist/; \
+			cp -r dist/dashboard/* ../../apps/cli/internal/dashboard/dist/; \
 		fi; \
 	else \
 		echo "Dashboard dependencies not installed. Run 'make deps-dashboard' first."; \
@@ -80,7 +80,7 @@ build-vscode:
 # Release build (optimized, with embedded dashboard)
 release: build-dashboard
 	@echo "Building release binary..."
-	CGO_ENABLED=0 go build $(LDFLAGS) -o palace ./cmd/palace
+	CGO_ENABLED=1 go build $(LDFLAGS) -o palace ./apps/cli
 	@echo "Release build complete: ./palace ($(shell du -h palace | cut -f1))"
 
 # =============================================================================
@@ -126,7 +126,7 @@ e2e: build-palace
 # Run palace server in dev mode
 dev:
 	@echo "Starting palace in dev mode..."
-	go run ./cmd/palace serve --dev
+	go run ./apps/cli serve --dev
 
 # Run dashboard dev server (with proxy to palace backend)
 dev-dashboard:
@@ -216,7 +216,7 @@ clean:
 	rm -rf apps/dashboard/.angular
 	rm -rf apps/vscode/out
 	rm -rf apps/vscode/*.vsix
-	rm -rf internal/dashboard/dist
+	rm -rf apps/cli/internal/dashboard/dist
 	go clean ./...
 	@echo "Clean complete!"
 
@@ -239,11 +239,11 @@ info:
 	@echo "  Date:    $(DATE)"
 	@echo ""
 	@echo "Directories:"
-	@echo "  CLI:       cmd/palace/"
+	@echo "  CLI:       apps/cli/"
 	@echo "  Dashboard: apps/dashboard/"
 	@echo "  VS Code:   apps/vscode/"
-	@echo "  Internal:  internal/"
-	@echo "  Public:    pkg/"
+	@echo "  Internal:  apps/cli/internal/"
+	@echo "  Public:    apps/cli/pkg/"
 
 # Verify build
 verify: build

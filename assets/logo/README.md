@@ -5,35 +5,39 @@ A brain with structured internal pathways - representing the "Mind Palace" conce
 ## Logo Concept
 
 The logo combines:
+
 - **Brain shape**: Represents memory, cognition, and the "mind" aspect
 - **Internal corridors/pathways**: Represents the structured "palace" - rooms, connections, organized knowledge
 - **Gradient colors**: Palace Purple (#6B5B95) to Memory Blue (#4A90D9) - scholarly yet modern
 
 ## Available Files
 
-| File | Purpose | Use Case |
-|------|---------|----------|
-| `logo.svg` | Primary logo | Documentation, README, marketing |
-| `logo-dark.svg` | Darker variant | Light backgrounds |
-| `logo-light.svg` | Lighter variant | Dark backgrounds |
-| `logo-mono.svg` | Monochrome (currentColor) | Favicons, where color is inherited |
-| `brain-10-svgrepo-com.svg` | Original source | Reference only |
+| File             | Purpose                   | Use Case                           |
+| ---------------- | ------------------------- | ---------------------------------- |
+| `logo.svg`       | Primary logo              | Documentation, README, marketing   |
+| `logo-dark.svg`  | Darker variant            | Light backgrounds                  |
+| `logo-light.svg` | Lighter variant           | Dark backgrounds                   |
+| `logo-mono.svg`  | Monochrome (currentColor) | Favicons, where color is inherited |
 
 ## Color Variants
 
 ### Primary (logo.svg)
+
 - Outer shell: Gradient from #6B5B95 (Palace Purple) to #4A90D9 (Memory Blue)
 - Inner corridors: White (#FFFFFF) at 95% opacity
 
 ### Dark (logo-dark.svg)
+
 - Outer shell: Gradient from #5A4A84 to #3A7BC8 (slightly darker)
 - Inner corridors: White (#FFFFFF) at 95% opacity
 
 ### Light (logo-light.svg)
+
 - Outer shell: Gradient from #9B8BC5 to #6AB0F9 (lighter, more vibrant)
 - Inner corridors: Dark (#1A1A2E) at 90% opacity
 
 ### Monochrome (logo-mono.svg)
+
 - Uses `currentColor` - inherits from parent CSS
 - Single color, no gradient
 

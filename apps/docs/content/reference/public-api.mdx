@@ -5,9 +5,9 @@ Mind Palace provides public Go packages that external tools can import to intera
 ## Installation
 
 ```sh
-go get github.com/koksalmehmet/mind-palace/pkg/memory
-go get github.com/koksalmehmet/mind-palace/pkg/corridor
-go get github.com/koksalmehmet/mind-palace/pkg/types
+go get github.com/koksalmehmet/mind-palace/apps/cli/pkg/memory
+go get github.com/koksalmehmet/mind-palace/apps/cli/pkg/corridor
+go get github.com/koksalmehmet/mind-palace/apps/cli/pkg/types
 ```
 
 ## Packages
@@ -27,7 +27,7 @@ Shared type definitions used across memory and corridor packages.
 ### Types
 
 ```go
-import "github.com/koksalmehmet/mind-palace/pkg/types"
+import "github.com/koksalmehmet/mind-palace/apps/cli/pkg/types"
 
 // Session represents an agent work session
 type Session struct {
@@ -113,7 +113,7 @@ Workspace session memory API. Tracks sessions, activities, learnings, and file i
 ### Opening Memory
 
 ```go
-import "github.com/koksalmehmet/mind-palace/pkg/memory"
+import "github.com/koksalmehmet/mind-palace/apps/cli/pkg/memory"
 
 // Open workspace memory (creates .palace/memory.db if needed)
 mem, err := memory.Open("/path/to/workspace")
@@ -215,7 +215,7 @@ Global corridor API for cross-workspace knowledge sharing.
 ### Opening Corridor
 
 ```go
-import "github.com/koksalmehmet/mind-palace/pkg/corridor"
+import "github.com/koksalmehmet/mind-palace/apps/cli/pkg/corridor"
 
 // Open global corridor (~/.palace/corridors/personal.db)
 cor, err := corridor.OpenGlobal()
@@ -274,7 +274,7 @@ import (
     "fmt"
     "log"
 
-    "github.com/koksalmehmet/mind-palace/pkg/memory"
+    "github.com/koksalmehmet/mind-palace/apps/cli/pkg/memory"
 )
 
 func main() {
