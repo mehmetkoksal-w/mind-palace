@@ -13,6 +13,8 @@
     "completedAt",
     "fileCount",
     "chunkCount",
+    "symbolCount",
+    "relationshipCount",
     "scanHash",
     "provenance"
   ],
@@ -25,6 +27,8 @@
     "completedAt": { "type": "string", "format": "date-time" },
     "fileCount": { "type": "integer", "minimum": 0 },
     "chunkCount": { "type": "integer", "minimum": 0 },
+    "symbolCount": { "type": "integer", "minimum": 0 },
+    "relationshipCount": { "type": "integer", "minimum": 0 },
     "scanHash": { "type": "string", "minLength": 1 },
     "provenance": {
       "type": "object",

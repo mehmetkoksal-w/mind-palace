@@ -1,0 +1,138 @@
+{
+  "name": "mind-palace-vscode",
+  "displayName": "Mind Palace Observer",
+  "description": "Head-Up Display for the Mind Palace CLI",
+  "version": "0.0.1-alpha",
+  "license": "PolyForm-Shield-1.0.0",
+  "publisher": "mind-palace",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/koksalmehmet/mind-palace",
+    "directory": "apps/vscode"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:mindPalace.blueprintView"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mind-palace-view",
+          "title": "Mind Palace",
+          "icon": "$(heart)"
+        }
+      ]
+    },
+    "views": {
+      "mind-palace-view": [
+        {
+          "id": "mindPalace.blueprintView",
+          "name": "Blueprint",
+          "type": "webview",
+          "icon": "$(layout-sidebar-left)"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "mindPalace.heal",
+        "title": "Mind Palace: Heal (Scan & Collect)",
+        "icon": "$(heart)"
+      },
+      {
+        "command": "mindPalace.checkStatus",
+        "title": "Mind Palace: Check Status",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "mindPalace.openBlueprint",
+        "title": "Mind Palace: Open Blueprint",
+        "icon": "$(layout-sidebar-left)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "mindPalace.heal",
+        "key": "ctrl+shift+h",
+        "mac": "cmd+shift+h",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mindPalace.checkStatus",
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mindPalace.openBlueprint",
+        "key": "ctrl+shift+b",
+        "mac": "cmd+shift+b",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "Mind Palace",
+      "properties": {
+        "mindPalace.binaryPath": {
+          "type": "string",
+          "default": "palace",
+          "description": "Path to the 'palace' binary executable."
+        },
+        "mindPalace.waitForCleanWorkspace": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, auto-sync waits until ALL files in the workspace are saved. If false, it scans after the delay even if some files are unsaved."
+        },
+        "mindPalace.autoSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically heal (scan & collect) after file changes."
+        },
+        "mindPalace.autoSyncDelay": {
+          "type": "number",
+          "default": 1500,
+          "minimum": 500,
+          "maximum": 30000,
+          "description": "Milliseconds to wait after the last save before scanning (debounce)."
+        }
+      }
+    },
+    "colors": [
+      {
+        "id": "mindPalace.staleBackground",
+        "description": "Background color for the status bar when the palace is stale.",
+        "defaults": {
+          "dark": "statusBarItem.errorBackground",
+          "light": "statusBarItem.errorBackground",
+          "highContrast": "statusBarItem.errorBackground"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/cytoscape": "^3.21.9",
+    "@types/minimatch": "^5.1.2",
+    "@types/node": "^18.14.6",
+    "@types/vscode": "^1.80.0",
+    "cytoscape": "^3.33.1",
+    "typescript": "^5.1.3"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.2.0",
+    "minimatch": "^9.0.3"
+  }
+}
