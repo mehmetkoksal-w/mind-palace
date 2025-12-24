@@ -345,7 +345,8 @@ jobs:
         if: matrix.installer == 'msi'
         run: |
           dotnet tool install --global wix --version 4.0.4
-          echo "WiX installed"
+          wix extension add -g WixToolset.UI.wixext/4.0.4
+          echo "WiX and UI extension installed"
 
       - name: Create MSI (Windows)
         if: matrix.installer == 'msi'
