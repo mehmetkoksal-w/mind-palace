@@ -4,6 +4,9 @@ import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 import './globals.css'
 
+// Get basePath from environment
+const basePath = process.env.NODE_ENV === 'production' ? '/mind-palace' : ''
+
 export const metadata = {
   title: {
     default: 'Mind Palace',
@@ -15,7 +18,7 @@ export const metadata = {
     description: 'A deterministic context system for codebases',
   },
   icons: {
-    icon: '/favicon.png',
+    icon: `${basePath}/favicon.png`,
   },
 }
 
@@ -30,13 +33,7 @@ const banner = (
 const Logo = () => (
   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
     <svg viewBox="0 0 512 512" width="28" height="28">
-      <defs>
-        <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: '#6B5B95' }} />
-          <stop offset="100%" style={{ stopColor: '#4A90D9' }} />
-        </linearGradient>
-      </defs>
-      <g fill="url(#brandGradient)">
+      <g fill="#6B5B95">
         <path d="M499.51,335.772l-46.048-130.234C445.439,90.702,349.802,0,232.917,0C110.768,0,11.759,99.019,11.759,221.158
           v69.684C11.759,412.982,110.768,512,232.917,512c100.571,0,185.406-67.154,212.256-159.054h42.186c4.181,0,8.104-2.032,10.518-5.45
           C500.291,344.088,500.895,339.712,499.51,335.772z M328.82,214.59c2.511,14.166-2.495,37.128-47.051,37.128
@@ -77,9 +74,9 @@ const footer = (
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
-      <Head faviconGlyph="🏛️">
+      <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="icon" type="image/png" href={`${basePath}/favicon.png`} />
       </Head>
       <body>
         <Layout
@@ -99,3 +96,4 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     </html>
   )
 }
+
