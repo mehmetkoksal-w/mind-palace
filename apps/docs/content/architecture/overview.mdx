@@ -33,11 +33,12 @@ This document describes the high-level architecture of Mind Palace.
 
 ## Components
 
-### 1. CLI (`cmd/palace`)
+### 1. CLI (`apps/cli`)
 
 The command-line interface for all Mind Palace operations.
 
 **Responsibilities:**
+
 - Initialize workspaces
 - Scan and index codebases
 - Query symbols and files
@@ -45,95 +46,109 @@ The command-line interface for all Mind Palace operations.
 - Start the dashboard server
 
 **Key Files:**
-- `cmd/palace/main.go` - Entry point
-- `internal/cli/cli.go` - Command implementations
 
-### 2. Butler (`internal/butler`)
+- `apps/cli/main.go` - Entry point
+- `apps/cli/internal/cli/cli.go` - Command implementations
+
+### 2. Butler (`apps/cli/internal/butler`)
 
 The central coordinator and MCP server.
 
 **Responsibilities:**
+
 - Handle MCP tool calls from agents
 - Coordinate between index, memory, and corridors
 - Assemble context for agent queries
 - Serve as the API layer
 
 **Key Files:**
-- `internal/butler/butler.go` - Main coordinator
-- `internal/butler/mcp.go` - MCP protocol handling
 
-### 3. Index/Oracle (`internal/index`)
+- `apps/cli/internal/butler/butler.go` - Main coordinator
+- `apps/cli/internal/butler/mcp.go` - MCP protocol handling
+
+### 3. Index/Oracle (`apps/cli/internal/index`)
 
 The code intelligence engine.
 
 **Responsibilities:**
+
 - Parse source files
 - Build symbol tables
 - Index function calls and references
 - Provide fast symbol lookup
 
 **Key Files:**
-- `internal/index/index.go` - Core indexing
-- `internal/index/oracle.go` - Query and context assembly
 
-### 4. Memory (`internal/memory`)
+- `apps/cli/internal/index/index.go` - Core indexing
+- `apps/cli/internal/index/oracle.go` - Query and context assembly
+
+### 4. Memory (`apps/cli/internal/memory`)
 
 Session memory and learning storage.
 
 **Responsibilities:**
+
 - Track agent sessions
 - Log activities
 - Store and retrieve learnings
 - Maintain file intelligence
 
 **Key Files:**
-- `internal/memory/memory.go` - Main interface
-- `internal/memory/schema.go` - Database schema
 
-### 5. Corridor (`internal/corridor`)
+- `apps/cli/internal/memory/memory.go` - Main interface
+- `apps/cli/internal/memory/schema.go` - Database schema
+
+### 5. Corridor (`apps/cli/internal/corridor`)
 
 Cross-workspace knowledge sharing.
 
 **Responsibilities:**
+
 - Manage personal corridor
 - Link workspaces
 - Promote learnings
 - Search across corridors
 
 **Key Files:**
-- `internal/corridor/global.go` - Global corridor manager
-- `internal/corridor/schema.go` - Database schema
 
-### 6. Dashboard (`internal/dashboard` + `apps/dashboard`)
+- `apps/cli/internal/corridor/global.go` - Global corridor manager
+- `apps/cli/internal/corridor/schema.go` - Database schema
+
+### 6. Dashboard (`apps/cli/internal/dashboard` + `apps/dashboard`)
 
 Web-based visualization interface.
 
 **Backend Responsibilities:**
+
 - HTTP server
 - REST API endpoints
 - Static file serving
 
 **Frontend Responsibilities:**
+
 - Angular SPA
 - D3.js visualizations
 - Real-time updates
 
 **Key Files:**
-- `internal/dashboard/server.go` - HTTP server
-- `internal/dashboard/handlers.go` - API handlers
+
+- `apps/cli/internal/dashboard/server.go` - HTTP server
+- `apps/cli/internal/dashboard/handlers.go` - API handlers
 - `apps/dashboard/src/` - Angular application
 
-### 7. Analysis (`internal/analysis`)
+### 7. Analysis (`apps/cli/internal/analysis`)
 
 Language-specific parsers.
 
 **Responsibilities:**
+
 - Parse source files
 - Extract symbols (functions, types, etc.)
 - Identify call relationships
 - Handle language-specific constructs
 
 **Supported Languages:**
+
 - Go (primary)
 - TypeScript/JavaScript
 - Python
@@ -252,37 +267,35 @@ Agent Starts
 
 ```
 mind-palace/
-├── cmd/palace/          # CLI entry point
-├── internal/
-│   ├── analysis/        # Language parsers
-│   ├── butler/          # MCP server & coordinator
-│   ├── cli/             # CLI commands
-│   ├── config/          # Configuration
-│   ├── corridor/        # Cross-workspace sharing
-│   ├── dashboard/       # HTTP server
-│   ├── index/           # Code index & oracle
-│   └── memory/          # Session memory
-├── apps/
-│   ├── dashboard/       # Angular frontend
-│   └── vscode/          # VS Code extension
-├── pkg/                 # Public Go packages
-├── schemas/             # JSON schemas
-├── docs/                # Documentation
-└── scripts/             # Build & test scripts
+├── apps/                    # All ecosystem applications
+│   ├── cli/                 # Palace CLI (Go)
+│   │   ├── main.go          # Entry point
+│   │   ├── internal/        # Core engine packages
+│   │   ├── pkg/             # Public Go API
+│   │   ├── schemas/         # JSON schemas
+│   │   ├── starter/         # Init templates
+│   │   └── tests/           # Integration tests
+│   ├── dashboard/           # Angular web dashboard
+│   ├── docs/                # Next.js documentation
+│   └── vscode/              # VS Code extension
+├── assets/                  # Shared branding assets
+├── packaging/               # Installer scripts
+├── scripts/                 # Build & CI scripts
+└── Makefile
 ```
 
 ## Technology Stack
 
-| Component | Technology |
-|-----------|------------|
-| CLI & Backend | Go |
-| Database | SQLite (modernc.org/sqlite) |
-| MCP Protocol | JSON-RPC over stdio |
-| Dashboard Backend | Go net/http |
-| Dashboard Frontend | Angular 17+ |
-| Visualizations | D3.js |
-| Parser (Go) | go/parser, go/ast |
-| Parser (TS/JS) | tree-sitter |
+| Component          | Technology                  |
+| ------------------ | --------------------------- |
+| CLI & Backend      | Go                          |
+| Database           | SQLite (modernc.org/sqlite) |
+| MCP Protocol       | JSON-RPC over stdio         |
+| Dashboard Backend  | Go net/http                 |
+| Dashboard Frontend | Angular 17+                 |
+| Visualizations     | D3.js                       |
+| Parser (Go)        | go/parser, go/ast           |
+| Parser (TS/JS)     | tree-sitter                 |
 
 ## Performance Considerations
 

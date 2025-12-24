@@ -56,9 +56,8 @@ apps/vscode/node_modules/
 apps/dashboard/dist/
 apps/dashboard/node_modules/
 apps/dashboard/.angular/
-apps/palace/palace
-internal/dashboard/dist/*
-!internal/dashboard/dist/.gitkeep
+apps/cli/internal/dashboard/dist/*
+!apps/cli/internal/dashboard/dist/.gitkeep
 
 # Next.js (apps/docs)
 apps/docs/.next/
@@ -73,8 +72,6 @@ pnpm-lock.yaml
 package-lock.json
 yarn.lock
 
-# pkg directory (Go packages)
-pkg/
 
 # OS files
 .DS_Store

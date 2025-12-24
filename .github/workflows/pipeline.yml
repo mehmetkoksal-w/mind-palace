@@ -46,13 +46,13 @@ jobs:
           echo "Version: $VER"
 
       - name: Build
-        run: go build -v ./cmd/palace
+        run: go build -v ./apps/cli
 
       - name: Vet
         run: go vet ./...
 
       - name: Test
-        run: go test -v -race -coverprofile=coverage.out ./internal/...
+        run: go test -v -race -coverprofile=coverage.out ./apps/cli/internal/...
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -118,7 +118,7 @@ jobs:
       - name: Check docs changes
         id: changes
         run: |
-          if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -qE '^docs/'; then
+          if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -qE '^apps/docs/'; then
             echo "docs=true" >> $GITHUB_OUTPUT
           else
             echo "docs=false" >> $GITHUB_OUTPUT
@@ -151,7 +151,7 @@ jobs:
   deploy-docs:
     name: "Deploy: Docs"
     needs: check
-    if: github.event_name != 'pull_request' && needs.check.outputs.docs_changed == 'true'
+    if: github.event_name != 'pull_request' && (needs.check.outputs.docs_changed == 'true' || needs.check.outputs.release_needed == 'true')
     runs-on: ubuntu-latest
     environment:
       name: production-docs
@@ -159,16 +159,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/configure-pages@v4
-
-      - uses: actions/jekyll-build-pages@v1
+      - uses: actions/setup-node@v4
         with:
-          source: ./docs
-          destination: ./_site
+          node-version: '20'
+
+      - name: Build Docs
+        working-directory: apps/docs
+        run: |
+          npm install
+          npm run build
+
+      - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./_site
+          path: apps/docs/out
 
       - name: Deploy
         id: deployment
@@ -242,7 +247,7 @@ jobs:
           path: "*.vsix"
 
   release-cli:
-    name: "Release: CLI (${{ matrix.asset_name }})"
+    name: "Release: CLI (${{ matrix.platform }})"
     needs: [check, deploy-docs, release-dashboard]
     if: |
       always() &&
@@ -253,28 +258,29 @@ jobs:
     runs-on: ${{ matrix.os }}
     environment: production-release
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            goos: darwin
+          - os: macos-13
+            platform: darwin-amd64
             goarch: amd64
-            asset_name: palace-darwin-amd64
+            installer: dmg
           - os: macos-latest
-            goos: darwin
+            platform: darwin-arm64
             goarch: arm64
-            asset_name: palace-darwin-arm64
+            installer: dmg
           - os: ubuntu-latest
-            goos: linux
+            platform: linux-amd64
             goarch: amd64
-            asset_name: palace-linux-amd64
+            installer: deb
           - os: ubuntu-24.04-arm
-            goos: linux
+            platform: linux-arm64
             goarch: arm64
-            asset_name: palace-linux-arm64
+            installer: deb
           - os: windows-latest
-            goos: windows
+            platform: windows-amd64
             goarch: amd64
-            asset_name: palace-windows-amd64.exe
+            installer: msi
     steps:
       - uses: actions/checkout@v4
 
@@ -285,24 +291,98 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: dashboard-assets
-          path: internal/dashboard/dist
+          path: apps/cli/internal/dashboard/dist
 
-      - name: Build
+      - name: Build Binary
         shell: bash
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "1"
           VERSION: ${{ needs.check.outputs.version_tag }}
         run: |
           COMMIT=$(git rev-parse --short HEAD)
           DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          BINARY_NAME="palace"
+          if [ "${{ matrix.installer }}" = "msi" ]; then
+            BINARY_NAME="palace.exe"
+          fi
           go build -ldflags="-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" \
-            -o ${{ matrix.asset_name }} ./cmd/palace
+            -o "$BINARY_NAME" ./apps/cli
+          echo "Built: $BINARY_NAME"
 
-      - uses: actions/upload-artifact@v4
+      # ── macOS: Create DMG ──────────────────────────────────────────
+      - name: Create DMG (macOS)
+        if: matrix.installer == 'dmg'
+        env:
+          VERSION: ${{ needs.check.outputs.version_tag }}
+        run: |
+          chmod +x packaging/macos/create-dmg.sh
+          ./packaging/macos/create-dmg.sh \
+            ./palace \
+            "$VERSION" \
+            "palace-${{ matrix.platform }}.dmg"
+          
+          # Also create tar.gz for users who prefer it
+          tar -czvf "palace-${{ matrix.platform }}.tar.gz" palace
+
+      # ── Linux: Create DEB ──────────────────────────────────────────
+      - name: Create DEB (Linux)
+        if: matrix.installer == 'deb'
+        env:
+          VERSION: ${{ needs.check.outputs.version_tag }}
+        run: |
+          chmod +x packaging/linux/create-deb.sh
+          ./packaging/linux/create-deb.sh \
+            ./palace \
+            "$VERSION" \
+            "${{ matrix.goarch }}" \
+            "palace-${{ matrix.platform }}.deb"
+          
+          # Also create tar.gz for users who prefer it
+          tar -czvf "palace-${{ matrix.platform }}.tar.gz" palace
+
+      # ── Windows: Create MSI ────────────────────────────────────────
+      - name: Install WiX (Windows)
+        if: matrix.installer == 'msi'
+        run: |
+          dotnet tool install --global wix --version 4.0.4
+          echo "WiX installed"
+
+      - name: Create MSI (Windows)
+        if: matrix.installer == 'msi'
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.check.outputs.version_tag }}
+        run: |
+          $version = $env:VERSION -replace '^v', ''
+          # Ensure version is X.Y.Z format (MSI requires numeric)
+          if ($version -match '^(\d+\.\d+\.\d+)') {
+            $msiVersion = $matches[1]
+          } else {
+            $msiVersion = "0.0.1"
+          }
+          
+          # Build MSI using WiX v4
+          wix build packaging/windows/palace.wxs `
+            -d Version="$msiVersion" `
+            -d BinaryPath="$(Get-Location)\palace.exe" `
+            -ext WixToolset.UI.wixext `
+            -o "palace-${{ matrix.platform }}.msi"
+          
+          # Also create zip for users who prefer it
+          Compress-Archive -Path palace.exe -DestinationPath "palace-${{ matrix.platform }}.zip"
+
+      # ── Upload Artifacts ───────────────────────────────────────────
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.asset_name }}
-          path: ${{ matrix.asset_name }}
+          name: installer-${{ matrix.platform }}
+          path: |
+            palace-${{ matrix.platform }}.dmg
+            palace-${{ matrix.platform }}.deb
+            palace-${{ matrix.platform }}.msi
+            palace-${{ matrix.platform }}.tar.gz
+            palace-${{ matrix.platform }}.zip
+          if-no-files-found: ignore
 
   # ============================================================
   # STAGE 5: Publish Release

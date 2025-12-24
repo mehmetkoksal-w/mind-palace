@@ -34,7 +34,7 @@ echo ""
 if [ ! -f "$PALACE_BIN" ]; then
     echo "Building palace CLI..."
     cd "$PROJECT_ROOT"
-    go build -o palace ./cmd/palace
+    go build -o palace ./apps/cli
 fi
 
 # Helper function to run tests
