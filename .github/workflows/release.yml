@@ -68,27 +68,32 @@ jobs:
           name: vscode-extension
           path: "*.vsix"
 
-  # Build Go binaries for all platforms
+  # Build Go binaries for all platforms (requires native runners for CGO)
   build:
     name: Build ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     needs: build-dashboard
     strategy:
       matrix:
         include:
-          - goos: darwin
+          - os: macos-latest
+            goos: darwin
             goarch: arm64
             name: palace-darwin-arm64
-          - goos: darwin
+          - os: macos-latest
+            goos: darwin
             goarch: amd64
             name: palace-darwin-amd64
-          - goos: linux
+          - os: ubuntu-latest
+            goos: linux
             goarch: amd64
             name: palace-linux-amd64
-          - goos: linux
+          - os: ubuntu-latest
+            goos: linux
             goarch: arm64
             name: palace-linux-arm64
-          - goos: windows
+          - os: ubuntu-latest
+            goos: windows
             goarch: amd64
             name: palace-windows-amd64.exe
     steps:
@@ -96,7 +101,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: go.mod
 
       - name: Download dashboard assets
         uses: actions/download-artifact@v4
@@ -111,12 +116,11 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 0
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           COMMIT=$(git rev-parse --short HEAD)
           DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          go build -ldflags="-s -w -X main.buildVersion=$VERSION -X main.buildCommit=$COMMIT -X main.buildDate=$DATE" -o ${{ matrix.name }} ./cmd/palace
+          go build -ldflags="-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o ${{ matrix.name }} ./cmd/palace
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
