@@ -15,9 +15,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Go CI
+  # ============================================================
+  # STAGE 1: CI (Automatic)
+  # ============================================================
   ci-go:
-    name: Go CI
+    name: "CI: Go"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,11 +50,10 @@ jobs:
         run: go vet ./...
 
       - name: Go test
-        run: go test -v ./...
+        run: go test -v ./internal/...
 
-  # Dashboard CI
   ci-dashboard:
-    name: Dashboard CI
+    name: "CI: Dashboard"
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -74,15 +75,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Upload dashboard build
-        uses: actions/upload-artifact@v4
-        with:
-          name: dashboard-build
-          path: apps/dashboard/dist/
-
-  # VS Code extension CI
   ci-vscode:
-    name: VS Code CI
+    name: "CI: VS Code"
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -104,19 +98,54 @@ jobs:
       - name: Compile extension
         run: npm run compile
 
-  # All CI checks passed
   ci:
-    name: CI Complete
+    name: "CI: Complete"
     needs: [ci-go, ci-dashboard, ci-vscode]
     runs-on: ubuntu-latest
+    outputs:
+      docs_changed: ${{ steps.changes.outputs.docs }}
+      should_release: ${{ steps.release.outputs.should_release }}
+      version_tag: ${{ steps.release.outputs.version_tag }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for docs changes
+        id: changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -qE '^docs/|^apps/docs/'; then
+            echo "docs=true" >> $GITHUB_OUTPUT
+            echo "Docs changes detected"
+          else
+            echo "docs=false" >> $GITHUB_OUTPUT
+            echo "No docs changes"
+          fi
+
+      - name: Check if release needed
+        id: release
+        run: |
+          VER=$(cat VERSION | tr -d '[:space:]')
+          TAG="v$VER"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping release."
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $TAG missing. Release required."
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version_tag=$TAG" >> $GITHUB_OUTPUT
+          fi
+
       - run: echo "All CI checks passed"
 
-  # Deploy documentation
+  # ============================================================
+  # STAGE 2: Docs Deployment (Requires Approval)
+  # Only runs if docs changed
+  # ============================================================
   docs:
-    name: Deploy Docs
-    if: github.event_name == 'push'
+    name: "Deploy: Docs"
     needs: ci
+    if: needs.ci.outputs.docs_changed == 'true'
     runs-on: ubuntu-latest
     environment:
       name: production-docs
@@ -142,39 +171,22 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  # Check if release is needed
-  release-check:
-    name: Check Release
-    if: github.event_name == 'push'
-    needs: ci
-    runs-on: ubuntu-latest
-    outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
-      version_tag: ${{ steps.check.outputs.version_tag }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  # ============================================================
+  # STAGE 3: Release (Requires Approval)
+  # Only runs if VERSION changed (new release needed)
+  # ============================================================
 
-      - id: check
-        run: |
-          VER=$(cat VERSION | tr -d '[:space:]')
-          TAG="v$VER"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists. Skipping release."
-            echo "should_release=false" >> $GITHUB_OUTPUT
-          else
-            echo "Tag $TAG missing. Release required."
-            echo "should_release=true" >> $GITHUB_OUTPUT
-            echo "version_tag=$TAG" >> $GITHUB_OUTPUT
-          fi
-
-  # Build dashboard for embedding
+  # Build dashboard assets for embedding
   build-dashboard:
-    name: Build Dashboard Assets
-    needs: [release-check]
-    if: needs.release-check.outputs.should_release == 'true'
+    name: "Build: Dashboard Assets"
+    needs: [ci, docs]
+    if: |
+      always() &&
+      needs.ci.result == 'success' &&
+      (needs.docs.result == 'success' || needs.docs.result == 'skipped') &&
+      needs.ci.outputs.should_release == 'true'
     runs-on: ubuntu-latest
+    environment: production-release
     steps:
       - uses: actions/checkout@v4
 
@@ -204,9 +216,13 @@ jobs:
 
   # Build VS Code extension
   build-vscode-ext:
-    name: Build VS Code Extension
-    needs: [release-check]
-    if: needs.release-check.outputs.should_release == 'true'
+    name: "Build: VS Code Extension"
+    needs: [ci, docs]
+    if: |
+      always() &&
+      needs.ci.result == 'success' &&
+      (needs.docs.result == 'success' || needs.docs.result == 'skipped') &&
+      needs.ci.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -232,13 +248,16 @@ jobs:
           name: vscode-extension
           path: "*.vsix"
 
-  # Build platform binaries with embedded dashboard
-  build-assets:
-    name: Build ${{ matrix.asset_name }}
-    needs: [release-check, build-dashboard, docs]
-    if: needs.release-check.outputs.should_release == 'true'
+  # Build platform binaries
+  build-binaries:
+    name: "Build: ${{ matrix.asset_name }}"
+    needs: [ci, docs, build-dashboard]
+    if: |
+      always() &&
+      needs.ci.result == 'success' &&
+      (needs.docs.result == 'success' || needs.docs.result == 'skipped') &&
+      needs.build-dashboard.result == 'success'
     runs-on: ${{ matrix.os }}
-    environment: production-release
     strategy:
       matrix:
         include:
@@ -278,13 +297,15 @@ jobs:
           path: internal/dashboard/dist
 
       - name: Verify dashboard assets
+        shell: bash
         run: ls -la internal/dashboard/dist/
 
       - name: Build ${{ matrix.asset_name }}
+        shell: bash
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          VERSION: ${{ needs.release-check.outputs.version_tag }}
+          VERSION: ${{ needs.ci.outputs.version_tag }}
           COMMIT: ${{ github.sha }}
         run: |
           BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -296,7 +317,7 @@ jobs:
         run: |
           mkdir -p staging/usr/local/bin
           cp ${{ matrix.asset_name }} staging/usr/local/bin/palace
-          VER_NUM=$(echo ${{ needs.release-check.outputs.version_tag }} | sed 's/^v//')
+          VER_NUM=$(echo ${{ needs.ci.outputs.version_tag }} | sed 's/^v//')
           pkgbuild --root staging \
             --identifier "com.koksalmehmet.palace" \
             --version "$VER_NUM" \
@@ -314,11 +335,14 @@ jobs:
           name: ${{ matrix.pkg_name }}
           path: ${{ matrix.pkg_name }}
 
-  # Create GitHub release with all assets
-  finalize-release:
-    name: Finalize Release
-    needs: [build-assets, build-vscode-ext, release-check]
-    if: needs.release-check.outputs.should_release == 'true'
+  # Create GitHub Release
+  release:
+    name: "Release: Publish"
+    needs: [ci, build-binaries, build-vscode-ext]
+    if: |
+      always() &&
+      needs.build-binaries.result == 'success' &&
+      needs.build-vscode-ext.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -341,7 +365,7 @@ jobs:
 
       - name: Extract release notes
         env:
-          VERSION: ${{ needs.release-check.outputs.version_tag }}
+          VERSION: ${{ needs.ci.outputs.version_tag }}
         run: |
           VERSION="${VERSION#v}"
           go run ./scripts/extract_changelog.go "$VERSION" > release-notes.txt || echo "No changelog extraction available" > release-notes.txt
@@ -364,7 +388,7 @@ jobs:
       - name: Create Release on GitHub
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.release-check.outputs.version_tag }}
+          TAG: ${{ needs.ci.outputs.version_tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
