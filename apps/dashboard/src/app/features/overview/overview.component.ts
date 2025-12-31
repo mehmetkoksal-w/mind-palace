@@ -1,11 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService, Stats, ActiveAgent } from '../../core/services/api.service';
+import { NeuralMapComponent } from './neural-map/neural-map.component';
 
 @Component({
   selector: 'app-overview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NeuralMapComponent],
   template: `
     <div class="overview">
       <h2>Overview</h2>
@@ -31,6 +32,15 @@ import { ApiService, Stats, ActiveAgent } from '../../core/services/api.service'
           <div class="stat-value">{{ stats()?.rooms || 0 }}</div>
           <div class="stat-label">Rooms</div>
         </div>
+      </div>
+
+      <!-- Neural Map Section -->
+      <div class="section neural-map-section">
+        <div class="section-header">
+          <h3>Neural Map</h3>
+          <span class="section-subtitle">Relationships between code and knowledge</span>
+        </div>
+        <app-neural-map [height]="420" />
       </div>
 
       @if (agents().length > 0) {
@@ -156,6 +166,26 @@ import { ApiService, Stats, ActiveAgent } from '../../core/services/api.service'
       color: #00d26a;
       font-weight: bold;
       margin-left: 0.5rem;
+    }
+
+    .neural-map-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .section-header h3 {
+      margin: 0;
+    }
+
+    .section-subtitle {
+      font-size: 0.8rem;
+      color: #64748b;
     }
   `]
 })

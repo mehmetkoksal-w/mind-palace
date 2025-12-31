@@ -56,14 +56,14 @@ type ContextPack struct {
 }
 
 type CorridorInfo struct {
-	Name        string   `json:"name"`                  // Neighbor name
-	Source      string   `json:"source"`                // URL or local path
-	Goal        string   `json:"goal,omitempty"`        // Remote pack's goal
-	Files       []string `json:"files"`                 // Namespaced: corridor://{name}/{path}
-	Rooms       []string `json:"rooms,omitempty"`       // Remote room names
-	FromCache   bool     `json:"fromCache"`             // True if loaded from cache
-	FetchedAt   string   `json:"fetchedAt"`             // When this was fetched
-	Error       string   `json:"error,omitempty"`       // Any fetch errors (non-fatal)
+	Name      string   `json:"name"`            // Neighbor name
+	Source    string   `json:"source"`          // URL or local path
+	Goal      string   `json:"goal,omitempty"`  // Remote pack's goal
+	Files     []string `json:"files"`           // Namespaced: corridor://{name}/{path}
+	Rooms     []string `json:"rooms,omitempty"` // Remote room names
+	FromCache bool     `json:"fromCache"`       // True if loaded from cache
+	FetchedAt string   `json:"fetchedAt"`       // When this was fetched
+	Error     string   `json:"error,omitempty"` // Any fetch errors (non-fatal)
 }
 
 type Finding struct {

@@ -639,6 +639,23 @@ spec:
 			t.Errorf("Language = %q, want %q", result.Language, "yaml")
 		}
 	})
+
+	t.Run("parse blocks", func(t *testing.T) {
+		code := `
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+`
+		result, err := parser.Parse([]byte(code), "docker-compose.yml")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "yaml" {
+			t.Errorf("Language = %q, want %q", result.Language, "yaml")
+		}
+	})
 }
 
 // TestSQLParser tests SQL parsing
@@ -665,6 +682,61 @@ SELECT * FROM users WHERE deleted_at IS NULL;
 
 		if result.Language != "sql" {
 			t.Errorf("Language = %q, want %q", result.Language, "sql")
+		}
+	})
+
+	t.Run("parse table and function", func(t *testing.T) {
+		code := `
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    name TEXT
+);
+
+CREATE FUNCTION get_user_name(user_id INT) RETURNS TEXT AS $$
+BEGIN
+    RETURN (SELECT name FROM users WHERE id = user_id);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE VIEW active_users AS SELECT * FROM users;
+CREATE INDEX idx_users_name ON users(name);
+`
+		result, err := parser.Parse([]byte(code), "schema.sql")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "sql" {
+			t.Errorf("Language = %q, want %q", result.Language, "sql")
+		}
+
+		// Verify symbols
+		foundTable := false
+		foundFunc := false
+		foundView := false
+		foundIndex := false
+		for _, sym := range result.Symbols {
+			switch sym.Name {
+			case "users":
+				foundTable = true
+			case "get_user_name":
+				foundFunc = true
+			case "active_users":
+				foundView = true
+			case "idx_users_name":
+				foundIndex = true
+			}
+		}
+		if !foundTable {
+			t.Error("Table 'users' not found")
+		}
+		if !foundFunc {
+			t.Error("Function 'get_user_name' not found")
+		}
+		if !foundView {
+			t.Error("View 'active_users' not found")
+		}
+		if !foundIndex {
+			t.Error("Index 'idx_users_name' not found")
 		}
 	})
 }
@@ -777,6 +849,628 @@ func TestParserEmptyInput(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSwiftParser tests Swift parsing
+func TestSwiftParser(t *testing.T) {
+	parser := NewSwiftParser()
+
+	t.Run("parse class and struct", func(t *testing.T) {
+		code := `
+import Foundation
+
+/// A simple user model
+public class User {
+    var name: String
+    var age: Int
+
+    init(name: String, age: Int) {
+        self.name = name
+        self.age = age
+    }
+
+    func sayHello() {
+        print("Hello, \(name)")
+    }
+}
+
+struct Point {
+    let x: Double
+    let y: Double
+}
+`
+		result, err := parser.Parse([]byte(code), "User.swift")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+
+		foundUser := false
+		foundPoint := false
+		for _, sym := range result.Symbols {
+			if sym.Name == "User" {
+				foundUser = true
+				if sym.Kind != KindClass {
+					t.Errorf("User.Kind = %q, want %q", sym.Kind, KindClass)
+				}
+				if !sym.Exported {
+					t.Error("User should be exported")
+				}
+			}
+			if sym.Name == "Point" {
+				foundPoint = true
+				if sym.Kind != KindClass { // Struct often matches Class kind in these parsers
+					t.Errorf("Point.Kind = %q, want %q", sym.Kind, KindClass)
+				}
+			}
+		}
+		if !foundUser {
+			t.Error("Did not find User class")
+		}
+		if !foundPoint {
+			t.Error("Did not find Point struct")
+		}
+
+		// Check import
+		foundImport := false
+		for _, rel := range result.Relationships {
+			if rel.Kind == RelImport && rel.TargetFile == "Foundation" {
+				foundImport = true
+				break
+			}
+		}
+		if !foundImport {
+			t.Error("Did not find Foundation import")
+		}
+	})
+}
+
+// TestRubyParser tests Ruby parsing
+func TestRubyParser(t *testing.T) {
+	parser := NewRubyParser()
+
+	t.Run("parse class with methods", func(t *testing.T) {
+		code := `
+require 'json'
+
+class Greeter
+  def initialize(name)
+    @name = name
+  end
+
+  def hello
+    puts "Hello, #{@name}!"
+  end
+
+  def self.version
+    "1.0.0"
+  end
+end
+`
+		result, err := parser.Parse([]byte(code), "greeter.rb")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+
+		found := false
+		for _, sym := range result.Symbols {
+			if sym.Name == "Greeter" {
+				found = true
+				if sym.Kind != KindClass {
+					t.Errorf("Greeter.Kind = %q, want %q", sym.Kind, KindClass)
+				}
+			}
+		}
+		if !found {
+			t.Error("Did not find Greeter class")
+		}
+
+		foundImport := false
+		for _, rel := range result.Relationships {
+			if rel.Kind == RelImport && rel.TargetFile == "json" {
+				foundImport = true
+				break
+			}
+		}
+		if !foundImport {
+			t.Error("Did not find json require")
+		}
+	})
+}
+
+// TestPHPParser tests PHP parsing
+func TestPHPParser(t *testing.T) {
+	parser := NewPHPParser()
+
+	t.Run("parse class and interface", func(t *testing.T) {
+		code := `<?php
+namespace App;
+
+use Vendor\Library;
+
+interface Loggable {
+    public function log($message);
+}
+
+class User implements Loggable {
+    private $id;
+    public $name;
+
+    public function __construct($id, $name) {
+        $this->id = $id;
+        $this->name = $name;
+    }
+
+    public function log($message) {
+        echo $message;
+    }
+
+    public static function create($name) {
+        return new self(rand(), $name);
+    }
+}
+`
+		result, err := parser.Parse([]byte(code), "User.php")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+
+		foundInterface := false
+		foundClass := false
+		for _, sym := range result.Symbols {
+			if sym.Name == "Loggable" {
+				foundInterface = true
+				if sym.Kind != KindInterface {
+					t.Errorf("Loggable.Kind = %q, want %q", sym.Kind, KindInterface)
+				}
+			}
+			if sym.Name == "User" {
+				foundClass = true
+				if sym.Kind != KindClass {
+					t.Errorf("User.Kind = %q, want %q", sym.Kind, KindClass)
+				}
+			}
+		}
+		if !foundInterface {
+			t.Error("Did not find Loggable interface")
+		}
+		if !foundClass {
+			t.Error("Did not find User class")
+		}
+	})
+}
+
+// TestKotlinParser tests Kotlin parsing
+func TestKotlinParser(t *testing.T) {
+	parser := NewKotlinParser()
+
+	t.Run("parse class and function", func(t *testing.T) {
+		code := `
+package com.example
+
+class User(val id: Int, var name: String) {
+    fun greet() {
+        println("Hello, $name")
+    }
+}
+
+fun main() {
+    val user = User(1, "Kotlin")
+    user.greet()
+}
+`
+		result, err := parser.Parse([]byte(code), "User.kt")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+
+		found := false
+		for _, sym := range result.Symbols {
+			if sym.Name == "User" {
+				found = true
+				if sym.Kind != KindClass {
+					t.Errorf("User.Kind = %q, want %q", sym.Kind, KindClass)
+				}
+			}
+		}
+		if !found {
+			t.Error("Did not find User class")
+		}
+	})
+}
+
+// TestScalaParser tests Scala parsing
+func TestScalaParser(t *testing.T) {
+	parser := NewScalaParser()
+
+	t.Run("parse class and object", func(t *testing.T) {
+		code := `
+package com.example
+
+case class User(id: Int, name: String)
+
+object Main {
+  def main(args: Array[String]): Unit = {
+    val user = User(1, "Scala")
+    println(s"Hello, ${user.name}")
+  }
+}
+`
+		result, err := parser.Parse([]byte(code), "Main.scala")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+
+		found := false
+		for _, sym := range result.Symbols {
+			if sym.Name == "Main" {
+				found = true
+				if sym.Kind != KindClass { // Object often matches Class kind
+					t.Errorf("Main.Kind = %q, want %q", sym.Kind, KindClass)
+				}
+			}
+		}
+		if !found {
+			t.Error("Did not find Main object")
+		}
+	})
+}
+
+// TestCSharpParser tests C# parsing
+func TestCSharpParser(t *testing.T) {
+	parser := NewCSharpParser()
+
+	t.Run("parse class and namespace", func(t *testing.T) {
+		code := `
+using System;
+
+namespace Example {
+    public class Greeter {
+        public void Greet(string name) {
+            Console.WriteLine($"Hello, {name}");
+        }
+    }
+}
+`
+		result, err := parser.Parse([]byte(code), "Greeter.cs")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+
+		found := false
+		for _, sym := range result.Symbols {
+			if sym.Name == "Greeter" {
+				found = true
+				if sym.Kind != KindClass {
+					t.Errorf("Greeter.Kind = %q, want %q", sym.Kind, KindClass)
+				}
+			}
+		}
+		if !found {
+			t.Error("Did not find Greeter class")
+		}
+	})
+}
+
+// TestElixirParser tests Elixir parsing
+func TestElixirParser(t *testing.T) {
+	parser := NewElixirParser()
+
+	t.Run("parse module and function", func(t *testing.T) {
+		code := `
+defmodule Greeter do
+  def hello(name) do
+    "Hello, #{name}"
+  end
+end
+`
+		result, err := parser.Parse([]byte(code), "greeter.ex")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+
+		found := false
+		for _, sym := range result.Symbols {
+			if sym.Name == "Greeter" {
+				found = true
+				if sym.Kind != KindClass {
+					t.Errorf("Greeter.Kind = %q, want %q", sym.Kind, KindClass)
+				}
+			}
+		}
+		if !found {
+			t.Error("Did not find Greeter module")
+		}
+	})
+}
+
+// TestLuaParser tests Lua parsing
+func TestLuaParser(t *testing.T) {
+	parser := NewLuaParser()
+
+	t.Run("parse symbols", func(t *testing.T) {
+		code := `
+function greet(name)
+  print("Hello, " .. name)
+end
+
+local function secret()
+  return 42
+end
+
+local x = 10
+MAX_SIZE = 100
+config.port = 8080
+`
+		result, err := parser.Parse([]byte(code), "test.lua")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+
+		symbols := make(map[string]Symbol)
+		for _, s := range result.Symbols {
+			symbols[s.Name] = s
+		}
+
+		if _, ok := symbols["greet"]; !ok {
+			t.Error("Global function 'greet' not found")
+		}
+		if _, ok := symbols["secret"]; !ok {
+			t.Error("Local function 'secret' not found")
+		}
+		if _, ok := symbols["x"]; !ok {
+			t.Error("Local variable 'x' not found")
+		}
+
+		// Constants (all caps)
+		if _, ok := symbols["MAX_SIZE"]; !ok {
+			t.Error("Constant 'MAX_SIZE' not found")
+		}
+
+		// Properties
+		if _, ok := symbols["config.port"]; !ok {
+			t.Error("Property 'config.port' not found")
+		}
+	})
+}
+
+// TestMarkdownParser tests Markdown parsing
+func TestMarkdownParser(t *testing.T) {
+	parser := NewMarkdownParser()
+
+	t.Run("parse markdown headings", func(t *testing.T) {
+		code := `
+# Project Title
+## Installation
+### Usage
+`
+		result, err := parser.Parse([]byte(code), "README.md")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "markdown" {
+			t.Errorf("Language = %q, want %q", result.Language, "markdown")
+		}
+	})
+}
+
+// TestJSONParser tests JSON parsing
+func TestJSONParser(t *testing.T) {
+	parser := NewJSONParser()
+
+	t.Run("parse json object", func(t *testing.T) {
+		code := `{"name": "test", "version": 1.0}`
+		result, err := parser.Parse([]byte(code), "package.json")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "json" {
+			t.Errorf("Language = %q, want %q", result.Language, "json")
+		}
+	})
+}
+
+// TestCSSParser tests CSS parsing
+func TestCSSParser(t *testing.T) {
+	parser := NewCSSParser()
+
+	t.Run("parse css rules", func(t *testing.T) {
+		code := `
+.container { width: 100%; }
+#header { color: red; }
+`
+		result, err := parser.Parse([]byte(code), "style.css")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "css" {
+			t.Errorf("Language = %q, want %q", result.Language, "css")
+		}
+	})
+}
+
+// TestHTMLParser tests HTML parsing
+func TestHTMLParser(t *testing.T) {
+	parser := NewHTMLParser()
+
+	t.Run("parse html structure", func(t *testing.T) {
+		code := `<!DOCTYPE html><html><body><h1>Title</h1></body></html>`
+		result, err := parser.Parse([]byte(code), "index.html")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "html" {
+			t.Errorf("Language = %q, want %q", result.Language, "html")
+		}
+	})
+}
+
+// TestTOMLParser tests TOML parsing
+func TestTOMLParser(t *testing.T) {
+	parser := NewTOMLParser()
+
+	t.Run("parse tables", func(t *testing.T) {
+		code := `
+[package]
+name = "mind-palace"
+version = "0.1.0"
+
+[dependencies]
+sqlite = "3.0"
+`
+		result, err := parser.Parse([]byte(code), "Cargo.toml")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "toml" {
+			t.Errorf("Language = %q, want %q", result.Language, "toml")
+		}
+	})
+}
+
+// TestSvelteParser tests Svelte parsing
+func TestSvelteParser(t *testing.T) {
+	parser := NewSvelteParser()
+
+	t.Run("parse component", func(t *testing.T) {
+		code := `
+<script>
+  import { onMount } from 'svelte';
+  import Header from './Header.svelte';
+  export let name = 'world';
+</script>
+
+<Header title="Welcome" />
+<h1>Hello {name}!</h1>
+`
+		result, err := parser.Parse([]byte(code), "App.svelte")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "svelte" {
+			t.Errorf("Language = %q, want %q", result.Language, "svelte")
+		}
+
+		// Verify relationships (imports)
+		foundImport := false
+		for _, rel := range result.Relationships {
+			if rel.Kind == RelImport && (rel.TargetFile == "svelte" || rel.TargetFile == "./Header.svelte") {
+				foundImport = true
+			}
+		}
+		if !foundImport {
+			t.Error("Imports not found in Svelte code")
+		}
+	})
+}
+
+// TestProtobufParser tests Protobuf parsing
+func TestProtobufParser(t *testing.T) {
+	parser := NewProtobufParser()
+
+	t.Run("parse message and service", func(t *testing.T) {
+		code := `
+syntax = "proto3";
+package api;
+
+message User {
+  string id = 1;
+  string name = 2;
+}
+
+service UserService {
+  rpc GetUser(UserRequest) returns (User);
+}
+`
+		result, err := parser.Parse([]byte(code), "api.proto")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "protobuf" {
+			t.Errorf("Language = %q, want %q", result.Language, "protobuf")
+		}
+	})
+}
+
+// TestGroovyParser tests Groovy parsing
+func TestGroovyParser(t *testing.T) {
+	parser := NewGroovyParser()
+
+	t.Run("parse groovy script", func(t *testing.T) {
+		code := `def greet(name) { println "Hello $name" }`
+		result, err := parser.Parse([]byte(code), "script.groovy")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "groovy" {
+			t.Errorf("Language = %q, want %q", result.Language, "groovy")
+		}
+	})
+}
+
+// TestOCamlParser tests OCaml parsing
+func TestOCamlParser(t *testing.T) {
+	parser := NewOCamlParser()
+
+	t.Run("parse ocaml function", func(t *testing.T) {
+		code := `let greet name = print_endline ("Hello " ^ name)`
+		result, err := parser.Parse([]byte(code), "greet.ml")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "ocaml" {
+			t.Errorf("Language = %q, want %q", result.Language, "ocaml")
+		}
+	})
+}
+
+// TestElmParser tests Elm parsing
+func TestElmParser(t *testing.T) {
+	parser := NewElmParser()
+
+	t.Run("parse elm function", func(t *testing.T) {
+		code := `module Main exposing (..)
+greet name = "Hello " ++ name`
+		result, err := parser.Parse([]byte(code), "Main.elm")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "elm" {
+			t.Errorf("Language = %q, want %q", result.Language, "elm")
+		}
+	})
+}
+
+// TestCUEParser tests CUE parsing
+func TestCUEParser(t *testing.T) {
+	parser := NewCUEParser()
+
+	t.Run("parse cue schema", func(t *testing.T) {
+		code := `package schema
+#User: { name: string, age: int & >0 }`
+		result, err := parser.Parse([]byte(code), "schema.cue")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "cue" {
+			t.Errorf("Language = %q, want %q", result.Language, "cue")
+		}
+	})
+}
+
+// TestDartParser tests Dart parsing
+func TestDartParser(t *testing.T) {
+	parser := NewDartParser()
+
+	t.Run("parse dart class", func(t *testing.T) {
+		code := `class User { String name; User(this.name); }`
+		result, err := parser.Parse([]byte(code), "user.dart")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		if result.Language != "dart" {
+			t.Errorf("Language = %q, want %q", result.Language, "dart")
+		}
+	})
 }
 
 // TestParserLanguageMethod tests that all parsers return correct Language()

@@ -106,6 +106,12 @@ func runCommand(binPath, dir string, args ...string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
+func runPalaceWithError(t *testing.T, binPath, dir string, args ...string) (string, error) {
+	t.Helper()
+	out, err := runCommand(binPath, dir, args...)
+	return string(out), err
+}
+
 func assertSQLiteFile(t *testing.T, path string) {
 	t.Helper()
 	file, err := os.Open(path)

@@ -102,13 +102,13 @@ Created by `palace scan`. This is the source of truth.
 }
 ```
 
-Created by `palace collect`. Schema-validated.
+Created by `palace context "goal"`. Schema-validated.
 
 ### Change Signal
 
 `change-signal.json` - Diff metadata for scoped workflows.
 
-Created by `palace signal --diff HEAD~1..HEAD`. Enables CI to verify only changed files.
+Created by `palace ci signal --diff HEAD~1..HEAD`. Enables CI to verify only changed files.
 
 ---
 
@@ -119,8 +119,8 @@ Created by `palace signal --diff HEAD~1..HEAD`. Enables CI to verify only change
 The search engine. Uses FTS5 with BM25 ranking + entry-point boosting.
 
 ```sh
-palace ask "where is authentication"
-palace ask --room api "rate limiting"
+palace query "where is authentication"
+palace query --room api "rate limiting"
 ```
 
 ### MCP Server
@@ -134,24 +134,26 @@ palace serve
 Exposes:
 - `search_mind_palace` - Query the index
 - `list_rooms` - Enumerate rooms
+- `get_context` - Generate context packs
+- `get_graph` - Explore call relationships
 - `palace://files/{path}` - Read files
 - `palace://rooms/{name}` - Read room manifests
 
 ### Observer
 
-VS Code extension. Automates verify/scan/collect on file save.
+VS Code extension. Automates check/scan on file save.
 
 ---
 
 ## Data Flow
 
 ```
-┌──────────────┐   scan    ┌──────────────┐  collect  ┌──────────────┐
+┌──────────────┐   scan    ┌──────────────┐  context  ┌──────────────┐
 │ Source Files │ ────────► │  palace.db   │ ────────► │ context-pack │
 │   + Rooms    │           │   (Index)    │           │    .json     │
 └──────────────┘           └──────────────┘           └──────────────┘
                                   │
-                                  │ ask / serve
+                                  │ query / serve
                                   ▼
                            ┌──────────────┐
                            │   Results    │
@@ -165,7 +167,7 @@ VS Code extension. Automates verify/scan/collect on file save.
 ## Verification Model
 
 ```
-palace verify [--fast|--strict]
+palace check [--fast|--strict]
 
 --fast (default):
   1. Check mtime/size of files

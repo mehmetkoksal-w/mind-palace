@@ -121,7 +121,6 @@ func TruncateToTokenBudget(items []BudgetedItem, budget int) []BudgetedItem {
 	return result
 }
 
-
 // TruncateSymbols truncates symbols to fit within a token budget
 func TruncateSymbols(symbols []SymbolInfo, budget int) []SymbolInfo {
 	if budget <= 0 || len(symbols) == 0 {
@@ -169,11 +168,11 @@ func TruncateSymbols(symbols []SymbolInfo, budget int) []SymbolInfo {
 
 // TokenBudget tracks token usage across multiple categories
 type TokenBudget struct {
-	Total     int
-	Used      int
-	Symbols   int
-	Chunks    int
-	Metadata  int
+	Total    int
+	Used     int
+	Symbols  int
+	Chunks   int
+	Metadata int
 }
 
 // NewTokenBudget creates a new token budget with the given total
@@ -229,5 +228,5 @@ func formatTokenCount(n int) string {
 				"0k", "", 1,
 			), "0"), ".") + "k"
 	}
-	return string(rune('0' + n/100)) + string(rune('0'+n/10%10)) + string(rune('0'+n%10))
+	return string(rune('0'+n/100)) + string(rune('0'+n/10%10)) + string(rune('0'+n%10))
 }

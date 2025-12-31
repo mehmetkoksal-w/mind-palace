@@ -24,11 +24,11 @@ type FileChange struct {
 
 // IncrementalScanSummary contains results of an incremental scan
 type IncrementalScanSummary struct {
-	FilesAdded    int
-	FilesModified int
-	FilesDeleted  int
+	FilesAdded     int
+	FilesModified  int
+	FilesDeleted   int
 	FilesUnchanged int
-	Duration      time.Duration
+	Duration       time.Duration
 }
 
 // DetectChanges compares the filesystem against the database index

@@ -311,3 +311,17 @@ func TestCapabilityType(t *testing.T) {
 		t.Error("Capability env not set correctly")
 	}
 }
+
+func TestWriteContextPackError(t *testing.T) {
+	cp := model.ContextPack{
+		SchemaVersion: "1.0.0",
+		Kind:          "palace/context-pack",
+		Goal:          "Test",
+	}
+
+	// Write to invalid path
+	err := model.WriteContextPack("/nonexistent/dir/context.json", cp)
+	if err == nil {
+		t.Error("expected error for invalid path")
+	}
+}

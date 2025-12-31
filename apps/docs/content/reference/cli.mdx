@@ -9,20 +9,33 @@ All commands are deterministic. Validation uses embedded schemas.
 | Command | Purpose | Modifies State |
 |---------|---------|----------------|
 | `init` | Create .palace/ structure | Yes |
-| `detect` | Auto-detect project profile | Yes |
 | `scan` | Build/refresh Index | Yes |
-| `collect` | Assemble context pack | Yes |
-| `verify` | Check freshness | No |
-| `signal` | Generate change signal | Yes |
-| `ask` | Query Butler | No |
+| `check` | Verify freshness (lint + verify) | No |
+| `query` | Search the codebase | No |
+| `context` | Generate AI context pack | Yes |
+| `graph` | Explore call relationships | No |
 | `serve` | Start MCP server | No |
-| `lint` | Validate configs | No |
-| `version` | Show version info | No |
+| `ci` | CI/CD commands | Varies |
+| `remember` | Store idea/decision/learning | Yes |
+| `outcome` | Record decision outcome | Yes |
+| `review` | Review old decisions | No |
+| `link` | Create relationships | Yes |
+| `session` | Manage agent sessions | Yes |
+| `learn` | Store a learning | Yes |
+| `recall` | Search learnings/decisions | No |
+| `intel` | Show file intelligence | No |
+| `brief` | Get file briefing | No |
+| `corridor` | Cross-workspace sharing | Varies |
+| `dashboard` | Start web dashboard | No |
+| `maintenance` | Cleanup stale data | Yes |
 | `update` | Self-update to latest | Yes |
+| `version` | Show version info | No |
 
 ---
 
-## init
+## Core Commands
+
+### init
 
 Create `.palace/` scaffolding.
 
@@ -40,62 +53,32 @@ Does not scan or index.
 
 ---
 
-## detect
-
-Generate project profile from workspace analysis.
-
-```sh
-palace detect
-```
-
-**Creates**: `.palace/project-profile.json`
-
-Detects language, framework, and structure hints.
-
----
-
-## scan
+### scan
 
 Build the Index (Tier-0).
 
 ```sh
-palace scan
+palace scan [--incremental]
 ```
 
 **Creates**:
 - `.palace/index/palace.db` - SQLite + FTS5
 - `.palace/index/scan.json` - Scan metadata
 
+| Flag | Effect |
+|------|--------|
+| `--incremental` | Only re-index changed files (faster) |
+
 Respects guardrails. Deterministic output.
 
 ---
 
-## collect
+### check
 
-Assemble context pack from Index + Rooms.
-
-```sh
-palace collect [--diff <range>] [--goal "<text>"] [--allow-stale]
-```
-
-| Flag | Effect |
-|------|--------|
-| `--diff` | Scope to changed files only |
-| `--goal` | Set context pack goal |
-| `--allow-stale` | Skip freshness check |
-
-**Creates**: `.palace/outputs/context-pack.json`
-
-With Corridors configured, fetches and merges neighbor context.
-
----
-
-## verify
-
-Check Index freshness.
+Verify Index freshness (combines lint + verify).
 
 ```sh
-palace verify [--fast|--strict] [--diff <range>]
+palace check [--fast|--strict] [--diff <range>]
 ```
 
 | Mode | Behavior |
@@ -110,33 +93,19 @@ palace verify [--fast|--strict] [--diff <range>]
 
 ---
 
-## signal
+### query
 
-Generate change signal from git diff.
-
-```sh
-palace signal --diff <range>
-```
-
-**Creates**: `.palace/outputs/change-signal.json`
-
-Contains sorted file list with hashes. Enables reproducible diff-scoped workflows.
-
----
-
-## ask
-
-Query the Index via Butler.
+Search the codebase via Butler.
 
 ```sh
-palace ask "<query>" [--room <name>] [--limit <n>]
+palace query "<query>" [--room <name>] [--limit <n>]
 ```
 
 **Examples**:
 ```sh
-palace ask "where is authentication"
-palace ask "AuthService"
-palace ask --room api "rate limiting"
+palace query "where is authentication"
+palace query "AuthService"
+palace query --room api "rate limiting"
 ```
 
 **Ranking**: BM25 + entry point boost (3x) + path match boost (2.5x)
@@ -145,7 +114,49 @@ Results grouped by Room.
 
 ---
 
-## serve
+### context
+
+Generate AI context pack from Index + Rooms.
+
+```sh
+palace context "<goal>" [--diff <range>] [--allow-stale]
+```
+
+| Flag | Effect |
+|------|--------|
+| `--diff` | Scope to changed files only |
+| `--allow-stale` | Skip freshness check |
+
+**Creates**: `.palace/outputs/context-pack.json`
+
+With Corridors configured, fetches and merges neighbor context.
+
+---
+
+### graph
+
+Explore call relationships in the codebase.
+
+```sh
+palace graph <symbol> [--callers|--callees] [--depth <n>]
+```
+
+| Flag | Effect |
+|------|--------|
+| `--callers` | Show functions that call this symbol |
+| `--callees` | Show functions this symbol calls |
+| `--depth` | Traversal depth (default: 2) |
+
+**Examples**:
+```sh
+palace graph handleAuth              # Show call graph
+palace graph handleAuth --callers    # Who calls handleAuth?
+palace graph handleAuth --callees    # What does handleAuth call?
+```
+
+---
+
+### serve
 
 Start MCP server for AI agents.
 
@@ -158,6 +169,8 @@ JSON-RPC 2.0 over stdio.
 **Tools**:
 - `search_mind_palace` - Query Index
 - `list_rooms` - List Rooms
+- `get_context` - Generate context pack
+- `get_graph` - Explore call relationships
 
 **Resources**:
 - `palace://files/{path}` - Read file
@@ -165,19 +178,344 @@ JSON-RPC 2.0 over stdio.
 
 ---
 
-## lint
+## Brain Commands
 
-Validate curated configs.
+The Brain system tracks ideas, decisions, and their outcomes over time.
+
+### remember
+
+Store an idea, decision, or learning (auto-classified).
 
 ```sh
-palace lint
+palace remember "<content>"
 ```
 
-Checks `palace.jsonc`, `rooms/*.jsonc`, `playbooks/*.jsonc` against embedded schemas.
+The system auto-classifies based on content:
+- Questions or "what if" → **idea**
+- Statements with "let's", "we should", "decided" → **decision**
+- "TIL", "learned", factual statements → **learning**
+
+**Examples**:
+```sh
+palace remember "Let's use JWT for auth"     # → decision
+palace remember "What if we cache this?"     # → idea
+palace remember "TIL: Go maps aren't safe"   # → learning
+```
+
+**Shorthand**: You can use `palace "<content>"` directly:
+```sh
+palace "TIL: Context cancellation is important"
+```
 
 ---
 
-## version
+### outcome
+
+Record the outcome of a decision.
+
+```sh
+palace outcome <decision-id> <status> [--notes "<text>"]
+```
+
+| Status | Meaning |
+|--------|---------|
+| `successful` | Decision worked out well |
+| `failed` | Decision didn't work |
+| `superseded` | Replaced by another decision |
+| `abandoned` | Never implemented |
+
+**Examples**:
+```sh
+palace outcome d_abc123 successful
+palace outcome d_abc123 failed --notes "Performance issues"
+```
+
+---
+
+### review
+
+Review decisions awaiting outcome feedback.
+
+```sh
+palace review [--limit <n>] [--days <n>]
+```
+
+Shows decisions older than `--days` (default: 7) that don't have outcomes recorded.
+
+---
+
+### link
+
+Create relationships between records.
+
+```sh
+palace link <id> --<relation> <target>
+```
+
+| Relation | Description |
+|----------|-------------|
+| `--supersedes` | This decision replaces another |
+| `--implements` | This implements an idea/decision |
+| `--related` | General relationship |
+
+**Examples**:
+```sh
+palace link d_123 --supersedes d_old      # Decision replaces another
+palace link i_456 --implements auth.go:10 # Idea implements code
+palace link d_789 --related d_abc         # General relationship
+```
+
+---
+
+## Session Memory Commands
+
+### session
+
+Manage agent sessions.
+
+```sh
+palace session <subcommand>
+```
+
+**Subcommands**:
+
+```sh
+palace session start --agent <type> [--goal "<text>"]
+palace session end <session-id>
+palace session list [--active] [--limit <n>]
+palace session show <session-id>
+```
+
+**Examples**:
+```sh
+palace session start --agent claude --goal "Fix auth bug"
+palace session list --active
+palace session end sess_abc123
+```
+
+---
+
+### learn
+
+Store a learning for future reference.
+
+```sh
+palace learn "<content>" [--scope file|room|palace] [--path <path>] [--confidence <0.0-1.0>]
+```
+
+**Examples**:
+```sh
+palace learn "Always run tests before commit"
+palace learn "This file has tricky edge cases" --scope file --path src/auth.go
+```
+
+---
+
+### recall
+
+Search and retrieve learnings, decisions, and ideas.
+
+```sh
+palace recall "<query>" [--scope file|room|palace] [--path <path>] [--limit <n>]
+palace recall --decisions [--limit <n>]
+palace recall --ideas [--limit <n>]
+```
+
+**Examples**:
+```sh
+palace recall "testing"          # Search learnings
+palace recall --decisions        # List all decisions
+palace recall --ideas            # List all ideas
+```
+
+---
+
+### intel
+
+Show file intelligence (edit history, failures).
+
+```sh
+palace intel <file-path>
+```
+
+Displays:
+- Edit frequency and patterns
+- Recent changes by agents
+- Associated learnings
+- Known issues or failures
+
+---
+
+### brief
+
+Get a briefing before working on files.
+
+```sh
+palace brief <file-path> [--verbose]
+```
+
+Provides:
+- File purpose and structure
+- Related learnings
+- Recent activity
+- Potential pitfalls
+
+---
+
+## Corridor Commands
+
+Cross-workspace knowledge sharing.
+
+### corridor list
+
+List linked workspaces.
+
+```sh
+palace corridor list
+```
+
+---
+
+### corridor link
+
+Link another workspace.
+
+```sh
+palace corridor link <name> <path>
+```
+
+**Example**:
+```sh
+palace corridor link api ../api-service
+```
+
+---
+
+### corridor unlink
+
+Remove a linked workspace.
+
+```sh
+palace corridor unlink <name>
+```
+
+---
+
+### corridor search
+
+Search across all linked workspaces.
+
+```sh
+palace corridor search "<query>" [--all] [--workspace <name>]
+```
+
+---
+
+### corridor personal
+
+Show personal learnings (cross-workspace).
+
+```sh
+palace corridor personal
+```
+
+---
+
+### corridor promote
+
+Promote a learning to personal (cross-workspace).
+
+```sh
+palace corridor promote <learning-id>
+```
+
+---
+
+## CI/CD Commands
+
+### ci verify
+
+Verify index freshness in CI.
+
+```sh
+palace ci verify [--strict]
+```
+
+Exits non-zero if stale.
+
+---
+
+### ci collect
+
+Generate context pack for CI.
+
+```sh
+palace ci collect --diff <range>
+```
+
+---
+
+### ci signal
+
+Generate change signal from diff.
+
+```sh
+palace ci signal --diff <range>
+```
+
+**Creates**: `.palace/outputs/change-signal.json`
+
+---
+
+## Dashboard
+
+### dashboard
+
+Start web dashboard for visualization.
+
+```sh
+palace dashboard [--port <n>]
+```
+
+Opens browser to the dashboard UI showing:
+- Codebase graph visualization
+- Session history browser
+- File hotspot analysis
+- Search interface
+
+---
+
+## Housekeeping Commands
+
+### maintenance
+
+Cleanup stale data.
+
+```sh
+palace maintenance [--sessions] [--agents] [--learnings] [--links]
+```
+
+Removes:
+- Old ended sessions
+- Orphaned agent data
+- Stale learnings
+- Broken links
+
+---
+
+### update
+
+Self-update to the latest release.
+
+```sh
+palace update
+```
+
+Downloads the appropriate binary for your OS/architecture from GitHub releases, verifies SHA256 checksum if available, and replaces the current executable.
+
+---
+
+### version
 
 Show version and build info.
 
@@ -188,115 +526,6 @@ palace version [--check]
 | Flag | Effect |
 |------|--------|
 | `--check` | Query GitHub for latest release |
-
-**Examples**:
-```sh
-palace version
-# palace 0.0.1-alpha (commit abc123, built 2025-12-23)
-
-palace version --check
-# palace 0.0.1-alpha (commit abc123, built 2025-12-23)
-# Update available: v0.0.1-alpha -> v0.0.1
-# Run 'palace update' to install
-```
-
----
-
-## update
-
-Self-update to the latest release.
-
-```sh
-palace update
-```
-
-Downloads the appropriate binary for your OS/architecture from GitHub releases, verifies SHA256 checksum if available, and replaces the current executable.
-
-**Output**:
-```
-Checking for updates...
-Downloading v0.0.2...
-Verifying checksum...
-Installing update...
-Updated to v0.0.2
-```
-
-**Notes**:
-- Requires write permission to the palace binary location
-- Creates a `.backup` file during update (removed on success)
-- On startup, palace checks for updates (cached 24h) and prints a notification if a new version is available
-
----
-
-## Session Commands
-
-### session start
-
-```sh
-palace session start --agent <type> [--goal "<text>"]
-```
-
-### session list
-
-```sh
-palace session list [--active] [--limit <n>]
-```
-
-### session end
-
-```sh
-palace session end <session-id>
-```
-
----
-
-## Corridor Commands
-
-### corridor list
-
-```sh
-palace corridor list
-```
-
-### corridor link
-
-```sh
-palace corridor link <name> <path>
-```
-
-### corridor unlink
-
-```sh
-palace corridor unlink <name>
-```
-
-### corridor search
-
-```sh
-palace corridor search "<query>" [--all] [--workspace <name>]
-```
-
-### corridor promote
-
-```sh
-palace corridor promote <learning-id>
-```
-
----
-
-## Learning Commands
-
-### learn
-
-```sh
-palace learn "<content>" [--scope file|room|palace] [--path <path>] [--confidence <0.0-1.0>]
-```
-
-### recall
-
-```sh
-palace recall "<query>" [--scope file|room|palace] [--path <path>] [--limit <n>]
-```
 
 ---
 

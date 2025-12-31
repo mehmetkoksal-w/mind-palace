@@ -41,19 +41,19 @@ type (
 
 // Re-export constants
 const (
-	ActivityFileRead  = types.ActivityFileRead
-	ActivityFileEdit  = types.ActivityFileEdit
-	ActivitySearch    = types.ActivitySearch
-	ActivityCommand   = types.ActivityCommand
-	SessionActive     = types.SessionActive
-	SessionCompleted  = types.SessionCompleted
-	SessionAbandoned  = types.SessionAbandoned
-	ScopeFile         = types.ScopeFile
-	ScopeRoom         = types.ScopeRoom
-	ScopePalace       = types.ScopePalace
-	OutcomeSuccess    = types.OutcomeSuccess
-	OutcomeFailure    = types.OutcomeFailure
-	OutcomeUnknown    = types.OutcomeUnknown
+	ActivityFileRead = types.ActivityFileRead
+	ActivityFileEdit = types.ActivityFileEdit
+	ActivitySearch   = types.ActivitySearch
+	ActivityCommand  = types.ActivityCommand
+	SessionActive    = types.SessionActive
+	SessionCompleted = types.SessionCompleted
+	SessionAbandoned = types.SessionAbandoned
+	ScopeFile        = types.ScopeFile
+	ScopeRoom        = types.ScopeRoom
+	ScopePalace      = types.ScopePalace
+	OutcomeSuccess   = types.OutcomeSuccess
+	OutcomeFailure   = types.OutcomeFailure
+	OutcomeUnknown   = types.OutcomeUnknown
 )
 
 // Memory provides workspace session memory management.

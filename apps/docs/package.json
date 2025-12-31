@@ -1,6 +1,6 @@
 {
   "name": "mind-palace-docs",
-  "version": "0.0.1-alpha",
+  "version": "0.1.0-alpha",
   "private": true,
   "scripts": {
     "dev": "next dev",

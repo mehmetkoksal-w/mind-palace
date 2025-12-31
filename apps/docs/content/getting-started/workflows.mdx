@@ -4,7 +4,6 @@
 
 ```sh
 palace init          # Create .palace/ structure
-palace detect        # Auto-detect language/framework
 palace scan          # Build initial index
 ```
 
@@ -14,24 +13,24 @@ palace scan          # Build initial index
 
 ```sh
 # After changes
-palace scan          # Rebuild index
-palace collect       # Refresh context pack
+palace scan                    # Rebuild index
+palace context "your goal"     # Generate context pack
 
 # Before agent work
-palace verify        # Confirm freshness
-palace ask "query"   # Find relevant code
+palace check                   # Confirm freshness
+palace query "auth logic"      # Find relevant code
 ```
 
 ### VS Code (Automatic)
 
 ```
-Edit files → Save → Extension runs verify → Auto-heal if stale
+Edit files → Save → Extension runs check → Auto-heal if stale
 ```
 
 The Observer extension handles the loop automatically:
 
-1. **Save file** - triggers debounced verify
-2. **If stale** - runs `palace scan && palace collect`
+1. **Save file** - triggers debounced check
+2. **If stale** - runs `palace scan`
 3. **HUD updates** - green (fresh) or red (stale)
 
 ## Diff-Scoped Workflows
@@ -39,14 +38,14 @@ The Observer extension handles the loop automatically:
 Constrain context to only changed files:
 
 ```sh
-# Generate change signal
-palace signal --diff HEAD~1..HEAD
-
-# Collect only affected context
-palace collect --diff HEAD~1..HEAD
-
 # Verify only changed files
-palace verify --diff HEAD~1..HEAD
+palace check --diff HEAD~1..HEAD
+
+# Generate context for only affected files
+palace context "fix bug" --diff HEAD~1..HEAD
+
+# CI signal for change tracking
+palace ci signal --diff HEAD~1..HEAD
 ```
 
 Useful for:
@@ -60,7 +59,7 @@ Useful for:
 # .github/workflows/verify.yml
 - name: Verify Mind Palace
   run: |
-    palace verify --strict --diff ${{ github.event.pull_request.base.sha }}..${{ github.sha }}
+    palace ci verify --strict --diff ${{ github.event.pull_request.base.sha }}..${{ github.sha }}
 ```
 
 Exit codes:
@@ -86,13 +85,58 @@ Exit codes:
 Agent can then:
 1. Call `search_mind_palace` to find code
 2. Call `list_rooms` to understand structure
-3. Read files via `palace://files/{path}`
+3. Call `get_context` to generate context packs
+4. Call `get_graph` to explore call relationships
+5. Read files via `palace://files/{path}`
 
 ### Via Context Pack
 
 ```sh
-palace collect --goal "Fix the auth bug"
+palace context "Fix the auth bug"
 # Hand context-pack.json to agent
+```
+
+## Brain Workflow
+
+Track ideas, decisions, and outcomes:
+
+```sh
+# Capture decisions as you make them
+palace remember "Let's use JWT for authentication"
+palace remember "What if we add caching here?"
+
+# Record outcomes
+palace outcome d_abc123 successful
+palace outcome d_xyz789 failed --notes "Performance issues"
+
+# Review old decisions
+palace review --days 7
+
+# Link related decisions
+palace link d_new --supersedes d_old
+```
+
+## Session Memory Workflow
+
+Track agent sessions and learnings:
+
+```sh
+# Start a session
+palace session start --agent claude --goal "Fix auth bug"
+
+# Capture learnings during work
+palace learn "Always check for null users first"
+palace learn "This file has edge cases" --scope file --path auth.go
+
+# Get briefing before editing
+palace brief src/auth.go
+
+# End session
+palace session end SESSION_ID
+
+# Later, recall learnings
+palace recall "authentication"
+palace intel src/auth.go
 ```
 
 ---
@@ -102,14 +146,19 @@ palace collect --goal "Fix the auth bug"
 | Command | Purpose | Key Flags |
 |---------|---------|-----------|
 | `palace init` | Create .palace/ | `--with-outputs` |
-| `palace detect` | Auto-detect project | - |
-| `palace scan` | Build/rebuild index | - |
-| `palace collect` | Assemble context pack | `--diff`, `--goal`, `--allow-stale` |
-| `palace verify` | Check freshness | `--fast`, `--strict`, `--diff` |
-| `palace signal` | Generate change signal | `--diff` |
-| `palace ask` | Search index | `--room` |
+| `palace scan` | Build/rebuild index | `--incremental` |
+| `palace check` | Verify freshness | `--fast`, `--strict`, `--diff` |
+| `palace query` | Search index | `--room`, `--limit` |
+| `palace context` | Generate context pack | `--diff`, `--allow-stale` |
+| `palace graph` | Explore call relationships | `--callers`, `--callees` |
 | `palace serve` | Start MCP server | `--root` |
-| `palace lint` | Validate configs | - |
+| `palace remember` | Store idea/decision | - |
+| `palace outcome` | Record decision outcome | `--notes` |
+| `palace session` | Manage sessions | `start`, `end`, `list` |
+| `palace learn` | Store learning | `--scope`, `--path` |
+| `palace recall` | Search learnings | `--decisions`, `--ideas` |
+| `palace intel` | File intelligence | - |
+| `palace brief` | Get briefing | `--verbose` |
 
 ---
 

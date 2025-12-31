@@ -259,7 +259,6 @@ func GetIndexSchemaVersion(db *sql.DB) (int, error) {
 	return version, err
 }
 
-
 func BuildFileRecords(root string, guardrails config.Guardrails) ([]FileRecord, error) {
 	files, err := fsutil.ListFiles(root, guardrails)
 	if err != nil {

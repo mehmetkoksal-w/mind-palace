@@ -44,6 +44,9 @@ func (m *Memory) AddLearning(l Learning) (string, error) {
 		return "", fmt.Errorf("insert learning: %w", err)
 	}
 
+	// Enqueue embedding generation (non-blocking)
+	m.enqueueEmbedding(l.ID, "learning", l.Content)
+
 	return l.ID, nil
 }
 
@@ -276,4 +279,165 @@ func (m *Memory) PruneLowConfidenceLearnings(minConfidence float64) (int64, erro
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+// ============================================================================
+// Learning Lifecycle Management
+// ============================================================================
+
+// Learning status constants
+const (
+	LearningStatusActive   = "active"
+	LearningStatusObsolete = "obsolete"
+	LearningStatusArchived = "archived"
+)
+
+// MarkLearningObsolete marks a learning as obsolete with a reason.
+func (m *Memory) MarkLearningObsolete(id, reason string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	result, err := m.db.Exec(`
+		UPDATE learnings
+		SET status = ?, obsolete_reason = ?, last_used = ?
+		WHERE id = ?
+	`, LearningStatusObsolete, reason, now, id)
+	if err != nil {
+		return fmt.Errorf("mark learning obsolete: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("learning not found: %s", id)
+	}
+	return nil
+}
+
+// ArchiveOldLearnings archives learnings that are unused and low confidence.
+func (m *Memory) ArchiveOldLearnings(unusedDays int, maxConfidence float64) (int64, error) {
+	cutoff := time.Now().AddDate(0, 0, -unusedDays).Format(time.RFC3339)
+	now := time.Now().UTC().Format(time.RFC3339)
+	result, err := m.db.Exec(`
+		UPDATE learnings
+		SET status = ?, archived_at = ?
+		WHERE last_used < ? AND confidence <= ? AND status = ?
+	`, LearningStatusArchived, now, cutoff, maxConfidence, LearningStatusActive)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+// GetLearningsByStatus retrieves learnings by lifecycle status.
+func (m *Memory) GetLearningsByStatus(status string, limit int) ([]Learning, error) {
+	query := `
+		SELECT id, session_id, scope, scope_path, content, confidence, source, created_at, last_used, use_count
+		FROM learnings
+		WHERE status = ?
+		ORDER BY last_used DESC
+	`
+	args := []interface{}{status}
+	if limit > 0 {
+		query += ` LIMIT ?`
+		args = append(args, limit)
+	}
+
+	rows, err := m.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query learnings by status: %w", err)
+	}
+	defer rows.Close()
+
+	var learnings []Learning
+	for rows.Next() {
+		var l Learning
+		var createdAt, lastUsed string
+		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &createdAt, &lastUsed, &l.UseCount); err != nil {
+			return nil, fmt.Errorf("scan learning: %w", err)
+		}
+		l.CreatedAt = parseTimeOrZero(createdAt)
+		l.LastUsed = parseTimeOrZero(lastUsed)
+		learnings = append(learnings, l)
+	}
+	return learnings, nil
+}
+
+// ============================================================================
+// Decision-Learning Links (Outcome Feedback)
+// ============================================================================
+
+// LinkLearningToDecision creates a relationship between a learning and decision.
+// When the decision's outcome is recorded, the linked learning's confidence is updated.
+func (m *Memory) LinkLearningToDecision(decisionID, learningID string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := m.db.Exec(`
+		INSERT OR IGNORE INTO decision_learnings (decision_id, learning_id, created_at)
+		VALUES (?, ?, ?)
+	`, decisionID, learningID, now)
+	if err != nil {
+		return fmt.Errorf("link learning to decision: %w", err)
+	}
+	return nil
+}
+
+// UnlinkLearningFromDecision removes the relationship between a learning and decision.
+func (m *Memory) UnlinkLearningFromDecision(decisionID, learningID string) error {
+	_, err := m.db.Exec(`
+		DELETE FROM decision_learnings WHERE decision_id = ? AND learning_id = ?
+	`, decisionID, learningID)
+	return err
+}
+
+// GetLearningsForDecision returns learnings linked to a decision.
+func (m *Memory) GetLearningsForDecision(decisionID string) ([]Learning, error) {
+	rows, err := m.db.Query(`
+		SELECT l.id, l.session_id, l.scope, l.scope_path, l.content, l.confidence, l.source, l.created_at, l.last_used, l.use_count
+		FROM learnings l
+		JOIN decision_learnings dl ON l.id = dl.learning_id
+		WHERE dl.decision_id = ?
+		ORDER BY l.confidence DESC
+	`, decisionID)
+	if err != nil {
+		return nil, fmt.Errorf("query learnings for decision: %w", err)
+	}
+	defer rows.Close()
+
+	var learnings []Learning
+	for rows.Next() {
+		var l Learning
+		var createdAt, lastUsed string
+		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &createdAt, &lastUsed, &l.UseCount); err != nil {
+			return nil, fmt.Errorf("scan learning: %w", err)
+		}
+		l.CreatedAt = parseTimeOrZero(createdAt)
+		l.LastUsed = parseTimeOrZero(lastUsed)
+		learnings = append(learnings, l)
+	}
+	return learnings, nil
+}
+
+// GetDecisionsForLearning returns decisions linked to a learning.
+func (m *Memory) GetDecisionsForLearning(learningID string) ([]Decision, error) {
+	rows, err := m.db.Query(`
+		SELECT d.id, d.content, d.rationale, d.context, d.status, d.outcome, d.outcome_note, d.outcome_at, d.scope, d.scope_path, d.session_id, d.source, d.created_at, d.updated_at
+		FROM decisions d
+		JOIN decision_learnings dl ON d.id = dl.decision_id
+		WHERE dl.learning_id = ?
+		ORDER BY d.created_at DESC
+	`, learningID)
+	if err != nil {
+		return nil, fmt.Errorf("query decisions for learning: %w", err)
+	}
+	defer rows.Close()
+
+	var decisions []Decision
+	for rows.Next() {
+		var d Decision
+		var createdAt, updatedAt, outcomeAt string
+		if err := rows.Scan(&d.ID, &d.Content, &d.Rationale, &d.Context, &d.Status, &d.Outcome, &d.OutcomeNote, &outcomeAt, &d.Scope, &d.ScopePath, &d.SessionID, &d.Source, &createdAt, &updatedAt); err != nil {
+			return nil, fmt.Errorf("scan decision: %w", err)
+		}
+		d.CreatedAt = parseTimeOrZero(createdAt)
+		d.UpdatedAt = parseTimeOrZero(updatedAt)
+		d.OutcomeAt = parseTimeOrZero(outcomeAt)
+		decisions = append(decisions, d)
+	}
+	return decisions, nil
 }

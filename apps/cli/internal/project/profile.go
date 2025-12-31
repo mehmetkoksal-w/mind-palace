@@ -68,8 +68,10 @@ func detectLanguages(root string) []string {
 		langs = append(langs, "javascript")
 	}
 
-	// Dart/Flutter
-	if fileExists(filepath.Join(root, "pubspec.yaml")) {
+	// Dart/Flutter - check root and monorepo patterns
+	if fileExists(filepath.Join(root, "pubspec.yaml")) ||
+		fileExists(filepath.Join(root, "melos.yaml")) || // Melos monorepo manager
+		hasMonorepoSubproject(root, "pubspec.yaml") {
 		langs = append(langs, "dart")
 	}
 
@@ -93,7 +95,9 @@ func detectLanguages(root string) []string {
 	// Java/Kotlin (Maven/Gradle)
 	if fileExists(filepath.Join(root, "pom.xml")) ||
 		fileExists(filepath.Join(root, "build.gradle")) ||
-		fileExists(filepath.Join(root, "build.gradle.kts")) {
+		fileExists(filepath.Join(root, "build.gradle.kts")) ||
+		hasMonorepoSubproject(root, "build.gradle") ||
+		hasMonorepoSubproject(root, "build.gradle.kts") {
 		langs = append(langs, "java")
 	}
 
@@ -116,6 +120,25 @@ func detectLanguages(root string) []string {
 		langs = append(langs, "unknown")
 	}
 	return langs
+}
+
+// hasMonorepoSubproject checks common monorepo directories for a specific file
+// This handles patterns like apps/*/pubspec.yaml, packages/*/pubspec.yaml, etc.
+func hasMonorepoSubproject(root string, filename string) bool {
+	monorepoPatterns := []string{"apps", "packages", "libs", "modules", "services"}
+	for _, pattern := range monorepoPatterns {
+		patternDir := filepath.Join(root, pattern)
+		if entries, err := os.ReadDir(patternDir); err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					if fileExists(filepath.Join(patternDir, entry.Name(), filename)) {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 // hasFileWithExtension checks if any file with the given extension exists in the root directory
@@ -168,7 +191,7 @@ func defaultTestCommand(langs []string) string {
 		case "javascript":
 			return "npm test"
 		case "dart":
-			return "dart test"
+			return "flutter test || dart test"
 		case "rust":
 			return "cargo test"
 		case "python":
@@ -196,7 +219,7 @@ func defaultLintCommand(langs []string) string {
 		case "javascript":
 			return "npm run lint"
 		case "dart":
-			return "dart analyze"
+			return "flutter analyze || dart analyze"
 		case "rust":
 			return "cargo clippy"
 		case "python":

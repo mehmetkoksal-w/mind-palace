@@ -64,13 +64,13 @@ var ProgrammingSynonyms = map[string][]string{
 	"cache":      {"store", "buffer", "memo"},
 
 	// File operations
-	"file":   {"document", "doc"},
-	"read":   {"load", "get", "fetch", "open"},
-	"write":  {"save", "store", "put"},
-	"path":   {"filepath", "route", "location"},
-	"open":   {"read", "load", "access"},
-	"close":  {"shutdown", "dispose", "cleanup"},
-	"save":   {"write", "store", "persist"},
+	"file":  {"document", "doc"},
+	"read":  {"load", "get", "fetch", "open"},
+	"write": {"save", "store", "put"},
+	"path":  {"filepath", "route", "location"},
+	"open":  {"read", "load", "access"},
+	"close": {"shutdown", "dispose", "cleanup"},
+	"save":  {"write", "store", "persist"},
 
 	// Async operations
 	"async":   {"asynchronous", "concurrent", "parallel"},
@@ -90,19 +90,19 @@ var ProgrammingSynonyms = map[string][]string{
 	"warn":  {"warning", "alert"},
 
 	// Misc programming
-	"util":     {"utility", "helper", "common"},
-	"helper":   {"util", "utility", "tool"},
-	"function": {"func", "fn", "method", "procedure"},
-	"method":   {"func", "function", "member"},
-	"class":    {"type", "struct", "model"},
+	"util":      {"utility", "helper", "common"},
+	"helper":    {"util", "utility", "tool"},
+	"function":  {"func", "fn", "method", "procedure"},
+	"method":    {"func", "function", "member"},
+	"class":     {"type", "struct", "model"},
 	"interface": {"contract", "protocol", "trait"},
-	"module":   {"package", "lib", "library"},
-	"import":   {"include", "require", "use"},
-	"export":   {"expose", "public"},
-	"private":  {"internal", "hidden"},
-	"public":   {"exported", "exposed"},
-	"init":     {"initialize", "setup", "bootstrap", "start"},
-	"cleanup":  {"teardown", "dispose", "destroy"},
+	"module":    {"package", "lib", "library"},
+	"import":    {"include", "require", "use"},
+	"export":    {"expose", "public"},
+	"private":   {"internal", "hidden"},
+	"public":    {"exported", "exposed"},
+	"init":      {"initialize", "setup", "bootstrap", "start"},
+	"cleanup":   {"teardown", "dispose", "destroy"},
 }
 
 // expandWithSynonyms takes a list of tokens and adds synonyms
