@@ -8,32 +8,128 @@ All commands are deterministic. Validation uses embedded schemas.
 
 | Command | Purpose | Modifies State |
 |---------|---------|----------------|
-| `init` | Create .palace/ structure | Yes |
+| `explore` | Search codebase, symbols, call graphs | No |
+| `store` | Store idea/decision/learning (aliases: `remember`, `learn`) | Yes |
+| `recall` | Search and retrieve knowledge | No |
+| `brief` | Get file briefing and intel | No |
+| `init` | Create .palace/ structure (aliases: `build`, `enter`) | Yes |
 | `scan` | Build/refresh Index | Yes |
-| `check` | Verify freshness (lint + verify) | No |
-| `query` | Search the codebase | No |
-| `context` | Generate AI context pack | Yes |
-| `graph` | Explore call relationships | No |
+| `check` | Verify freshness | No |
 | `serve` | Start MCP server | No |
-| `ci` | CI/CD commands | Varies |
-| `remember` | Store idea/decision/learning | Yes |
-| `outcome` | Record decision outcome | Yes |
-| `review` | Review old decisions | No |
-| `link` | Create relationships | Yes |
 | `session` | Manage agent sessions | Yes |
-| `learn` | Store a learning | Yes |
-| `recall` | Search learnings/decisions | No |
-| `intel` | Show file intelligence | No |
-| `brief` | Get file briefing | No |
 | `corridor` | Cross-workspace sharing | Varies |
+| `ci` | CI/CD commands | Varies |
 | `dashboard` | Start web dashboard | No |
-| `maintenance` | Cleanup stale data | Yes |
+| `maintenance` | Cleanup stale data (alias: `clean`) | Yes |
 | `update` | Self-update to latest | Yes |
 | `version` | Show version info | No |
 
 ---
 
 ## Core Commands
+
+### explore
+
+Search the codebase, symbols, and call graphs.
+
+```sh
+palace explore [subcommand] [options]
+```
+
+**Subcommands**:
+```sh
+palace explore "<query>"           # Search the codebase
+palace explore rooms               # List all rooms
+palace explore context "<goal>"    # Generate context pack
+palace explore impact <file>       # Analyze change impact
+palace explore symbols "<query>"   # Search symbols
+palace explore graph <symbol>      # Show call graph
+palace explore callers <symbol>    # Who calls this?
+palace explore callees <symbol>    # What does this call?
+```
+
+**Examples**:
+```sh
+palace explore "authentication"
+palace explore rooms
+palace explore context "Fix auth bug" --diff HEAD~1..HEAD
+palace explore graph handleAuth --depth 3
+```
+
+---
+
+### store
+
+Store ideas, decisions, and learnings (auto-classified).
+
+```sh
+palace store "<content>" [options]
+```
+
+**Aliases**: `remember`, `learn`
+
+**Options**:
+```sh
+--kind <type>        # Force type: idea, decision, learning
+--scope <scope>      # Scope: file, room, palace (default: palace)
+--path <path>        # Scope path for file/room scope
+--confidence <0-1>   # Confidence level (default: 0.8)
+--rationale <text>   # Rationale for decisions
+```
+
+**Examples**:
+```sh
+palace store "Let's use JWT for auth"                    # Auto: decision
+palace store "What if we cache this?"                    # Auto: idea
+palace store "TIL: Go maps aren't safe" --scope file --path src/util.go
+palace "Context cancellation matters"                    # Shorthand
+```
+
+---
+
+### recall
+
+Search and retrieve knowledge.
+
+```sh
+palace recall [subcommand] [options]
+```
+
+**Subcommands**:
+```sh
+palace recall "<query>"           # Search learnings
+palace recall decisions           # List decisions
+palace recall ideas               # List ideas
+palace recall outcome <id> <status> [--notes "<text>"]  # Record outcome
+palace recall link <source> --<rel> <target>            # Create link
+```
+
+**Examples**:
+```sh
+palace recall "testing"
+palace recall decisions --limit 10
+palace recall outcome d_abc123 successful
+palace recall link d_123 --supersedes d_old
+```
+
+---
+
+### brief
+
+Get file briefing and intelligence.
+
+```sh
+palace brief <file-path> [--verbose]
+```
+
+**Provides**:
+- File purpose and structure
+- Related learnings and decisions
+- Recent activity
+- Potential pitfalls
+- Failure history
+
+---
 
 ### init
 
@@ -42,6 +138,8 @@ Create `.palace/` scaffolding.
 ```sh
 palace init [--with-outputs] [--force]
 ```
+
+**Aliases**: `build`, `enter`
 
 **Creates**:
 - `palace.jsonc` - Root config
@@ -75,7 +173,7 @@ Respects guardrails. Deterministic output.
 
 ### check
 
-Verify Index freshness (combines lint + verify).
+Verify Index freshness.
 
 ```sh
 palace check [--fast|--strict] [--diff <range>]
@@ -93,69 +191,6 @@ palace check [--fast|--strict] [--diff <range>]
 
 ---
 
-### query
-
-Search the codebase via Butler.
-
-```sh
-palace query "<query>" [--room <name>] [--limit <n>]
-```
-
-**Examples**:
-```sh
-palace query "where is authentication"
-palace query "AuthService"
-palace query --room api "rate limiting"
-```
-
-**Ranking**: BM25 + entry point boost (3x) + path match boost (2.5x)
-
-Results grouped by Room.
-
----
-
-### context
-
-Generate AI context pack from Index + Rooms.
-
-```sh
-palace context "<goal>" [--diff <range>] [--allow-stale]
-```
-
-| Flag | Effect |
-|------|--------|
-| `--diff` | Scope to changed files only |
-| `--allow-stale` | Skip freshness check |
-
-**Creates**: `.palace/outputs/context-pack.json`
-
-With Corridors configured, fetches and merges neighbor context.
-
----
-
-### graph
-
-Explore call relationships in the codebase.
-
-```sh
-palace graph <symbol> [--callers|--callees] [--depth <n>]
-```
-
-| Flag | Effect |
-|------|--------|
-| `--callers` | Show functions that call this symbol |
-| `--callees` | Show functions this symbol calls |
-| `--depth` | Traversal depth (default: 2) |
-
-**Examples**:
-```sh
-palace graph handleAuth              # Show call graph
-palace graph handleAuth --callers    # Who calls handleAuth?
-palace graph handleAuth --callees    # What does handleAuth call?
-```
-
----
-
 ### serve
 
 Start MCP server for AI agents.
@@ -166,11 +201,18 @@ palace serve [--root <path>]
 
 JSON-RPC 2.0 over stdio.
 
-**Tools**:
-- `search_mind_palace` - Query Index
-- `list_rooms` - List Rooms
-- `get_context` - Generate context pack
-- `get_graph` - Explore call relationships
+**Tool Categories**:
+- **Explore**: `explore`, `explore_rooms`, `explore_context`, `explore_graph`, etc.
+- **Store**: `store` (ideas, decisions, learnings)
+- **Recall**: `recall`, `recall_decisions`, `recall_ideas`, `recall_outcome`, etc.
+- **Brief**: `brief`, `brief_file`, `briefing_smart`
+- **Session**: `session_start`, `session_log`, `session_end`, etc.
+- **Conversation**: `conversation_store`, `conversation_search`, `conversation_extract`
+- **Corridor**: `corridor_learnings`, `corridor_promote`, etc.
+- **Semantic**: `search_semantic`, `search_hybrid`, `search_similar`
+- **Decay**: `decay_stats`, `decay_preview`, `decay_apply`
+- **Postmortem**: `store_postmortem`, `get_postmortems`, `resolve_postmortem`
+- **Scope**: `context_auto_inject`, `scope_explain`
 
 **Resources**:
 - `palace://files/{path}` - Read file
@@ -178,96 +220,7 @@ JSON-RPC 2.0 over stdio.
 
 ---
 
-## Brain Commands
-
-The Brain system tracks ideas, decisions, and their outcomes over time.
-
-### remember
-
-Store an idea, decision, or learning (auto-classified).
-
-```sh
-palace remember "<content>"
-```
-
-The system auto-classifies based on content:
-- Questions or "what if" → **idea**
-- Statements with "let's", "we should", "decided" → **decision**
-- "TIL", "learned", factual statements → **learning**
-
-**Examples**:
-```sh
-palace remember "Let's use JWT for auth"     # → decision
-palace remember "What if we cache this?"     # → idea
-palace remember "TIL: Go maps aren't safe"   # → learning
-```
-
-**Shorthand**: You can use `palace "<content>"` directly:
-```sh
-palace "TIL: Context cancellation is important"
-```
-
----
-
-### outcome
-
-Record the outcome of a decision.
-
-```sh
-palace outcome <decision-id> <status> [--notes "<text>"]
-```
-
-| Status | Meaning |
-|--------|---------|
-| `successful` | Decision worked out well |
-| `failed` | Decision didn't work |
-| `superseded` | Replaced by another decision |
-| `abandoned` | Never implemented |
-
-**Examples**:
-```sh
-palace outcome d_abc123 successful
-palace outcome d_abc123 failed --notes "Performance issues"
-```
-
----
-
-### review
-
-Review decisions awaiting outcome feedback.
-
-```sh
-palace review [--limit <n>] [--days <n>]
-```
-
-Shows decisions older than `--days` (default: 7) that don't have outcomes recorded.
-
----
-
-### link
-
-Create relationships between records.
-
-```sh
-palace link <id> --<relation> <target>
-```
-
-| Relation | Description |
-|----------|-------------|
-| `--supersedes` | This decision replaces another |
-| `--implements` | This implements an idea/decision |
-| `--related` | General relationship |
-
-**Examples**:
-```sh
-palace link d_123 --supersedes d_old      # Decision replaces another
-palace link i_456 --implements auth.go:10 # Idea implements code
-palace link d_789 --related d_abc         # General relationship
-```
-
----
-
-## Session Memory Commands
+## Session Commands
 
 ### session
 
@@ -292,73 +245,6 @@ palace session start --agent claude --goal "Fix auth bug"
 palace session list --active
 palace session end sess_abc123
 ```
-
----
-
-### learn
-
-Store a learning for future reference.
-
-```sh
-palace learn "<content>" [--scope file|room|palace] [--path <path>] [--confidence <0.0-1.0>]
-```
-
-**Examples**:
-```sh
-palace learn "Always run tests before commit"
-palace learn "This file has tricky edge cases" --scope file --path src/auth.go
-```
-
----
-
-### recall
-
-Search and retrieve learnings, decisions, and ideas.
-
-```sh
-palace recall "<query>" [--scope file|room|palace] [--path <path>] [--limit <n>]
-palace recall --decisions [--limit <n>]
-palace recall --ideas [--limit <n>]
-```
-
-**Examples**:
-```sh
-palace recall "testing"          # Search learnings
-palace recall --decisions        # List all decisions
-palace recall --ideas            # List all ideas
-```
-
----
-
-### intel
-
-Show file intelligence (edit history, failures).
-
-```sh
-palace intel <file-path>
-```
-
-Displays:
-- Edit frequency and patterns
-- Recent changes by agents
-- Associated learnings
-- Known issues or failures
-
----
-
-### brief
-
-Get a briefing before working on files.
-
-```sh
-palace brief <file-path> [--verbose]
-```
-
-Provides:
-- File purpose and structure
-- Related learnings
-- Recent activity
-- Potential pitfalls
 
 ---
 

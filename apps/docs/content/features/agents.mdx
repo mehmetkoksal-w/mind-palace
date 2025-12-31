@@ -45,20 +45,130 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ### Available Tools
 
+#### Explore Tools
+
 | Tool | Parameters | Returns |
 |------|------------|---------|
-| `search_mind_palace` | `query`, `limit?`, `room?` | Ranked results by Room |
-| `list_rooms` | - | Room names + entry points |
-| `get_context` | `goal`, `diff?` | Context pack for a task |
-| `get_graph` | `symbol`, `callers?`, `callees?` | Call graph relationships |
-| `start_session` | `agentType`, `goal?` | Session ID |
-| `end_session` | `sessionId` | Confirmation |
-| `log_activity` | `sessionId`, `kind`, `target`, `outcome?` | Activity ID |
-| `add_learning` | `content`, `scope?`, `scopePath?`, `confidence?` | Learning ID |
-| `get_learnings` | `query?`, `scope?`, `scopePath?` | Matching learnings |
-| `get_file_intel` | `path` | File intelligence data |
-| `check_conflict` | `path` | Conflict detection result |
-| `get_active_agents` | - | List of active agents |
+| `explore` | `query`, `limit?`, `room?` | Search the codebase |
+| `explore_rooms` | - | List all rooms with entry points |
+| `explore_context` | `goal`, `diff?` | Generate context pack for a task |
+| `explore_impact` | `file` | Analyze impact of changes to a file |
+| `explore_symbols` | `query?`, `room?`, `limit?` | Search for symbols |
+| `explore_symbol` | `name`, `file?` | Get symbol details |
+| `explore_file` | `path` | Get file metadata and structure |
+| `explore_deps` | `file` | Get file dependencies |
+| `explore_callers` | `symbol`, `file?`, `depth?` | Find callers of a symbol |
+| `explore_callees` | `symbol`, `file?`, `depth?` | Find callees of a symbol |
+| `explore_graph` | `symbol`, `file?`, `depth?` | Get full call graph |
+
+#### Store Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `store` | `content`, `kind?`, `scope?`, `scopePath?`, `confidence?`, `rationale?` | Store idea, decision, or learning |
+
+#### Recall Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `recall` | `query?`, `scope?`, `scopePath?`, `limit?` | Search learnings |
+| `recall_decisions` | `scope?`, `scopePath?`, `status?`, `limit?` | List decisions |
+| `recall_ideas` | `scope?`, `scopePath?`, `status?`, `limit?` | List ideas |
+| `recall_outcome` | `id`, `status`, `notes?` | Record decision outcome |
+| `recall_link` | `source`, `target`, `relation`, `reason?` | Link two records |
+| `recall_links` | `id` | Get links for a record |
+| `recall_unlink` | `source`, `target` | Remove a link |
+| `recall_learning_link` | `learningId`, `file`, `line?` | Link learning to code |
+| `recall_obsolete` | `id`, `reason?` | Mark learning as obsolete |
+| `recall_archive` | `id` | Archive a record |
+| `recall_learnings_by_status` | `status`, `limit?` | Get learnings by status |
+
+#### Contradiction Detection Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `recall_contradictions` | `scope?`, `resolved?`, `limit?` | List contradictions |
+| `recall_contradiction_check` | `id` | Check for contradictions |
+| `recall_contradiction_summary` | - | Contradiction statistics |
+
+#### Brief Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `brief` | `path` | Get file briefing |
+| `brief_file` | `path` | Get detailed file intelligence |
+| `briefing_smart` | `context`, `contextPath`, `style?` | LLM-generated smart briefing |
+
+#### Session Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `session_start` | `agentType`, `goal?` | Start a work session |
+| `session_log` | `sessionId`, `kind`, `target`, `outcome?`, `details?` | Log activity |
+| `session_end` | `sessionId` | End session |
+| `session_conflict` | `path` | Check for file conflicts |
+| `session_list` | `active?`, `limit?` | List sessions |
+
+#### Conversation Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `conversation_store` | `sessionId`, `messages`, `summary?` | Store conversation |
+| `conversation_search` | `query?`, `sessionId?`, `limit?` | Search conversations |
+| `conversation_extract` | `conversationId` | Extract knowledge from conversation |
+
+#### Corridor Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `corridor_learnings` | `query?`, `limit?` | Get personal learnings |
+| `corridor_links` | - | List linked workspaces |
+| `corridor_stats` | - | Corridor statistics |
+| `corridor_promote` | `learningId` | Promote to personal corridor |
+| `corridor_reinforce` | `learningId` | Reinforce a learning |
+
+#### Semantic Search Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `search_semantic` | `query`, `kinds?`, `limit?` | Semantic similarity search |
+| `search_hybrid` | `query`, `kinds?`, `limit?` | Combined keyword + semantic |
+| `search_similar` | `id`, `limit?` | Find similar records |
+
+#### Embedding Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `embedding_sync` | `force?` | Sync embeddings for all records |
+| `embedding_stats` | - | Embedding statistics |
+
+#### Decay Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `decay_stats` | - | Decay statistics |
+| `decay_preview` | `days?` | Preview what will decay |
+| `decay_apply` | - | Apply confidence decay |
+| `decay_reinforce` | `id` | Reinforce a learning |
+| `decay_boost` | `id`, `amount?` | Boost learning confidence |
+
+#### Context & Scope Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `context_auto_inject` | `filePath`, `maxTokens?`, `includeLearnings?`, `includeDecisions?`, `includeFailures?` | Auto-inject context for file |
+| `scope_explain` | `filePath` | Explain scope inheritance for file |
+
+#### Postmortem Tools
+
+| Tool | Parameters | Returns |
+|------|------------|---------|
+| `store_postmortem` | `title`, `whatHappened`, `rootCause?`, `lessonsLearned?`, `preventionSteps?`, `severity?`, `affectedFiles?`, `relatedDecision?` | Create failure postmortem |
+| `get_postmortems` | `status?`, `severity?`, `limit?` | List postmortems |
+| `get_postmortem` | `id` | Get postmortem details |
+| `resolve_postmortem` | `id` | Mark postmortem resolved |
+| `postmortem_stats` | - | Postmortem statistics |
+| `postmortem_to_learnings` | `id` | Convert lessons to learnings |
 
 ### Available Resources
 
@@ -188,7 +298,7 @@ Track agent work with sessions:
 
 ```json
 {
-  "tool": "start_session",
+  "tool": "session_start",
   "arguments": {
     "agentType": "claude-code",
     "goal": "Implement user authentication"
@@ -200,7 +310,7 @@ During work, log activities:
 
 ```json
 {
-  "tool": "log_activity",
+  "tool": "session_log",
   "arguments": {
     "sessionId": "session-123",
     "kind": "file_edit",
@@ -214,9 +324,10 @@ Capture learnings:
 
 ```json
 {
-  "tool": "add_learning",
+  "tool": "store",
   "arguments": {
     "content": "This module requires null checks",
+    "kind": "learning",
     "scope": "file",
     "scopePath": "src/auth/login.go",
     "confidence": 0.85
@@ -228,9 +339,55 @@ Before editing, check for conflicts:
 
 ```json
 {
-  "tool": "check_conflict",
+  "tool": "session_conflict",
   "arguments": {
     "path": "src/auth/login.go"
+  }
+}
+```
+
+## Failure Tracking
+
+Record failures for learning:
+
+```json
+{
+  "tool": "store_postmortem",
+  "arguments": {
+    "title": "Authentication bypass bug",
+    "whatHappened": "JWT validation was bypassed due to missing signature check",
+    "rootCause": "Signature verification was disabled in test config and deployed to production",
+    "lessonsLearned": ["Always validate JWT signatures", "Separate test and production configs"],
+    "severity": "high",
+    "affectedFiles": ["src/auth/jwt.go", "src/middleware/auth.go"]
+  }
+}
+```
+
+## Scope-Aware Context
+
+Get context for any file with scope inheritance:
+
+```json
+{
+  "tool": "context_auto_inject",
+  "arguments": {
+    "filePath": "src/auth/login.go",
+    "maxTokens": 2000,
+    "includeLearnings": true,
+    "includeDecisions": true,
+    "includeFailures": true
+  }
+}
+```
+
+Understand what scope applies:
+
+```json
+{
+  "tool": "scope_explain",
+  "arguments": {
+    "filePath": "src/auth/login.go"
   }
 }
 ```

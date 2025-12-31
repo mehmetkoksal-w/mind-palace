@@ -518,12 +518,12 @@ func TestGetSchemaVersion(t *testing.T) {
 	mem, _ := Open(tmpDir)
 	defer mem.Close()
 
-	// After opening, schema version should be 2 (we have v0, v1, and v2 migrations)
+	// After opening, schema version should be 3 (v0, v1, v2, and v3 for postmortems)
 	version, err := mem.GetSchemaVersion()
 	if err != nil {
 		t.Fatalf("GetSchemaVersion failed: %v", err)
 	}
-	if version != 2 {
-		t.Errorf("Expected schema version 2, got %d", version)
+	if version != 3 {
+		t.Errorf("Expected schema version 3, got %d", version)
 	}
 }
