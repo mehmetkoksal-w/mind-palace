@@ -49,23 +49,14 @@ func (p *LuaParser) extractSymbols(node *sitter.Node, content []byte, analysis *
 		}
 
 		switch child.Type() {
-		case "function_declaration":
-			sym := p.parseFunctionDecl(child, content)
-			if sym != nil {
-				analysis.Symbols = append(analysis.Symbols, *sym)
-			}
-
-		case "local_function":
-			sym := p.parseLocalFunction(child, content)
+		case "function_statement":
+			sym := p.parseFunctionStatement(child, content)
 			if sym != nil {
 				analysis.Symbols = append(analysis.Symbols, *sym)
 			}
 
 		case "variable_declaration":
-			p.parseVariableDecl(child, content, analysis)
-
-		case "local_variable_declaration":
-			p.parseLocalVariableDecl(child, content, analysis)
+			p.parseVariableDeclaration(child, content, analysis)
 
 		case "assignment_statement":
 			p.parseAssignment(child, content, analysis)
@@ -75,15 +66,29 @@ func (p *LuaParser) extractSymbols(node *sitter.Node, content []byte, analysis *
 	}
 }
 
-func (p *LuaParser) parseFunctionDecl(node *sitter.Node, content []byte) *Symbol {
-	nameNode := node.ChildByFieldName("name")
-	if nameNode == nil {
-		for i := 0; i < int(node.ChildCount()); i++ {
-			child := node.Child(i)
-			if child != nil && (child.Type() == "identifier" || child.Type() == "dot_index_expression" || child.Type() == "method_index_expression") {
-				nameNode = child
-				break
+func (p *LuaParser) parseFunctionStatement(node *sitter.Node, content []byte) *Symbol {
+	isLocal := false
+	var nameNode *sitter.Node
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child == nil {
+			continue
+		}
+		if child.Type() == "local" {
+			isLocal = true
+		} else if child.Type() == "function_name" {
+			// Global function usually has function_name
+			for j := 0; j < int(child.ChildCount()); j++ {
+				sub := child.Child(j)
+				if sub != nil && (sub.Type() == "identifier" || sub.Type() == "dot_index_expression" || sub.Type() == "method_index_expression") {
+					nameNode = sub
+					break
+				}
 			}
+		} else if child.Type() == "identifier" && nameNode == nil {
+			// Local function or simple global function might have identifier directly
+			nameNode = child
 		}
 	}
 
@@ -107,76 +112,61 @@ func (p *LuaParser) parseFunctionDecl(node *sitter.Node, content []byte) *Symbol
 		LineEnd:    int(node.EndPoint().Row) + 1,
 		Signature:  sig,
 		DocComment: doc,
-		Exported:   true,
+		Exported:   !isLocal,
 	}
 }
 
-func (p *LuaParser) parseLocalFunction(node *sitter.Node, content []byte) *Symbol {
-	nameNode := node.ChildByFieldName("name")
-	if nameNode == nil {
-		for i := 0; i < int(node.ChildCount()); i++ {
-			child := node.Child(i)
-			if child != nil && child.Type() == "identifier" {
-				nameNode = child
-				break
-			}
+func (p *LuaParser) parseVariableDeclaration(node *sitter.Node, content []byte, analysis *FileAnalysis) {
+	isLocal := false
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child != nil && child.Type() == "local" {
+			isLocal = true
+			break
 		}
 	}
 
-	if nameNode == nil {
-		return nil
-	}
-
-	name := nameNode.Content(content)
-	doc := p.extractPrecedingComment(node, content)
-	sig := p.extractFunctionSignature(node, content)
-
-	return &Symbol{
-		Name:       name,
-		Kind:       KindFunction,
-		LineStart:  int(node.StartPoint().Row) + 1,
-		LineEnd:    int(node.EndPoint().Row) + 1,
-		Signature:  sig,
-		DocComment: doc,
-		Exported:   false,
-	}
-}
-
-func (p *LuaParser) parseVariableDecl(node *sitter.Node, content []byte, analysis *FileAnalysis) {
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
-		if child != nil && child.Type() == "variable_list" {
+		if child != nil && child.Type() == "variable_declarator" {
+			// Collect all identifiers in this declarator
+			var identifiers []string
 			for j := 0; j < int(child.ChildCount()); j++ {
 				varNode := child.Child(j)
 				if varNode != nil && varNode.Type() == "identifier" {
-					analysis.Symbols = append(analysis.Symbols, Symbol{
-						Name:      varNode.Content(content),
-						Kind:      KindVariable,
-						LineStart: int(node.StartPoint().Row) + 1,
-						LineEnd:   int(node.EndPoint().Row) + 1,
-						Exported:  true,
-					})
+					identifiers = append(identifiers, strings.TrimSpace(varNode.Content(content)))
 				}
 			}
-		}
-	}
-}
 
-func (p *LuaParser) parseLocalVariableDecl(node *sitter.Node, content []byte, analysis *FileAnalysis) {
-	for i := 0; i < int(node.ChildCount()); i++ {
-		child := node.Child(i)
-		if child != nil && child.Type() == "variable_list" {
-			for j := 0; j < int(child.ChildCount()); j++ {
-				varNode := child.Child(j)
-				if varNode != nil && varNode.Type() == "identifier" {
-					analysis.Symbols = append(analysis.Symbols, Symbol{
-						Name:      varNode.Content(content),
-						Kind:      KindVariable,
-						LineStart: int(node.StartPoint().Row) + 1,
-						LineEnd:   int(node.EndPoint().Row) + 1,
-						Exported:  false,
-					})
+			if len(identifiers) == 0 {
+				continue
+			}
+
+			// If there are multiple identifiers (e.g., config.port), treat as property
+			if len(identifiers) > 1 {
+				fullName := strings.Join(identifiers, ".")
+				analysis.Symbols = append(analysis.Symbols, Symbol{
+					Name:      fullName,
+					Kind:      KindProperty,
+					LineStart: int(node.StartPoint().Row) + 1,
+					LineEnd:   int(node.EndPoint().Row) + 1,
+					Exported:  true,
+				})
+			} else {
+				// Single identifier
+				name := identifiers[0]
+				kind := KindVariable
+				// Check if it's all uppercase (constant) and not local
+				if !isLocal && strings.ToUpper(name) == name && len(name) > 0 {
+					kind = KindConstant
 				}
+				analysis.Symbols = append(analysis.Symbols, Symbol{
+					Name:      name,
+					Kind:      kind,
+					LineStart: int(node.StartPoint().Row) + 1,
+					LineEnd:   int(node.EndPoint().Row) + 1,
+					Exported:  !isLocal,
+				})
 			}
 		}
 	}

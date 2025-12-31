@@ -311,6 +311,80 @@ func TestIncrementalScanSummary(t *testing.T) {
 	}
 }
 
+func TestRunIncrementalWithCorruptedDB(t *testing.T) {
+	tmpDir := t.TempDir()
+	palaceDir := filepath.Join(tmpDir, ".palace", "index")
+	if err := os.MkdirAll(palaceDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	dbPath := filepath.Join(palaceDir, "palace.db")
+	if err := os.WriteFile(dbPath, []byte("NOT A SQLITE DB"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := RunIncremental(tmpDir)
+	if err == nil {
+		t.Error("expected error for corrupted database")
+	}
+}
+
+func TestRunIncrementalDetectsMultipleChanges(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// 1. Initial set: file-a.go, file-b.go
+	if err := os.WriteFile(filepath.Join(tmpDir, "file-a.go"), []byte("package a"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "file-b.go"), []byte("package b"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	Run(tmpDir)
+
+	// 2. Change: modify a, delete b, add c
+	if err := os.WriteFile(filepath.Join(tmpDir, "file-a.go"), []byte("package a // mod"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(tmpDir, "file-b.go")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "file-c.go"), []byte("package c"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	summary, err := RunIncremental(tmpDir)
+	if err != nil {
+		t.Fatalf("incremental scan failed: %v", err)
+	}
+
+	if summary.FilesModified != 1 || summary.FilesDeleted != 1 || summary.FilesAdded != 1 {
+		t.Errorf("expected 1 mod, 1 del, 1 add; got %d mod, %d del, %d add",
+			summary.FilesModified, summary.FilesDeleted, summary.FilesAdded)
+	}
+}
+
+func TestRunIncrementalWithMissingTable(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// 1. Initial setup
+	if err := os.WriteFile(filepath.Join(tmpDir, "file.go"), []byte("package a"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	Run(tmpDir)
+
+	// 2. Corrupt DB by dropping table
+	dbPath := filepath.Join(tmpDir, ".palace", "index", "palace.db")
+	db, _ := index.Open(dbPath)
+	db.Exec("DROP TABLE files")
+	db.Close()
+
+	// 3. Increment should fail
+	_, err := RunIncremental(tmpDir)
+	if err == nil {
+		t.Error("expected error when files table is missing")
+	}
+}
+
 // Helper function
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsAt(s, substr))

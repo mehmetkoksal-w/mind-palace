@@ -1,10 +1,16 @@
 package update
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -289,4 +295,335 @@ func containsHelper(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func withTestTransport(t *testing.T, rt http.RoundTripper) {
+	t.Helper()
+	original := http.DefaultTransport
+	http.DefaultTransport = rt
+	t.Cleanup(func() {
+		http.DefaultTransport = original
+	})
+}
+
+func newResponse(status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Status:     fmt.Sprintf("%d %s", status, http.StatusText(status)),
+		Header:     make(http.Header),
+		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+}
+
+func TestFetchLatestReleaseSuccess(t *testing.T) {
+	release := Release{
+		TagName: "v2.0.0",
+		HTMLURL: "https://example.com/release/v2.0.0",
+		Assets: []Asset{
+			{Name: buildAssetName(), BrowserDownloadURL: "https://example.com/bin"},
+			{Name: buildAssetName() + ".sha256", BrowserDownloadURL: "https://example.com/bin.sha256"},
+		},
+	}
+	payload, _ := json.Marshal(release)
+
+	withTestTransport(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Host != "api.github.com" {
+			return nil, fmt.Errorf("unexpected host: %s", req.URL.Host)
+		}
+		return newResponse(http.StatusOK, string(payload)), nil
+	}))
+
+	got, err := fetchLatestRelease()
+	if err != nil {
+		t.Fatalf("fetchLatestRelease() error = %v", err)
+	}
+	if got.TagName != "v2.0.0" {
+		t.Errorf("TagName = %q, want %q", got.TagName, "v2.0.0")
+	}
+	if len(got.Assets) != 2 {
+		t.Errorf("Assets length = %d, want %d", len(got.Assets), 2)
+	}
+}
+
+func TestFetchLatestReleaseNotFound(t *testing.T) {
+	withTestTransport(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return newResponse(http.StatusNotFound, "not found"), nil
+	}))
+
+	_, err := fetchLatestRelease()
+	if err == nil || !strings.Contains(err.Error(), "no releases found") {
+		t.Fatalf("fetchLatestRelease() error = %v, want no releases found", err)
+	}
+}
+
+func TestDownloadToTemp(t *testing.T) {
+	url := "https://example.com/download"
+	withTestTransport(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.String() != url {
+			return nil, fmt.Errorf("unexpected url: %s", req.URL.String())
+		}
+		return newResponse(http.StatusOK, "binary-data"), nil
+	}))
+
+	path, err := downloadToTemp(url)
+	if err != nil {
+		t.Fatalf("downloadToTemp() error = %v", err)
+	}
+	defer os.Remove(path)
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	if string(data) != "binary-data" {
+		t.Errorf("downloaded data = %q, want %q", string(data), "binary-data")
+	}
+}
+
+func TestDownloadToTempStatusError(t *testing.T) {
+	url := "https://example.com/download"
+	withTestTransport(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return newResponse(http.StatusInternalServerError, "fail"), nil
+	}))
+
+	_, err := downloadToTemp(url)
+	if err == nil || !strings.Contains(err.Error(), "download failed") {
+		t.Fatalf("downloadToTemp() error = %v, want status error", err)
+	}
+}
+
+func TestVerifyChecksum(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "file.bin")
+	content := []byte("hello-world")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	hash := sha256.Sum256(content)
+	sum := hex.EncodeToString(hash[:])
+	checksumURL := "https://example.com/checksum"
+
+	withTestTransport(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.String() != checksumURL {
+			return nil, fmt.Errorf("unexpected url: %s", req.URL.String())
+		}
+		return newResponse(http.StatusOK, sum+" file.bin"), nil
+	}))
+
+	if err := verifyChecksum(path, checksumURL); err != nil {
+		t.Fatalf("verifyChecksum() error = %v", err)
+	}
+}
+
+func TestVerifyChecksumInvalidFormat(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "file.bin")
+	if err := os.WriteFile(path, []byte("content"), 0644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	checksumURL := "https://example.com/checksum"
+	withTestTransport(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return newResponse(http.StatusOK, "   "), nil
+	}))
+
+	err := verifyChecksum(path, checksumURL)
+	if err == nil || !strings.Contains(err.Error(), "invalid checksum format") {
+		t.Fatalf("verifyChecksum() error = %v, want invalid checksum format", err)
+	}
+}
+
+func TestCheckUpdateAvailable(t *testing.T) {
+	release := Release{
+		TagName: "v2.0.0",
+		HTMLURL: "https://example.com/release/v2.0.0",
+		Assets: []Asset{
+			{Name: buildAssetName(), BrowserDownloadURL: "https://example.com/bin"},
+			{Name: buildAssetName() + ".sha256", BrowserDownloadURL: "https://example.com/bin.sha256"},
+		},
+	}
+	payload, _ := json.Marshal(release)
+
+	withTestTransport(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return newResponse(http.StatusOK, string(payload)), nil
+	}))
+
+	result, err := Check("1.0.0")
+	if err != nil {
+		t.Fatalf("Check() error = %v", err)
+	}
+	if !result.UpdateAvailable {
+		t.Error("UpdateAvailable should be true")
+	}
+	if result.DownloadURL == "" || result.ChecksumURL == "" {
+		t.Error("DownloadURL and ChecksumURL should be set")
+	}
+}
+
+func TestUpdateAlreadyLatest(t *testing.T) {
+	release := Release{
+		TagName: "v1.0.0",
+		HTMLURL: "https://example.com/release/v1.0.0",
+	}
+	payload, _ := json.Marshal(release)
+
+	withTestTransport(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return newResponse(http.StatusOK, string(payload)), nil
+	}))
+
+	err := Update("1.0.0", nil)
+	if err == nil || !strings.Contains(err.Error(), "already at latest version") {
+		t.Fatalf("Update() error = %v, want already at latest version", err)
+	}
+}
+
+func TestUpdateNoBinaryAvailable(t *testing.T) {
+	release := Release{
+		TagName: "v2.0.0",
+		HTMLURL: "https://example.com/release/v2.0.0",
+		Assets: []Asset{
+			{Name: "unrelated-asset", BrowserDownloadURL: "https://example.com/other"},
+		},
+	}
+	payload, _ := json.Marshal(release)
+
+	withTestTransport(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return newResponse(http.StatusOK, string(payload)), nil
+	}))
+
+	err := Update("1.0.0", nil)
+	if err == nil || !strings.Contains(err.Error(), "no binary available") {
+		t.Fatalf("Update() error = %v, want no binary available", err)
+	}
+}
+
+func TestCheckCachedWithValidCache(t *testing.T) {
+	dir := t.TempDir()
+	cachePath := filepath.Join(dir, "update-check.json")
+	entry := cacheEntry{
+		LatestVersion: "2.0.0",
+		ReleaseURL:    "https://example.com/release",
+		CheckedAt:     time.Now(),
+	}
+	data, _ := json.Marshal(entry)
+	os.WriteFile(cachePath, data, 0644)
+
+	result, err := CheckCached("1.0.0", dir)
+	if err != nil {
+		t.Fatalf("CheckCached() error = %v", err)
+	}
+	if !result.UpdateAvailable {
+		t.Error("UpdateAvailable should be true")
+	}
+	if result.LatestVersion != "2.0.0" {
+		t.Errorf("LatestVersion = %q, want %q", result.LatestVersion, "2.0.0")
+	}
+}
+
+func TestCheckCachedWithExpiredCache(t *testing.T) {
+	dir := t.TempDir()
+	cachePath := filepath.Join(dir, "update-check.json")
+	entry := cacheEntry{
+		LatestVersion: "2.0.0",
+		ReleaseURL:    "https://example.com/release",
+		CheckedAt:     time.Now().Add(-48 * time.Hour), // Expired
+	}
+	data, _ := json.Marshal(entry)
+	os.WriteFile(cachePath, data, 0644)
+
+	release := Release{
+		TagName: "v3.0.0",
+		HTMLURL: "https://example.com/release/v3.0.0",
+	}
+	payload, _ := json.Marshal(release)
+
+	withTestTransport(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return newResponse(http.StatusOK, string(payload)), nil
+	}))
+
+	result, err := CheckCached("1.0.0", dir)
+	if err != nil {
+		t.Fatalf("CheckCached() error = %v", err)
+	}
+	if result.LatestVersion != "3.0.0" {
+		t.Errorf("LatestVersion = %q, want %q", result.LatestVersion, "3.0.0")
+	}
+}
+
+func TestReplaceExecutable(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create "current" executable
+	currentPath := filepath.Join(dir, "current")
+	if err := os.WriteFile(currentPath, []byte("old-content"), 0755); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	// Create "new" executable
+	newPath := filepath.Join(dir, "new")
+	if err := os.WriteFile(newPath, []byte("new-content"), 0644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	if err := replaceExecutable(currentPath, newPath); err != nil {
+		t.Fatalf("replaceExecutable() error = %v", err)
+	}
+
+	// Verify content was replaced
+	content, err := os.ReadFile(currentPath)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	if string(content) != "new-content" {
+		t.Errorf("content = %q, want %q", string(content), "new-content")
+	}
+
+	// Verify backup was cleaned up
+	backupPath := currentPath + ".backup"
+	if _, err := os.Stat(backupPath); !os.IsNotExist(err) {
+		t.Error("backup file should have been removed")
+	}
+}
+
+func TestReplaceExecutableFailsIfCurrentMissing(t *testing.T) {
+	dir := t.TempDir()
+	currentPath := filepath.Join(dir, "missing")
+	newPath := filepath.Join(dir, "new")
+
+	if err := os.WriteFile(newPath, []byte("new-content"), 0644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	err := replaceExecutable(currentPath, newPath)
+	if err == nil {
+		t.Error("replaceExecutable() should fail if current is missing")
+	}
+}
+
+func TestReplaceExecutableFailsIfNewMissing(t *testing.T) {
+	dir := t.TempDir()
+	currentPath := filepath.Join(dir, "current")
+	newPath := filepath.Join(dir, "missing")
+
+	if err := os.WriteFile(currentPath, []byte("old-content"), 0755); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	err := replaceExecutable(currentPath, newPath)
+	if err == nil {
+		t.Error("replaceExecutable() should fail if new is missing")
+	}
+
+	// Verify original was restored from backup
+	content, _ := os.ReadFile(currentPath)
+	if string(content) != "old-content" {
+		t.Errorf("content = %q, want %q (original should be restored)", string(content), "old-content")
+	}
 }

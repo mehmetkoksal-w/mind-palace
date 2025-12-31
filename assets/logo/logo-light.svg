@@ -1,15 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Mind Palace Logo - For Dark Backgrounds -->
 <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="lightGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#9B8BC5"/>
-      <stop offset="100%" style="stop-color:#6AB0F9"/>
-    </linearGradient>
-  </defs>
-
-  <!-- Main brain outline -->
-  <g fill="url(#lightGradient)">
+  <!-- Main brain outline with solid lighter purple -->
+  <g fill="#9B8BC5">
     <path d="M499.51,335.772l-46.048-130.234C445.439,90.702,349.802,0,232.917,0C110.768,0,11.759,99.019,11.759,221.158
       v69.684C11.759,412.982,110.768,512,232.917,512c100.571,0,185.406-67.154,212.256-159.054h42.186c4.181,0,8.104-2.032,10.518-5.45
       C500.291,344.088,500.895,339.712,499.51,335.772z M328.82,214.59c2.511,14.166-2.495,37.128-47.051,37.128

@@ -81,7 +81,7 @@ echo "=========================================="
 echo "1. Basic CLI Tests"
 echo "=========================================="
 
-run_test_output "palace help" "$PALACE_BIN help" "Mind Palace"
+run_test_output "palace help" "$PALACE_BIN help" "palace - AI-friendly codebase memory and search"
 run_test_output "palace version" "$PALACE_BIN version" "palace"
 
 echo ""
@@ -146,9 +146,9 @@ echo "=========================================="
 echo "4. Query Tests"
 echo "=========================================="
 
-run_test_output "query sayHello" "$PALACE_BIN query sayHello" "sayHello"
-run_test_output "query main" "$PALACE_BIN query main" "main"
-run_test_output "query multiply" "$PALACE_BIN query multiply" "multiply"
+run_test_output "query sayHello" "$PALACE_BIN explore sayHello" "sayHello"
+run_test_output "query main" "$PALACE_BIN explore main" "main"
+run_test_output "query multiply" "$PALACE_BIN explore multiply" "multiply"
 
 echo ""
 echo "=========================================="
@@ -172,7 +172,7 @@ echo "=========================================="
 echo "6. Learning Tests"
 echo "=========================================="
 
-run_test "learn command" "$PALACE_BIN learn 'Always use meaningful variable names in Go'"
+run_test "learn command" "$PALACE_BIN store --as learning 'Always use meaningful variable names in Go' && sleep 1"
 run_test_output "recall test" "$PALACE_BIN recall 'variable'" "variable"
 
 echo ""
@@ -256,8 +256,8 @@ cd "$TEST_DIR/complex-project"
 
 run_test "complex project init" "$PALACE_BIN init"
 run_test "complex project scan" "$PALACE_BIN scan"
-run_test_output "query Handler" "$PALACE_BIN query Handler" "Handler"
-run_test_output "query NewUser" "$PALACE_BIN query NewUser" "NewUser"
+run_test_output "query Handler" "$PALACE_BIN explore Handler" "Handler"
+run_test_output "query NewUser" "$PALACE_BIN explore NewUser" "NewUser"
 
 echo ""
 echo "=========================================="
@@ -279,7 +279,7 @@ func NewProduct(id int, price float64) *Product {
 EOF
 
 run_test "rescan after adding file" "$PALACE_BIN scan"
-run_test_output "query NewProduct after rescan" "$PALACE_BIN query NewProduct" "NewProduct"
+run_test_output "query NewProduct after rescan" "$PALACE_BIN explore NewProduct" "NewProduct"
 
 echo ""
 echo "=========================================="

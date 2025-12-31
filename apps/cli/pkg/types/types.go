@@ -7,9 +7,9 @@ import "time"
 // Session represents an agent work session in a workspace.
 type Session struct {
 	ID           string    `json:"id"`
-	AgentType    string    `json:"agentType"`    // "claude-code", "cursor", "aider", etc.
-	AgentID      string    `json:"agentId"`      // Unique agent instance identifier
-	Goal         string    `json:"goal"`         // What the agent is trying to accomplish
+	AgentType    string    `json:"agentType"` // "claude-code", "cursor", "aider", etc.
+	AgentID      string    `json:"agentId"`   // Unique agent instance identifier
+	Goal         string    `json:"goal"`      // What the agent is trying to accomplish
 	StartedAt    time.Time `json:"startedAt"`
 	LastActivity time.Time `json:"lastActivity"`
 	State        string    `json:"state"`   // "active", "completed", "abandoned"
@@ -74,11 +74,11 @@ type LinkedWorkspace struct {
 
 // ActiveAgent represents an agent currently working in the workspace.
 type ActiveAgent struct {
-	AgentType  string    `json:"agentType"`
-	AgentID    string    `json:"agentId"`
-	SessionID  string    `json:"sessionId"`
-	LastSeen   time.Time `json:"lastSeen"`
-	CurrentFile string   `json:"currentFile,omitempty"`
+	AgentType   string    `json:"agentType"`
+	AgentID     string    `json:"agentId"`
+	SessionID   string    `json:"sessionId"`
+	LastSeen    time.Time `json:"lastSeen"`
+	CurrentFile string    `json:"currentFile,omitempty"`
 }
 
 // Conflict represents a potential conflict between agents.
@@ -92,10 +92,10 @@ type Conflict struct {
 
 // ActivityKind constants for activity types.
 const (
-	ActivityFileRead  = "file_read"
-	ActivityFileEdit  = "file_edit"
-	ActivitySearch    = "search"
-	ActivityCommand   = "command"
+	ActivityFileRead = "file_read"
+	ActivityFileEdit = "file_edit"
+	ActivitySearch   = "search"
+	ActivityCommand  = "command"
 )
 
 // SessionState constants for session states.

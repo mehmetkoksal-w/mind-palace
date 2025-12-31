@@ -49,43 +49,43 @@ func (p *SQLParser) extractSymbols(node *sitter.Node, content []byte, analysis *
 		}
 
 		switch child.Type() {
-		case "create_table_statement":
+		case "create_table":
 			sym := p.parseCreateTable(child, content)
 			if sym != nil {
 				analysis.Symbols = append(analysis.Symbols, *sym)
 			}
 
-		case "create_function_statement":
+		case "create_function":
 			sym := p.parseCreateFunction(child, content)
 			if sym != nil {
 				analysis.Symbols = append(analysis.Symbols, *sym)
 			}
 
-		case "create_view_statement":
+		case "create_view":
 			sym := p.parseCreateView(child, content)
 			if sym != nil {
 				analysis.Symbols = append(analysis.Symbols, *sym)
 			}
 
-		case "create_index_statement":
+		case "create_index":
 			sym := p.parseCreateIndex(child, content)
 			if sym != nil {
 				analysis.Symbols = append(analysis.Symbols, *sym)
 			}
 
-		case "create_trigger_statement":
+		case "create_trigger":
 			sym := p.parseCreateTrigger(child, content)
 			if sym != nil {
 				analysis.Symbols = append(analysis.Symbols, *sym)
 			}
 
-		case "create_procedure_statement":
+		case "create_procedure":
 			sym := p.parseCreateProcedure(child, content)
 			if sym != nil {
 				analysis.Symbols = append(analysis.Symbols, *sym)
 			}
 
-		case "create_type_statement":
+		case "create_type":
 			sym := p.parseCreateType(child, content)
 			if sym != nil {
 				analysis.Symbols = append(analysis.Symbols, *sym)

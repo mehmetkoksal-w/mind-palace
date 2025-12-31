@@ -28,18 +28,80 @@ Mind Palace Observer is the VS Code extension for the Mind Palace ecosystem.
 
 Click to open action menu.
 
-### Sidebar (Blueprint)
+### Sidebar Views
 
+The extension adds a Mind Palace activity bar with four views:
+
+#### Blueprint View
 - **Tree view**: Rooms as folders, entry points as files
-- **Graph view**: Cytoscape visualization
-- **Search**: Query Butler directly
+- **Graph view**: Cytoscape visualization of room relationships
+- Click to navigate to files
+
+#### Knowledge View
+Browse and manage your knowledge records:
+- **Ideas**: Grouped by status (active, exploring, implemented, dropped)
+- **Decisions**: Grouped by status (active, superseded, reversed)
+- **Learnings**: Grouped by scope (palace, room, file)
+- Context menu for creating links between records
+
+#### Sessions View
+Track AI agent sessions:
+- View active, completed, and abandoned sessions
+- Start new sessions with goal tracking
+- End sessions with outcome recording
+- View session activity history
+
+#### Corridor View
+Personal cross-workspace learnings:
+- Browse learnings promoted to your personal corridor
+- View linked workspaces
+- Reinforce learning confidence
+
+### Semantic Search
+
+AI-powered search for your knowledge base:
+- Combines keyword matching with semantic similarity
+- Filter by record type (ideas, decisions, learnings)
+- Requires embedding backend configuration (Ollama or OpenAI)
+
+Access via `Cmd/Ctrl+Shift+F` or Command Palette: "Mind Palace: Semantic Search"
+
+### Conversation Storage
+
+Store and search past AI conversations:
+- Automatically links conversations to sessions
+- Search by summary or content
+- View full conversation history
+
+### Links Management
+
+Create relationships between records:
+- **supports**: Record supports another
+- **contradicts**: Record contradicts another
+- **implements**: Record implements another
+- **supersedes**: Record supersedes another
+- **inspired_by**: Record is inspired by another
+- **related**: General relationship
 
 ### Auto-Heal
 
 On file save:
-1. Wait for debounce (default: 3s)
+1. Wait for debounce (default: 1.5s)
 2. Run `palace scan && palace collect`
-3. Update HUD
+3. Update HUD and refresh views
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Command |
+|----------|---------|
+| `Cmd/Ctrl+Shift+H` | Heal (scan & collect) |
+| `Cmd/Ctrl+Shift+S` | Check Status |
+| `Cmd/Ctrl+Shift+B` | Open Blueprint |
+| `Cmd/Ctrl+Shift+K` | Quick Store (with selection) |
+| `Cmd/Ctrl+Shift+F` | Semantic Search |
+| `Cmd/Ctrl+Shift+M` | Show Menu |
 
 ---
 
@@ -51,75 +113,102 @@ On file save:
 {
   "mindPalace.binaryPath": "palace",
   "mindPalace.autoSync": true,
-  "mindPalace.autoSyncDelay": 3000,
-  "mindPalace.waitForCleanWorkspace": true
+  "mindPalace.autoSyncDelay": 1500,
+  "mindPalace.waitForCleanWorkspace": false,
+  "mindPalace.showStatusBarItem": true,
+  "mindPalace.showFileDecorations": true,
+  "mindPalace.enableSemanticSearch": true
 }
 ```
 
-### Project Config (Higher Priority)
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `binaryPath` | `"palace"` | Path to palace CLI executable |
+| `autoSync` | `true` | Auto-heal on file save |
+| `autoSyncDelay` | `1500` | Debounce delay in ms (500-30000) |
+| `waitForCleanWorkspace` | `false` | Wait for all files saved before heal |
+| `showStatusBarItem` | `true` | Show status bar indicator |
+| `showFileDecorations` | `true` | Show inline editor decorations |
+| `enableSemanticSearch` | `true` | Enable semantic search features |
 
-In `.palace/palace.jsonc`:
+### Embedding Configuration
+
+To enable semantic search, configure embeddings in `.palace/palace.jsonc`:
 
 ```jsonc
 {
-  "vscode": {
-    "autoSync": true,
-    "autoSyncDelay": 5000,
-    "decorations": {
-      "enabled": true,
-      "style": "gutter"  // "gutter" | "inline" | "both"
-    },
-    "statusBar": {
-      "position": "left",
-      "priority": 100
-    },
-    "sidebar": {
-      "defaultView": "tree",  // "tree" | "graph"
-      "graphLayout": "cose"   // "cose" | "circle" | "grid"
-    }
-  }
+  // ... other config ...
+
+  // Option 1: Ollama (local, free)
+  "embeddingBackend": "ollama",
+  "embeddingModel": "nomic-embed-text",
+  "embeddingUrl": "http://localhost:11434",
+
+  // Option 2: OpenAI
+  "embeddingBackend": "openai",
+  "embeddingModel": "text-embedding-3-small",
+  "embeddingApiKey": "sk-..."
 }
 ```
-
-Project config overrides VS Code settings.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│              VS CODE EXTENSION                       │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
-│  │    HUD      │  │   Sidebar   │  │  Decorator  │ │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘ │
-│         └────────────────┼────────────────┘         │
-│                    ┌─────▼─────┐                    │
-│                    │  Bridge   │                    │
-│                    └─────┬─────┘                    │
-└──────────────────────────┼──────────────────────────┘
-                           │
-          ┌────────────────┼────────────────┐
-          ▼                ▼                ▼
-      palace           palace          palace
-      verify            scan            serve
+┌─────────────────────────────────────────────────────────────┐
+│                    VS CODE EXTENSION                         │
+│  ┌─────────┐ ┌───────────┐ ┌──────────┐ ┌─────────────────┐ │
+│  │   HUD   │ │  Sidebar  │ │ Decorator│ │  Tree Providers │ │
+│  └────┬────┘ └─────┬─────┘ └────┬─────┘ └────────┬────────┘ │
+│       └────────────┼────────────┼────────────────┘           │
+│                    │            │                            │
+│              ┌─────▼────────────▼─────┐                     │
+│              │        Bridge          │                     │
+│              │    (MCP Client)        │                     │
+│              └───────────┬────────────┘                     │
+└──────────────────────────┼──────────────────────────────────┘
+                           │ JSON-RPC over stdio
+                    ┌──────▼──────┐
+                    │   palace    │
+                    │   butler    │
+                    └─────────────┘
 ```
 
 **Key principle**: Extension has no state. CLI is source of truth.
 
+### Communication
+
+The extension communicates with the CLI via MCP (Model Context Protocol):
+- JSON-RPC over stdio
+- Tool-based API for all operations
+- Real-time updates via WebSocket (dashboard)
+
 ---
 
-## Files
+## Commands
 
-| File | Purpose |
-|------|---------|
-| `extension.ts` | Activation, commands, events |
-| `bridge.ts` | CLI invocation, MCP client |
-| `config.ts` | Merged config reader |
-| `version.ts` | CLI version check |
-| `hud.ts` | Status bar component |
-| `sidebar.ts` | Webview with graph/tree |
-| `decorator.ts` | Code gutters |
+| Command | Description |
+|---------|-------------|
+| `mindPalace.heal` | Scan and collect context |
+| `mindPalace.checkStatus` | Verify staleness |
+| `mindPalace.openBlueprint` | Show sidebar |
+| `mindPalace.refreshKnowledge` | Refresh knowledge view |
+| `mindPalace.refreshSessions` | Refresh sessions view |
+| `mindPalace.refreshCorridor` | Refresh corridor view |
+| `mindPalace.startSession` | Start new agent session |
+| `mindPalace.endSession` | End current session |
+| `mindPalace.storeIdea` | Store selection as idea |
+| `mindPalace.storeDecision` | Store selection as decision |
+| `mindPalace.storeLearning` | Store selection as learning |
+| `mindPalace.quickStore` | Quick store with auto-classification |
+| `mindPalace.semanticSearch` | Search knowledge semantically |
+| `mindPalace.searchConversations` | Search past conversations |
+| `mindPalace.showLinks` | Show links for a record |
+| `mindPalace.createLink` | Create link between records |
+| `mindPalace.showFileIntel` | Show file intelligence |
+| `mindPalace.showCallGraph` | Show call graph |
+| `mindPalace.showMenu` | Show action menu |
 
 ---
 
@@ -136,3 +225,13 @@ Project config overrides VS Code settings.
 **Search returns nothing**
 - Verify index exists: `ls .palace/index/palace.db`
 - Rebuild: `palace scan`
+
+**Semantic search not working**
+- Check embedding config in `.palace/palace.jsonc`
+- For Ollama: ensure `ollama serve` is running
+- For OpenAI: verify API key is set
+
+**Views not refreshing**
+- Use refresh button in view title bar
+- Check Output panel for errors
+- Restart extension: `Developer: Restart Extension Host`

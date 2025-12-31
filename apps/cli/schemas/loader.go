@@ -21,7 +21,7 @@ var (
 func getCompiler() (*jsonschema.Compiler, error) {
 	compileOnce.Do(func() {
 		c := jsonschema.NewCompiler()
-	for _, name := range []string{Palace, Room, Playbook, ContextPack, ChangeSignal, ProjectProfile, ScanSummary} {
+		for _, name := range []string{Palace, Room, Playbook, ContextPack, ChangeSignal, ProjectProfile, ScanSummary} {
 			filePath := schemaPath(name)
 			data, err := schemaFS.ReadFile(filePath)
 			if err != nil {

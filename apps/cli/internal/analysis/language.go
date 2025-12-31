@@ -79,9 +79,9 @@ var extensionToLanguage = map[string]Language{
 	".md":       LangMarkdown,
 	".markdown": LangMarkdown,
 	// HCL (Terraform)
-	".tf":    LangHCL,
+	".tf":     LangHCL,
 	".tfvars": LangHCL,
-	".hcl":   LangHCL,
+	".hcl":    LangHCL,
 	// Protobuf
 	".proto": LangProtobuf,
 	// Lua
@@ -105,15 +105,15 @@ var extensionToLanguage = map[string]Language{
 
 // filenameToLanguage maps specific filenames (without extensions) to languages
 var filenameToLanguage = map[string]Language{
-	"Dockerfile":     LangDockerfile,
-	"dockerfile":     LangDockerfile,
-	"Makefile":       LangBash,
-	"makefile":       LangBash,
-	"GNUmakefile":    LangBash,
-	"Jenkinsfile":    LangGroovy,
-	"BUILD":          LangPython,
-	"BUILD.bazel":    LangPython,
-	"WORKSPACE":      LangPython,
+	"Dockerfile":      LangDockerfile,
+	"dockerfile":      LangDockerfile,
+	"Makefile":        LangBash,
+	"makefile":        LangBash,
+	"GNUmakefile":     LangBash,
+	"Jenkinsfile":     LangGroovy,
+	"BUILD":           LangPython,
+	"BUILD.bazel":     LangPython,
+	"WORKSPACE":       LangPython,
 	"WORKSPACE.bazel": LangPython,
 }
 

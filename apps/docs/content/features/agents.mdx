@@ -9,7 +9,7 @@ Mind Palace treats AI agents as first-class consumers. Schemas are contracts, no
 | Mode | Best For | How |
 |------|----------|-----|
 | **MCP** | Interactive agents (Claude, Cursor) | `palace serve` |
-| **Context Pack** | Batch/CLI agents | `palace collect` |
+| **Context Pack** | Batch/CLI agents | `palace context "goal"` |
 
 ---
 
@@ -49,6 +49,16 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 |------|------------|---------|
 | `search_mind_palace` | `query`, `limit?`, `room?` | Ranked results by Room |
 | `list_rooms` | - | Room names + entry points |
+| `get_context` | `goal`, `diff?` | Context pack for a task |
+| `get_graph` | `symbol`, `callers?`, `callees?` | Call graph relationships |
+| `start_session` | `agentType`, `goal?` | Session ID |
+| `end_session` | `sessionId` | Confirmation |
+| `log_activity` | `sessionId`, `kind`, `target`, `outcome?` | Activity ID |
+| `add_learning` | `content`, `scope?`, `scopePath?`, `confidence?` | Learning ID |
+| `get_learnings` | `query?`, `scope?`, `scopePath?` | Matching learnings |
+| `get_file_intel` | `path` | File intelligence data |
+| `check_conflict` | `path` | Conflict detection result |
+| `get_active_agents` | - | List of active agents |
 
 ### Available Resources
 
@@ -63,6 +73,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 - **Room-aware** - Results grouped by Room
 - **Entry point boosting** - Important files surface first
 - **Live index** - No stale context packs
+- **Session tracking** - Monitor agent activity
+- **Learning capture** - Store and retrieve knowledge
 
 ---
 
@@ -71,7 +83,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 For agents that can't use MCP:
 
 ```sh
-palace collect --goal "Fix auth bug"
+palace context "Fix auth bug"
 # Provide .palace/outputs/context-pack.json to agent
 ```
 
@@ -80,6 +92,7 @@ The context pack contains:
 - Referenced files with content
 - Room context
 - Provenance (scan ID, timestamp)
+- Relevant learnings
 
 ---
 
@@ -118,7 +131,7 @@ If scope is "full":
 ## Verification Loop
 
 ```
-Agent proposes → Human reviews → Save → Observer verifies → Fresh ✓ or Stale ✗
+Agent proposes → Human reviews → Save → Observer checks → Fresh ✓ or Stale ✗
 ```
 
 ### With Observer (VS Code)
@@ -126,27 +139,27 @@ Agent proposes → Human reviews → Save → Observer verifies → Fresh ✓ or
 1. Agent queries via MCP or reads context pack
 2. Agent proposes changes
 3. Human saves files
-4. Observer runs `palace verify`
+4. Observer runs `palace check`
 5. HUD shows Fresh (green) or Stale (red)
-6. If stale, auto-heal runs `scan && collect`
+6. If stale, auto-heal runs `scan`
 
 ### Without Observer (CLI)
 
 ```sh
 # After agent changes
-palace verify --fast
+palace check --fast
 # If stale:
-palace scan && palace collect
+palace scan && palace context "next goal"
 ```
 
 ---
 
 ## Handling Staleness
 
-When `palace verify` fails:
+When `palace check` fails:
 
 ```
-Agent: "Index is stale. Please run `palace scan && palace collect` or approve auto-heal."
+Agent: "Index is stale. Please run `palace scan` or approve auto-heal."
 ```
 
 Never proceed with stale context. Request refresh.
@@ -158,11 +171,78 @@ Never proceed with stale context. Request refresh.
 For diff-scoped work:
 
 ```sh
-palace signal --diff HEAD~1..HEAD
-palace collect --diff HEAD~1..HEAD
+palace ci signal --diff HEAD~1..HEAD
+palace context "fix bug" --diff HEAD~1..HEAD
 ```
 
 Agents should:
 1. Check if `change-signal.json` exists
 2. Use its file list to scope work
 3. Treat deleted files as non-editable
+
+---
+
+## Session Memory Integration
+
+Track agent work with sessions:
+
+```json
+{
+  "tool": "start_session",
+  "arguments": {
+    "agentType": "claude-code",
+    "goal": "Implement user authentication"
+  }
+}
+```
+
+During work, log activities:
+
+```json
+{
+  "tool": "log_activity",
+  "arguments": {
+    "sessionId": "session-123",
+    "kind": "file_edit",
+    "target": "src/auth/login.go",
+    "outcome": "success"
+  }
+}
+```
+
+Capture learnings:
+
+```json
+{
+  "tool": "add_learning",
+  "arguments": {
+    "content": "This module requires null checks",
+    "scope": "file",
+    "scopePath": "src/auth/login.go",
+    "confidence": 0.85
+  }
+}
+```
+
+Before editing, check for conflicts:
+
+```json
+{
+  "tool": "check_conflict",
+  "arguments": {
+    "path": "src/auth/login.go"
+  }
+}
+```
+
+---
+
+## Best Practices
+
+1. **Start a session** - Always begin with `start_session` to enable tracking
+2. **Log activities** - Record reads, edits, and commands for file intelligence
+3. **Capture learnings** - Store patterns and heuristics discovered during work
+4. **Check for conflicts** - Before editing, verify no other agent is working on the file
+5. **End sessions properly** - Call `end_session` when done
+6. **Respect guardrails** - Never touch protected files
+7. **Honor scope** - Stay within the requested scope (diff or full)

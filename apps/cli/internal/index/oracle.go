@@ -9,35 +9,35 @@ import (
 
 // ContextResult represents the complete context for a task
 type ContextResult struct {
-	Query      string         `json:"query"`
-	Files      []FileContext  `json:"files"`
-	Symbols    []SymbolInfo   `json:"symbols"`
-	Imports    []ImportInfo   `json:"imports"`
-	Decisions  []Decision     `json:"decisions,omitempty"`
-	Warnings   []string       `json:"warnings,omitempty"`
-	TotalFiles int            `json:"totalFiles"`
-	TokenStats *TokenStats    `json:"tokenStats,omitempty"`
+	Query      string        `json:"query"`
+	Files      []FileContext `json:"files"`
+	Symbols    []SymbolInfo  `json:"symbols"`
+	Imports    []ImportInfo  `json:"imports"`
+	Decisions  []Decision    `json:"decisions,omitempty"`
+	Warnings   []string      `json:"warnings,omitempty"`
+	TotalFiles int           `json:"totalFiles"`
+	TokenStats *TokenStats   `json:"tokenStats,omitempty"`
 }
 
 // TokenStats reports token usage in the context result
 type TokenStats struct {
-	TotalTokens   int `json:"totalTokens"`
-	SymbolTokens  int `json:"symbolTokens"`
-	FileTokens    int `json:"fileTokens"`
-	ImportTokens  int `json:"importTokens"`
-	Budget        int `json:"budget,omitempty"`
-	Truncated     bool `json:"truncated,omitempty"`
+	TotalTokens  int  `json:"totalTokens"`
+	SymbolTokens int  `json:"symbolTokens"`
+	FileTokens   int  `json:"fileTokens"`
+	ImportTokens int  `json:"importTokens"`
+	Budget       int  `json:"budget,omitempty"`
+	Truncated    bool `json:"truncated,omitempty"`
 }
 
 // FileContext represents a file with relevant context
 type FileContext struct {
-	Path        string       `json:"path"`
-	Language    string       `json:"language"`
-	Relevance   float64      `json:"relevance"`
-	Symbols     []SymbolInfo `json:"symbols,omitempty"`
-	ChunkStart  int          `json:"chunkStart,omitempty"`
-	ChunkEnd    int          `json:"chunkEnd,omitempty"`
-	Snippet     string       `json:"snippet,omitempty"`
+	Path       string       `json:"path"`
+	Language   string       `json:"language"`
+	Relevance  float64      `json:"relevance"`
+	Symbols    []SymbolInfo `json:"symbols,omitempty"`
+	ChunkStart int          `json:"chunkStart,omitempty"`
+	ChunkEnd   int          `json:"chunkEnd,omitempty"`
+	Snippet    string       `json:"snippet,omitempty"`
 }
 
 // SymbolInfo represents a symbol with its metadata
@@ -598,10 +598,10 @@ func truncateSnippet(s string, maxLen int) string {
 
 // GetImpact returns the impact analysis for a file or symbol
 type ImpactResult struct {
-	Target      string       `json:"target"`
-	Dependents  []string     `json:"dependents"`
-	Dependencies []string    `json:"dependencies"`
-	Symbols     []SymbolInfo `json:"symbols"`
+	Target       string       `json:"target"`
+	Dependents   []string     `json:"dependents"`
+	Dependencies []string     `json:"dependencies"`
+	Symbols      []SymbolInfo `json:"symbols"`
 }
 
 // GetImpact analyzes what would be affected by changing a file or symbol

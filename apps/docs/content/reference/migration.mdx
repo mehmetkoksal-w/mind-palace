@@ -1,0 +1,151 @@
+# Migration Guide
+
+This guide covers breaking changes between versions and how to migrate your workflows.
+
+---
+
+## v0.0.1-alpha → v0.1.0-alpha
+
+This release includes **breaking changes** to command names for consistency and clarity.
+
+### Command Renames
+
+| Old Command | New Command | Notes |
+|-------------|-------------|-------|
+| `palace ask` | `palace query` | More accurate - you're querying, not asking |
+| `palace collect` | `palace context` | Clearer purpose - generates context packs |
+| `palace verify` | `palace check` | Now includes lint + verify in one command |
+| `palace detect` | *(removed)* | Merged into `palace init` |
+| `palace signal` | `palace ci signal` | Moved under `ci` subcommand |
+
+### Migration Steps
+
+#### 1. Update Shell Scripts
+
+```bash
+# Before
+palace ask "auth logic"
+palace collect --goal "fix bug"
+palace verify --strict
+palace signal --diff HEAD~1..HEAD
+
+# After
+palace query "auth logic"
+palace context "fix bug"
+palace check --strict
+palace ci signal --diff HEAD~1..HEAD
+```
+
+#### 2. Update CI/CD Pipelines
+
+```yaml
+# Before (.github/workflows/verify.yml)
+- name: Verify Mind Palace
+  run: |
+    palace verify --strict --diff ${{ github.event.pull_request.base.sha }}..${{ github.sha }}
+
+# After
+- name: Verify Mind Palace
+  run: |
+    palace ci verify --strict --diff ${{ github.event.pull_request.base.sha }}..${{ github.sha }}
+```
+
+#### 3. Update MCP Configurations
+
+No changes needed - the MCP server (`palace serve`) uses the same tool names.
+
+#### 4. Update VS Code Extension
+
+The extension automatically uses the correct commands. Just update to the latest version.
+
+### New Commands Added
+
+These commands are new in v0.1.0-alpha:
+
+| Command | Purpose |
+|---------|---------|
+| `palace remember` | Store ideas, decisions, or learnings (auto-classified) |
+| `palace outcome` | Record the outcome of a decision |
+| `palace review` | Review decisions awaiting feedback |
+| `palace link` | Create relationships between records |
+| `palace graph` | Explore call relationships |
+| `palace intel` | Show file intelligence |
+| `palace brief` | Get a briefing before editing |
+| `palace maintenance` | Clean up stale data |
+| `palace dashboard` | Start web dashboard |
+| `palace ci verify` | CI-specific verification |
+| `palace ci collect` | CI-specific context generation |
+| `palace ci signal` | Generate change signal |
+
+### Removed Commands
+
+| Command | Replacement |
+|---------|-------------|
+| `palace detect` | Run `palace init` - detection is now automatic |
+| `palace lint` | Use `palace check` - lint is included |
+
+### Configuration Changes
+
+#### palace.jsonc
+
+No schema changes. Existing configurations work without modification.
+
+#### VS Code Settings
+
+No changes to setting names. The extension handles command translation internally.
+
+---
+
+## Compatibility Notes
+
+### CLI Backwards Compatibility
+
+The CLI does **not** maintain backwards compatibility for removed/renamed commands. Update your scripts and pipelines immediately after upgrading.
+
+### MCP Protocol Compatibility
+
+The MCP protocol remains stable. Tool names are unchanged:
+- `search_mind_palace`
+- `list_rooms`
+- `get_context`
+- `get_graph`
+- `start_session`
+- `end_session`
+- etc.
+
+### Database Compatibility
+
+The `.palace/index/palace.db` schema is forwards-compatible. Databases created with v0.0.1-alpha will work with v0.1.0-alpha without migration.
+
+---
+
+## Troubleshooting
+
+### "Unknown command: ask"
+
+You're using the old command name. Use `palace query` instead.
+
+### "Unknown command: collect"
+
+Use `palace context "your goal"` instead.
+
+### "Unknown command: verify"
+
+Use `palace check` instead. Note that `check` now includes linting.
+
+### "Unknown command: signal"
+
+Use `palace ci signal --diff <range>` instead.
+
+### Scripts Breaking in CI
+
+Update your CI workflow files to use the new command names. See the migration steps above.
+
+---
+
+## Version History
+
+| Version | Date | Breaking Changes |
+|---------|------|------------------|
+| v0.1.0-alpha | 2025-12-26 | Command renames, new features |
+| v0.0.1-alpha | 2025-12-23 | Initial release |

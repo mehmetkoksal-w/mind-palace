@@ -41,15 +41,7 @@ This creates the `.palace/` directory with:
 - `rooms/` - Room definitions
 - `playbooks/` - Workflow templates
 
-### 2. Auto-Detect Project Type
-
-```sh
-palace detect
-```
-
-Mind Palace analyzes your codebase and generates a project profile.
-
-### 3. Build the Index
+### 2. Build the Index
 
 ```sh
 palace scan
@@ -60,13 +52,21 @@ This creates a SQLite database with full-text search (FTS5) containing:
 - Symbols (functions, types, classes)
 - Call relationships
 
-### 4. Query Your Codebase
+### 3. Query Your Codebase
 
 ```sh
-palace ask "where is authentication handled"
+palace query "where is authentication handled"
 ```
 
 Results are ranked using BM25 with entry-point boosting.
+
+### 4. Generate Context for AI Agents
+
+```sh
+palace context "fix the login bug"
+```
+
+This creates a context pack with relevant files, rooms, and metadata.
 
 ## What's Next
 

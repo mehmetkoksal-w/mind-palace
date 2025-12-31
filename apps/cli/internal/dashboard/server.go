@@ -4,6 +4,7 @@ package dashboard
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
 	"os/exec"
@@ -23,6 +24,7 @@ type Server struct {
 	corridor *corridor.GlobalCorridor
 	port     int
 	root     string
+	wsHub    *WSHub       // WebSocket hub for real-time updates
 	mu       sync.RWMutex // Protects butler, memory, and root during workspace switch
 }
 
@@ -43,12 +45,19 @@ func New(cfg Config) *Server {
 		corridor: cfg.Corridor,
 		port:     cfg.Port,
 		root:     cfg.Root,
+		wsHub:    NewWSHub(),
 	}
 }
 
 // Start starts the dashboard server.
 func (s *Server) Start(openBrowser bool) error {
 	mux := http.NewServeMux()
+
+	// Start WebSocket hub
+	go s.wsHub.Run()
+
+	// WebSocket endpoint
+	mux.HandleFunc("/api/ws", s.handleWebSocket)
 
 	// API endpoints
 	mux.HandleFunc("/api/health", s.handleHealth)
@@ -62,6 +71,7 @@ func (s *Server) Start(openBrowser bool) error {
 	mux.HandleFunc("/api/corridors/personal", s.handleCorridorPersonal)
 	mux.HandleFunc("/api/corridors/links", s.handleCorridorLinks)
 	mux.HandleFunc("/api/search", s.handleSearch)
+	mux.HandleFunc("/api/search/semantic", s.handleSemanticSearch)
 	mux.HandleFunc("/api/graph/", s.handleGraph)
 	mux.HandleFunc("/api/hotspots", s.handleHotspots)
 	mux.HandleFunc("/api/agents", s.handleAgents)
@@ -70,8 +80,38 @@ func (s *Server) Start(openBrowser bool) error {
 	mux.HandleFunc("/api/workspaces", s.handleWorkspaces)
 	mux.HandleFunc("/api/workspace/switch", s.handleWorkspaceSwitch)
 
-	// Static files (embedded dashboard or fallback)
-	mux.Handle("/", http.FileServer(http.FS(embeddedAssets)))
+	// Brain API endpoints (ideas, decisions, conversations, context)
+	mux.HandleFunc("/api/remember", s.handleRemember)
+	mux.HandleFunc("/api/brain/search", s.handleBrainSearch)
+	mux.HandleFunc("/api/brain/context", s.handleBrainContext)
+	mux.HandleFunc("/api/ideas", s.handleIdeas)
+	mux.HandleFunc("/api/decisions", s.handleDecisions)
+	mux.HandleFunc("/api/decisions/timeline", s.handleDecisionTimeline)
+	mux.HandleFunc("/api/decisions/", s.handleDecisionDetail)
+	mux.HandleFunc("/api/conversations", s.handleConversations)
+	mux.HandleFunc("/api/conversations/", s.handleConversationDetail)
+	mux.HandleFunc("/api/links", s.handleLinks)
+	mux.HandleFunc("/api/contradictions", s.handleContradictions)
+	mux.HandleFunc("/api/decay/stats", s.handleDecayStats)
+	mux.HandleFunc("/api/decay/preview", s.handleDecayPreview)
+
+	// Postmortem API endpoints
+	mux.HandleFunc("/api/postmortems/stats", s.handlePostmortemStats)
+	mux.HandleFunc("/api/postmortems/", s.handlePostmortemDetail)
+	mux.HandleFunc("/api/postmortems", s.handlePostmortems)
+	mux.HandleFunc("/api/briefings/smart", s.handleSmartBriefing)
+
+	// Context & Scope API endpoints
+	mux.HandleFunc("/api/context/preview", s.handleContextPreview)
+	mux.HandleFunc("/api/scope/explain", s.handleScopeExplain)
+	mux.HandleFunc("/api/scope/hierarchy", s.handleScopeHierarchy)
+
+	// Favicon handler (serves inline SVG regardless of which dashboard is used)
+	mux.HandleFunc("/favicon.ico", s.handleFavicon)
+	mux.HandleFunc("/favicon.svg", s.handleFavicon)
+
+	// Static files with SPA fallback (serve index.html for client-side routes)
+	mux.Handle("/", spaHandler(embeddedAssets))
 
 	// Find available port
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
@@ -146,4 +186,54 @@ func openURL(url string) {
 	go func() {
 		_ = cmd.Run()
 	}()
+}
+
+// handleWebSocket upgrades HTTP connections to WebSocket
+func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	ServeWS(s.wsHub, w, r)
+}
+
+// Broadcast sends an event to all connected WebSocket clients
+func (s *Server) Broadcast(eventType string, payload interface{}) {
+	if s.wsHub != nil {
+		s.wsHub.Broadcast(eventType, payload)
+	}
+}
+
+// WSHub returns the WebSocket hub for external use
+func (s *Server) WSHub() *WSHub {
+	return s.wsHub
+}
+
+// WSClientCount returns the number of connected WebSocket clients
+func (s *Server) WSClientCount() int {
+	if s.wsHub != nil {
+		return s.wsHub.ClientCount()
+	}
+	return 0
+}
+
+// spaHandler creates an HTTP handler that serves static files from the given
+// filesystem, with SPA fallback to index.html for routes that don't match files.
+func spaHandler(fsys fs.FS) http.Handler {
+	fileServer := http.FileServer(http.FS(fsys))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if path == "/" {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Try to serve the file directly
+		f, err := fsys.Open(path[1:]) // Remove leading slash
+		if err == nil {
+			f.Close()
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// File not found - serve index.html for SPA routing
+		r.URL.Path = "/"
+		fileServer.ServeHTTP(w, r)
+	})
 }

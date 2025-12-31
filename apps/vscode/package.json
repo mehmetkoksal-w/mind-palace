@@ -2,7 +2,7 @@
   "name": "mind-palace-vscode",
   "displayName": "Mind Palace Observer",
   "description": "Head-Up Display for the Mind Palace CLI",
-  "version": "0.0.1-alpha",
+  "version": "0.1.0-alpha",
   "license": "PolyForm-Shield-1.0.0",
   "publisher": "mind-palace",
   "icon": "images/icon.png",
@@ -19,7 +19,9 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onView:mindPalace.blueprintView"
+    "onView:mindPalace.blueprintView",
+    "onView:mindPalace.knowledgeView",
+    "onView:mindPalace.corridorView"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -39,6 +41,21 @@
           "name": "Blueprint",
           "type": "webview",
           "icon": "$(layout-sidebar-left)"
+        },
+        {
+          "id": "mindPalace.knowledgeView",
+          "name": "Knowledge",
+          "icon": "$(book)"
+        },
+        {
+          "id": "mindPalace.sessionsView",
+          "name": "Sessions",
+          "icon": "$(debug-start)"
+        },
+        {
+          "id": "mindPalace.corridorView",
+          "name": "Corridor",
+          "icon": "$(globe)"
         }
       ]
     },
@@ -57,6 +74,204 @@
         "command": "mindPalace.openBlueprint",
         "title": "Mind Palace: Open Blueprint",
         "icon": "$(layout-sidebar-left)"
+      },
+      {
+        "command": "mindPalace.refreshKnowledge",
+        "title": "Mind Palace: Refresh Knowledge",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mindPalace.showKnowledgeDetail",
+        "title": "Mind Palace: Show Knowledge Detail"
+      },
+      {
+        "command": "mindPalace.storeIdea",
+        "title": "Mind Palace: Store as Idea",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "mindPalace.storeDecision",
+        "title": "Mind Palace: Store as Decision",
+        "icon": "$(law)"
+      },
+      {
+        "command": "mindPalace.storeLearning",
+        "title": "Mind Palace: Store as Learning",
+        "icon": "$(book)"
+      },
+      {
+        "command": "mindPalace.quickStore",
+        "title": "Mind Palace: Quick Store...",
+        "icon": "$(save)"
+      },
+      {
+        "command": "mindPalace.showFileIntel",
+        "title": "Mind Palace: Show File Intelligence",
+        "icon": "$(info)"
+      },
+      {
+        "command": "mindPalace.showCallGraph",
+        "title": "Mind Palace: Show Call Graph",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "mindPalace.showMenu",
+        "title": "Mind Palace: Show Menu",
+        "icon": "$(three-bars)"
+      },
+      {
+        "command": "mindPalace.refreshSessions",
+        "title": "Mind Palace: Refresh Sessions",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mindPalace.startSession",
+        "title": "Mind Palace: Start Session",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "mindPalace.endSession",
+        "title": "Mind Palace: End Session",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "mindPalace.showSessionDetail",
+        "title": "Mind Palace: Show Session Detail"
+      },
+      {
+        "command": "mindPalace.showConflictInfo",
+        "title": "Mind Palace: Check File Conflict",
+        "icon": "$(warning)"
+      },
+      {
+        "command": "mindPalace.refreshCorridor",
+        "title": "Mind Palace: Refresh Corridor",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mindPalace.showCorridorLearningDetail",
+        "title": "Mind Palace: Show Corridor Learning Detail"
+      },
+      {
+        "command": "mindPalace.reinforceCorridorLearning",
+        "title": "Mind Palace: Reinforce Learning",
+        "icon": "$(thumbsup)"
+      },
+      {
+        "command": "mindPalace.searchConversations",
+        "title": "Mind Palace: Search Conversations",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "mindPalace.showConversationDetail",
+        "title": "Mind Palace: Show Conversation Detail"
+      },
+      {
+        "command": "mindPalace.showLinks",
+        "title": "Mind Palace: Show Links",
+        "icon": "$(link)"
+      },
+      {
+        "command": "mindPalace.createLink",
+        "title": "Mind Palace: Create Link",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "mindPalace.semanticSearch",
+        "title": "Mind Palace: Semantic Search",
+        "icon": "$(search-fuzzy)"
+      },
+      {
+        "command": "mindPalace.showLearningSuggestions",
+        "title": "Mind Palace: Show Learning Suggestions",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "mindPalace.showLearningDetail",
+        "title": "Mind Palace: Show Learning Detail"
+      },
+      {
+        "command": "mindPalace.showKnowledgeGraph",
+        "title": "Mind Palace: Show Knowledge Graph",
+        "icon": "$(graph)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "mindPalace.refreshKnowledge",
+          "when": "view == mindPalace.knowledgeView",
+          "group": "navigation"
+        },
+        {
+          "command": "mindPalace.refreshSessions",
+          "when": "view == mindPalace.sessionsView",
+          "group": "navigation"
+        },
+        {
+          "command": "mindPalace.startSession",
+          "when": "view == mindPalace.sessionsView",
+          "group": "navigation"
+        },
+        {
+          "command": "mindPalace.refreshCorridor",
+          "when": "view == mindPalace.corridorView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "mindPalace.endSession",
+          "when": "view == mindPalace.sessionsView && viewItem == session",
+          "group": "inline"
+        },
+        {
+          "command": "mindPalace.reinforceCorridorLearning",
+          "when": "view == mindPalace.corridorView && viewItem == learning",
+          "group": "inline"
+        },
+        {
+          "command": "mindPalace.showLinks",
+          "when": "view == mindPalace.knowledgeView && viewItem =~ /^(learning|decision|idea)$/",
+          "group": "1_links@1"
+        },
+        {
+          "command": "mindPalace.createLink",
+          "when": "view == mindPalace.knowledgeView && viewItem =~ /^(learning|decision|idea)$/",
+          "group": "1_links@2"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "mindPalace.storeSubmenu",
+          "when": "editorHasSelection",
+          "group": "mindpalace@1"
+        }
+      ],
+      "mindPalace.storeSubmenu": [
+        {
+          "command": "mindPalace.quickStore",
+          "group": "1_store@0"
+        },
+        {
+          "command": "mindPalace.storeIdea",
+          "group": "2_types@1"
+        },
+        {
+          "command": "mindPalace.storeDecision",
+          "group": "2_types@2"
+        },
+        {
+          "command": "mindPalace.storeLearning",
+          "group": "2_types@3"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "id": "mindPalace.storeSubmenu",
+        "label": "Mind Palace",
+        "icon": "$(heart)"
       }
     ],
     "keybindings": [
@@ -76,6 +291,29 @@
         "command": "mindPalace.openBlueprint",
         "key": "ctrl+shift+b",
         "mac": "cmd+shift+b",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mindPalace.quickStore",
+        "key": "ctrl+shift+k",
+        "mac": "cmd+shift+k",
+        "when": "editorHasSelection"
+      },
+      {
+        "command": "mindPalace.semanticSearch",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mindPalace.showMenu",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      },
+      {
+        "command": "mindPalace.showKnowledgeGraph",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g",
         "when": "editorTextFocus"
       }
     ],
@@ -103,6 +341,26 @@
           "minimum": 500,
           "maximum": 30000,
           "description": "Milliseconds to wait after the last save before scanning (debounce)."
+        },
+        "mindPalace.showStatusBarItem": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Mind Palace status item in the status bar."
+        },
+        "mindPalace.showFileDecorations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline decorations for learnings, ideas, and decisions in the editor."
+        },
+        "mindPalace.enableSemanticSearch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable semantic search features (requires embedding backend configured in palace.jsonc)."
+        },
+        "mindPalace.showInlineLearnings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline learning annotations in the editor (subtle decorations with confidence-based opacity)."
         }
       }
     },

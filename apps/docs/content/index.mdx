@@ -52,7 +52,7 @@ The metaphor isn't decorative—it's the architecture.
 |----------|-----|
 | **Deterministic** | SHA-256 hashes, SQLite with WAL, reproducible scans |
 | **Schema-first** | JSON Schema validation on all artifacts |
-| **Verifiable** | `palace verify` proves freshness |
+| **Verifiable** | `palace check` proves freshness |
 | **Agent-ready** | MCP server for direct AI integration |
 | **Diff-scoped** | Constrain context to changed files only |
 
@@ -64,30 +64,52 @@ curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/pal
 chmod +x palace && sudo mv palace /usr/local/bin/
 
 # Initialize
-palace init && palace detect && palace scan
+palace init && palace scan
 
 # Query
-palace ask "where is authentication handled"
+palace query "where is authentication handled"
+
+# Generate context for an AI agent
+palace context "fix the login bug"
 ```
 
 ## Components
 
 | Component | Purpose |
 |-----------|---------|
-| [CLI](/reference/cli) | Core engine: `palace scan`, `collect`, `verify`, `ask`, `serve` |
+| [CLI](/reference/cli) | Core engine: `palace scan`, `context`, `check`, `query`, `serve` |
 | [VS Code Extension](/reference/extension) | HUD, sidebar, auto-sync |
 | [MCP Server](/features/agents) | AI agent integration via JSON-RPC |
 | [Dashboard](/features/dashboard) | Web UI for visualization and monitoring |
 
 ## Features
 
+### Brain (Ideas & Decisions)
+Track ideas, decisions, and their outcomes over time.
+
+```bash
+palace remember "Let's use JWT for authentication"
+palace outcome d_abc123 successful
+palace review
+```
+
 ### Session Memory
 Track agent work sessions, activities, and learnings. See [Session Memory](/features/session-memory).
 
 ```bash
-palace session start --agent claude-code --goal "Add authentication"
+palace session start --agent claude --goal "Add authentication"
 palace learn "Use bcrypt for password hashing"
 palace recall "authentication"
+palace intel src/auth.go
+palace brief src/auth.go
+```
+
+### Call Graph
+Explore function relationships in your codebase.
+
+```bash
+palace graph handleAuth --callers
+palace graph processRequest --callees --depth 3
 ```
 
 ### Corridors
@@ -96,6 +118,8 @@ Share knowledge across projects. See [Corridors](/features/corridors).
 ```bash
 palace corridor link api-service ~/code/api-service
 palace corridor search "error handling" --all
+palace corridor personal
+palace corridor promote learning_123
 ```
 
 ### Dashboard

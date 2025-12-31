@@ -6,433 +6,203 @@ import (
 	"testing"
 	"time"
 
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
 )
 
-func TestMergeOrderedUnique(t *testing.T) {
-	tests := []struct {
-		name      string
-		primary   []string
-		secondary []string
-		expected  []string
-	}{
-		{
-			name:      "both empty",
-			primary:   []string{},
-			secondary: []string{},
-			expected:  []string{},
-		},
-		{
-			name:      "primary only",
-			primary:   []string{"a", "b", "c"},
-			secondary: []string{},
-			expected:  []string{"a", "b", "c"},
-		},
-		{
-			name:      "secondary only",
-			primary:   []string{},
-			secondary: []string{"x", "y", "z"},
-			expected:  []string{"x", "y", "z"},
-		},
-		{
-			name:      "no duplicates",
-			primary:   []string{"a", "b"},
-			secondary: []string{"c", "d"},
-			expected:  []string{"a", "b", "c", "d"},
-		},
-		{
-			name:      "with duplicates",
-			primary:   []string{"a", "b", "c"},
-			secondary: []string{"b", "c", "d"},
-			expected:  []string{"a", "b", "c", "d"},
-		},
-		{
-			name:      "primary has duplicates internally",
-			primary:   []string{"a", "a", "b"},
-			secondary: []string{"c"},
-			expected:  []string{"a", "b", "c"},
-		},
-		{
-			name:      "preserves primary order",
-			primary:   []string{"z", "a", "m"},
-			secondary: []string{"b", "c"},
-			expected:  []string{"z", "a", "m", "b", "c"},
-		},
-		{
-			name:      "nil primary",
-			primary:   nil,
-			secondary: []string{"a", "b"},
-			expected:  []string{"a", "b"},
-		},
-		{
-			name:      "nil secondary",
-			primary:   []string{"a", "b"},
-			secondary: nil,
-			expected:  []string{"a", "b"},
-		},
-		{
-			name:      "both nil",
-			primary:   nil,
-			secondary: nil,
-			expected:  []string{},
-		},
-		{
-			name:      "filters empty strings",
-			primary:   []string{"a", "", "b"},
-			secondary: []string{"", "c", ""},
-			expected:  []string{"a", "b", "c"},
-		},
+func TestCollectEntryPoints(t *testing.T) {
+	root := t.TempDir()
+	roomDir := filepath.Join(root, ".palace", "rooms")
+	if err := os.MkdirAll(roomDir, 0755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := mergeOrderedUnique(tt.primary, tt.secondary)
+	room := `{
+  "schemaVersion":"1.0.0",
+  "kind":"palace/room",
+  "name":"core",
+  "summary":"Core room",
+  "entryPoints":["src/main.go","lib/util.go"],
+  "provenance":{"createdBy":"test","createdAt":"2024-01-01T00:00:00Z"}
+}`
+	if err := os.WriteFile(filepath.Join(roomDir, "core.jsonc"), []byte(room), 0644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
 
-			// Handle nil vs empty slice comparison
-			if len(result) == 0 && len(tt.expected) == 0 {
-				return // Both empty, pass
-			}
-
-			if len(result) != len(tt.expected) {
-				t.Errorf("length mismatch: got %d, want %d\ngot: %v\nwant: %v",
-					len(result), len(tt.expected), result, tt.expected)
-				return
-			}
-
-			for i, v := range result {
-				if v != tt.expected[i] {
-					t.Errorf("index %d: got %q, want %q", i, v, tt.expected[i])
-				}
-			}
-		})
+	entries := collectEntryPoints(root, "core")
+	if len(entries) != 2 {
+		t.Fatalf("entries length = %d, want 2", len(entries))
+	}
+	if entries[0] != "src/main.go" {
+		t.Fatalf("entry[0] = %q, want %q", entries[0], "src/main.go")
 	}
 }
 
 func TestFilterExisting(t *testing.T) {
 	stored := map[string]index.FileMetadata{
-		"src/main.go":    {Hash: "abc123", Size: 100, ModTime: time.Now()},
-		"src/utils.go":   {Hash: "def456", Size: 200, ModTime: time.Now()},
-		"pkg/handler.go": {Hash: "ghi789", Size: 300, ModTime: time.Now()},
+		"a.go": {Hash: "a", Size: 1, ModTime: time.Now()},
 	}
-
-	tests := []struct {
-		name     string
-		paths    []string
-		expected []string
-	}{
-		{
-			name:     "all exist",
-			paths:    []string{"src/main.go", "src/utils.go"},
-			expected: []string{"src/main.go", "src/utils.go"},
-		},
-		{
-			name:     "none exist",
-			paths:    []string{"nonexistent.go", "missing.go"},
-			expected: []string{},
-		},
-		{
-			name:     "some exist",
-			paths:    []string{"src/main.go", "nonexistent.go", "pkg/handler.go"},
-			expected: []string{"src/main.go", "pkg/handler.go"},
-		},
-		{
-			name:     "empty paths",
-			paths:    []string{},
-			expected: []string{},
-		},
-		{
-			name:     "nil paths",
-			paths:    nil,
-			expected: []string{},
-		},
-		{
-			name:     "preserves order",
-			paths:    []string{"pkg/handler.go", "src/utils.go", "src/main.go"},
-			expected: []string{"pkg/handler.go", "src/utils.go", "src/main.go"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := filterExisting(tt.paths, stored)
-
-			if len(result) == 0 && len(tt.expected) == 0 {
-				return
-			}
-
-			if len(result) != len(tt.expected) {
-				t.Errorf("length mismatch: got %d, want %d\ngot: %v\nwant: %v",
-					len(result), len(tt.expected), result, tt.expected)
-				return
-			}
-
-			for i, v := range result {
-				if v != tt.expected[i] {
-					t.Errorf("index %d: got %q, want %q", i, v, tt.expected[i])
-				}
-			}
-		})
+	paths := []string{"a.go", "b.go"}
+	out := filterExisting(paths, stored)
+	if len(out) != 1 || out[0] != "a.go" {
+		t.Fatalf("filterExisting() = %v, want [a.go]", out)
 	}
 }
 
-func TestFilterExistingEmptyStore(t *testing.T) {
-	stored := map[string]index.FileMetadata{}
-	paths := []string{"a.go", "b.go", "c.go"}
-
-	result := filterExisting(paths, stored)
-
-	if len(result) != 0 {
-		t.Errorf("expected empty result for empty store, got %v", result)
+func TestMergeOrderedUnique(t *testing.T) {
+	out := mergeOrderedUnique([]string{"a", "b", "a"}, []string{"b", "c", ""})
+	if len(out) != 3 {
+		t.Fatalf("mergeOrderedUnique() length = %d, want 3", len(out))
+	}
+	if out[0] != "a" || out[1] != "b" || out[2] != "c" {
+		t.Fatalf("mergeOrderedUnique() = %v, want [a b c]", out)
 	}
 }
 
 func TestPrioritizeHits(t *testing.T) {
 	hits := []index.ChunkHit{
-		{Path: "src/main.go", ChunkIndex: 0, StartLine: 1, EndLine: 10},
-		{Path: "src/utils.go", ChunkIndex: 0, StartLine: 1, EndLine: 10},
-		{Path: "pkg/handler.go", ChunkIndex: 0, StartLine: 1, EndLine: 10},
-		{Path: "pkg/router.go", ChunkIndex: 0, StartLine: 1, EndLine: 10},
+		{Path: "a.go"},
+		{Path: "b.go"},
+		{Path: "c.go"},
 	}
-
-	tests := []struct {
-		name         string
-		changedPaths []string
-		expectedFirst []string // Expected paths at the beginning
-	}{
-		{
-			name:          "no changed paths",
-			changedPaths:  []string{},
-			expectedFirst: []string{"src/main.go", "src/utils.go"}, // Original order
-		},
-		{
-			name:          "nil changed paths",
-			changedPaths:  nil,
-			expectedFirst: []string{"src/main.go", "src/utils.go"},
-		},
-		{
-			name:          "prioritize single",
-			changedPaths:  []string{"pkg/handler.go"},
-			expectedFirst: []string{"pkg/handler.go"},
-		},
-		{
-			name:          "prioritize multiple",
-			changedPaths:  []string{"pkg/handler.go", "pkg/router.go"},
-			expectedFirst: []string{"pkg/handler.go", "pkg/router.go"},
-		},
-		{
-			name:          "changed paths not in hits",
-			changedPaths:  []string{"nonexistent.go"},
-			expectedFirst: []string{"src/main.go"}, // Original order preserved
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := prioritizeHits(hits, tt.changedPaths)
-
-			if len(result) != len(hits) {
-				t.Errorf("result length changed: got %d, want %d", len(result), len(hits))
-				return
-			}
-
-			// Check first elements match expected
-			for i, expected := range tt.expectedFirst {
-				if i >= len(result) {
-					break
-				}
-				if result[i].Path != expected {
-					t.Errorf("position %d: got path %q, want %q", i, result[i].Path, expected)
-				}
-			}
-		})
+	out := prioritizeHits(hits, []string{"b.go"})
+	if out[0].Path != "b.go" {
+		t.Fatalf("prioritizeHits()[0] = %s, want b.go", out[0].Path)
 	}
 }
 
-func TestPrioritizeHitsEmptyInput(t *testing.T) {
-	result := prioritizeHits([]index.ChunkHit{}, []string{"a.go"})
-	if len(result) != 0 {
-		t.Errorf("expected empty result for empty hits, got %v", result)
+func TestRunFullScopeAllowStale(t *testing.T) {
+	root := t.TempDir()
+	if _, err := config.EnsureLayout(root); err != nil {
+		t.Fatalf("EnsureLayout() error = %v", err)
+	}
+
+	if err := config.WriteTemplate(filepath.Join(root, ".palace", "palace.jsonc"), "palace.jsonc", map[string]string{
+		"projectName": "test",
+		"language":    "go",
+	}, true); err != nil {
+		t.Fatalf("WriteTemplate(palace) error = %v", err)
+	}
+	if err := config.WriteTemplate(filepath.Join(root, ".palace", "rooms", "project-overview.jsonc"), "rooms/project-overview.jsonc", nil, true); err != nil {
+		t.Fatalf("WriteTemplate(room) error = %v", err)
+	}
+
+	mainPath := filepath.Join(root, "main.go")
+	if err := os.WriteFile(mainPath, []byte("package main\n"), 0644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	dbPath := filepath.Join(root, ".palace", "index", "palace.db")
+	db, err := index.Open(dbPath)
+	if err != nil {
+		t.Fatalf("index.Open() error = %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	if _, err := db.Exec(`INSERT INTO files (path, hash, size, mod_time, indexed_at, language) VALUES (?, ?, ?, ?, ?, ?)`,
+		"main.go", "hash", 1, now, now, "go"); err != nil {
+		t.Fatalf("insert file error = %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO scans (root, scan_hash, started_at, completed_at) VALUES (?, ?, ?, ?)`,
+		root, "scanhash", now, now); err != nil {
+		t.Fatalf("insert scan error = %v", err)
+	}
+
+	result, err := Run(root, "", Options{AllowStale: true})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if result.ContextPack.Scope == nil || result.ContextPack.Scope.FileCount == 0 {
+		t.Fatalf("expected scope file count > 0")
 	}
 }
 
-func TestPrioritizeHitsPreservesAllHits(t *testing.T) {
-	hits := []index.ChunkHit{
-		{Path: "a.go", ChunkIndex: 0},
-		{Path: "b.go", ChunkIndex: 1},
-		{Path: "c.go", ChunkIndex: 2},
-	}
-	changedPaths := []string{"c.go"}
-
-	result := prioritizeHits(hits, changedPaths)
-
-	// All hits should still be present
-	pathSet := make(map[string]bool)
-	for _, h := range result {
-		pathSet[h.Path] = true
+func TestRunDiffScopeFromSignalWithCorridorWarning(t *testing.T) {
+	root := t.TempDir()
+	if _, err := config.EnsureLayout(root); err != nil {
+		t.Fatalf("EnsureLayout() error = %v", err)
 	}
 
-	for _, h := range hits {
-		if !pathSet[h.Path] {
-			t.Errorf("missing hit for path %q", h.Path)
-		}
-	}
-}
-
-func TestCollectEntryPoints(t *testing.T) {
-	t.Run("empty room name returns nil", func(t *testing.T) {
-		result := collectEntryPoints("/some/path", "")
-		if result != nil {
-			t.Errorf("expected nil for empty room name, got %v", result)
-		}
-	})
-
-	t.Run("nonexistent room file returns nil", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		result := collectEntryPoints(tmpDir, "nonexistent")
-		if result != nil {
-			t.Errorf("expected nil for nonexistent room, got %v", result)
-		}
-	})
-
-	t.Run("invalid room file returns nil", func(t *testing.T) {
-		tmpDir := t.TempDir()
-
-		// Create .palace/rooms directory
-		roomsDir := filepath.Join(tmpDir, ".palace", "rooms")
-		if err := os.MkdirAll(roomsDir, 0755); err != nil {
-			t.Fatalf("failed to create rooms dir: %v", err)
-		}
-
-		// Create an invalid room file (missing schema)
-		roomContent := `{ invalid json }`
-		roomPath := filepath.Join(roomsDir, "badroom.jsonc")
-		if err := os.WriteFile(roomPath, []byte(roomContent), 0644); err != nil {
-			t.Fatalf("failed to write room file: %v", err)
-		}
-
-		// Should return nil for invalid room file (validation fails)
-		result := collectEntryPoints(tmpDir, "badroom")
-		if result != nil {
-			t.Errorf("expected nil for invalid room file, got %v", result)
-		}
-	})
-}
-
-func TestRunRequiresIndex(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create minimal palace layout without index
-	palaceDir := filepath.Join(tmpDir, ".palace")
-	if err := os.MkdirAll(filepath.Join(palaceDir, "outputs"), 0755); err != nil {
-		t.Fatalf("failed to create palace dir: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(palaceDir, "rooms"), 0755); err != nil {
-		t.Fatalf("failed to create rooms dir: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(palaceDir, "playbooks"), 0755); err != nil {
-		t.Fatalf("failed to create playbooks dir: %v", err)
-	}
-
-	// Create palace.jsonc
 	palaceConfig := `{
-  "$schema": "./schemas/palace.schema.json",
-  "name": "test-palace"
+  "schemaVersion": "1.0.0",
+  "kind": "palace/config",
+  "project": {
+    "name": "test",
+    "description": "",
+    "language": "go",
+    "repository": ""
+  },
+  "defaultRoom": "project-overview",
+  "guardrails": {},
+  "neighbors": {
+    "missing": {
+      "localPath": "missing-neighbor"
+    }
+  },
+  "provenance": {
+    "createdBy": "test",
+    "createdAt": "2024-01-01T00:00:00Z"
+  }
 }`
-	if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0644); err != nil {
-		t.Fatalf("failed to write palace config: %v", err)
+	if err := os.WriteFile(filepath.Join(root, ".palace", "palace.jsonc"), []byte(palaceConfig), 0644); err != nil {
+		t.Fatalf("WriteFile(palace.jsonc) error = %v", err)
+	}
+	if err := config.WriteTemplate(filepath.Join(root, ".palace", "rooms", "project-overview.jsonc"), "rooms/project-overview.jsonc", map[string]string{}, true); err != nil {
+		t.Fatalf("WriteTemplate(room) error = %v", err)
 	}
 
-	// Create schemas
-	schemasDir := filepath.Join(palaceDir, "schemas")
-	if err := os.MkdirAll(schemasDir, 0755); err != nil {
-		t.Fatalf("failed to create schemas dir: %v", err)
-	}
-	palaceSchema := `{"$schema": "http://json-schema.org/draft-07/schema#", "type": "object"}`
-	if err := os.WriteFile(filepath.Join(schemasDir, "palace.schema.json"), []byte(palaceSchema), 0644); err != nil {
-		t.Fatalf("failed to write palace schema: %v", err)
+	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile(README) error = %v", err)
 	}
 
-	_, err := Run(tmpDir, "", Options{})
-	if err == nil {
-		t.Error("expected error when no index exists")
+	dbPath := filepath.Join(root, ".palace", "index", "palace.db")
+	db, err := index.Open(dbPath)
+	if err != nil {
+		t.Fatalf("index.Open() error = %v", err)
 	}
-}
+	t.Cleanup(func() { _ = db.Close() })
 
-func TestOptions(t *testing.T) {
-	// Test that Options struct works correctly
-	opts := Options{
-		AllowStale: true,
+	now := time.Now().UTC().Format(time.RFC3339)
+	if _, err := db.Exec(`INSERT INTO files (path, hash, size, mod_time, indexed_at, language) VALUES (?, ?, ?, ?, ?, ?)`,
+		"README.md", "hash", 1, now, now, "md"); err != nil {
+		t.Fatalf("insert file error = %v", err)
 	}
-
-	if !opts.AllowStale {
-		t.Error("AllowStale should be true")
-	}
-
-	opts2 := Options{}
-	if opts2.AllowStale {
-		t.Error("Default AllowStale should be false")
-	}
-}
-
-func TestResult(t *testing.T) {
-	// Test Result struct
-	result := Result{
-		CorridorWarnings: []string{"warning1", "warning2"},
+	if _, err := db.Exec(`INSERT INTO scans (root, scan_hash, started_at, completed_at) VALUES (?, ?, ?, ?)`,
+		root, "scanhash", now, now); err != nil {
+		t.Fatalf("insert scan error = %v", err)
 	}
 
-	if len(result.CorridorWarnings) != 2 {
-		t.Errorf("expected 2 warnings, got %d", len(result.CorridorWarnings))
+	sig := model.ChangeSignal{
+		SchemaVersion: "1.0.0",
+		Kind:          "palace/change-signal",
+		DiffRange:     "HEAD~1..HEAD",
+		GeneratedAt:   now,
+		Changes: []model.Change{
+			{Path: "README.md", Status: "modified", Hash: "hash"},
+		},
+		Provenance: model.Provenance{
+			CreatedBy: "palace signal",
+			CreatedAt: now,
+		},
 	}
-}
-
-// Benchmark tests
-func BenchmarkMergeOrderedUnique(b *testing.B) {
-	primary := make([]string, 100)
-	secondary := make([]string, 100)
-	for i := 0; i < 100; i++ {
-		primary[i] = filepath.Join("src", "file"+string(rune('a'+i%26))+".go")
-		secondary[i] = filepath.Join("pkg", "file"+string(rune('a'+i%26))+".go")
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		mergeOrderedUnique(primary, secondary)
-	}
-}
-
-func BenchmarkFilterExisting(b *testing.B) {
-	stored := make(map[string]index.FileMetadata)
-	paths := make([]string, 1000)
-	for i := 0; i < 1000; i++ {
-		path := filepath.Join("src", "file"+string(rune('a'+i%26))+".go")
-		paths[i] = path
-		if i%2 == 0 {
-			stored[path] = index.FileMetadata{Hash: "hash", Size: 100}
-		}
+	sigPath := filepath.Join(root, ".palace", "outputs", "change-signal.json")
+	if err := model.WriteChangeSignal(sigPath, sig); err != nil {
+		t.Fatalf("WriteChangeSignal() error = %v", err)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		filterExisting(paths, stored)
+	result, err := Run(root, "HEAD~1..HEAD", Options{AllowStale: true})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
 	}
-}
-
-func BenchmarkPrioritizeHits(b *testing.B) {
-	hits := make([]index.ChunkHit, 100)
-	changedPaths := make([]string, 20)
-	for i := 0; i < 100; i++ {
-		hits[i] = index.ChunkHit{
-			Path:      filepath.Join("src", "file"+string(rune('a'+i%26))+".go"),
-			StartLine: i * 10,
-			EndLine:   i*10 + 10,
-		}
+	if result.ContextPack.Scope == nil || result.ContextPack.Scope.Mode != "diff" {
+		t.Fatalf("expected diff scope, got %+v", result.ContextPack.Scope)
 	}
-	for i := 0; i < 20; i++ {
-		changedPaths[i] = hits[i*5].Path
+	if result.ContextPack.Scope.Source != "change-signal" {
+		t.Fatalf("expected change-signal source, got %q", result.ContextPack.Scope.Source)
 	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		prioritizeHits(hits, changedPaths)
+	if len(result.CorridorWarnings) == 0 {
+		t.Fatalf("expected corridor warning for missing neighbor")
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
 )
 
@@ -300,5 +301,128 @@ func TestChangeSignalMetadata(t *testing.T) {
 	}
 	if sig.Provenance.CreatedBy != "palace signal" {
 		t.Errorf("CreatedBy = %q, want %q", sig.Provenance.CreatedBy, "palace signal")
+	}
+}
+func TestPathsFromSignal(t *testing.T) {
+	dir := t.TempDir()
+
+	// Setup git repo
+	run := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v failed: %v output: %s", args, err, string(out))
+		}
+	}
+	run("init")
+	run("config", "user.email", "test@example.com")
+	run("config", "user.name", "tester")
+
+	path := filepath.Join(dir, "file.txt")
+	os.WriteFile(path, []byte("v1"), 0644)
+	run("add", ".")
+	run("commit", "-m", "init")
+	os.WriteFile(path, []byte("v2"), 0644)
+	run("add", ".")
+	run("commit", "-m", "mod")
+
+	// Generate a signal
+	diffRange := "HEAD~1..HEAD"
+	_, err := Generate(dir, diffRange)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test retrieving paths from signal
+	paths, fromSignal, err := Paths(dir, diffRange, config.Guardrails{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !fromSignal {
+		t.Error("expected paths from signal")
+	}
+	if len(paths) != 1 || paths[0] != "file.txt" {
+		t.Errorf("expected [file.txt], got %v", paths)
+	}
+
+	// Test with mismatching diff range (should fallback to git diff)
+	paths, fromSignal, err = Paths(dir, "HEAD", config.Guardrails{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fromSignal {
+		t.Error("expected paths from git diff, not signal")
+	}
+}
+
+func TestGenerateErrors(t *testing.T) {
+	// Invalid root
+	_, err := Generate("/non/existent", "HEAD")
+	if err == nil {
+		t.Error("expected error for invalid root")
+	}
+}
+
+func TestPathsFromSignalErrors(t *testing.T) {
+	dir := t.TempDir()
+	outDir := filepath.Join(dir, ".palace", "outputs")
+	os.MkdirAll(outDir, 0755)
+
+	// Create invalid signal file
+	sigPath := filepath.Join(outDir, "change-signal.json")
+	os.WriteFile(sigPath, []byte("not valid json"), 0644)
+
+	_, fromSignal, err := Paths(dir, "HEAD", config.Guardrails{})
+	if err == nil {
+		t.Error("expected error for invalid signal file")
+	}
+	if !fromSignal {
+		t.Error("expected fromSignal=true when file exists but fails load")
+	}
+}
+
+func TestPathsWithGuardrails(t *testing.T) {
+	dir := t.TempDir()
+	run := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v failed: %v output: %s", args, err, string(out))
+		}
+	}
+	run("init")
+	run("config", "user.email", "t@example.com")
+	run("config", "user.name", "t")
+
+	// Create an initial commit so HEAD is valid
+	os.WriteFile(filepath.Join(dir, "root"), []byte("root"), 0644)
+	run("add", ".")
+	run("commit", "-m", "root")
+
+	// Add secret file and commit it
+	os.WriteFile(filepath.Join(dir, "secret.key"), []byte("key"), 0644)
+	run("add", ".")
+	run("commit", "-m", "secret")
+
+	// Check diff from previous commit (HEAD~1) to HEAD. Expect secret.key, but guardrail ignores it.
+	g := config.Guardrails{DoNotTouchGlobs: []string{"*.key"}}
+	paths, _, err := Paths(dir, "HEAD~1", g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 0 {
+		t.Errorf("expected 0 paths, got %v", paths)
+	}
+}
+
+func TestGenerateWithInvalidDiffRange(t *testing.T) {
+	dir := t.TempDir()
+	// Initialize repo so it's a valid git root
+	exec.Command("git", "-C", dir, "init").Run()
+
+	// Pass invalid range that git will reject
+	_, err := Generate(dir, "INVALID..RANGE")
+	if err == nil {
+		t.Error("expected error for invalid git diff range")
 	}
 }

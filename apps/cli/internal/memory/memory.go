@@ -14,16 +14,17 @@ import (
 
 // Memory manages the session memory database for a workspace.
 type Memory struct {
-	db   *sql.DB
-	root string
+	db       *sql.DB
+	root     string
+	pipeline *EmbeddingPipeline // optional, may be nil
 }
 
 // Session represents an agent work session in the workspace.
 type Session struct {
 	ID           string    `json:"id"`
-	AgentType    string    `json:"agentType"`    // "claude-code", "cursor", "aider", etc.
-	AgentID      string    `json:"agentId"`      // Unique agent instance identifier
-	Goal         string    `json:"goal"`         // What the agent is trying to accomplish
+	AgentType    string    `json:"agentType"` // "claude-code", "cursor", "aider", etc.
+	AgentID      string    `json:"agentId"`   // Unique agent instance identifier
+	Goal         string    `json:"goal"`      // What the agent is trying to accomplish
 	StartedAt    time.Time `json:"startedAt"`
 	LastActivity time.Time `json:"lastActivity"`
 	State        string    `json:"state"`   // "active", "completed", "abandoned"
@@ -100,9 +101,29 @@ func Open(root string) (*Memory, error) {
 	return m, nil
 }
 
-// Close closes the memory database.
+// Close closes the memory database and stops the embedding pipeline.
 func (m *Memory) Close() error {
+	if m.pipeline != nil {
+		m.pipeline.Stop()
+	}
 	return m.db.Close()
+}
+
+// SetEmbeddingPipeline sets the embedding pipeline for auto-embedding.
+func (m *Memory) SetEmbeddingPipeline(p *EmbeddingPipeline) {
+	m.pipeline = p
+}
+
+// GetEmbeddingPipeline returns the embedding pipeline (may be nil).
+func (m *Memory) GetEmbeddingPipeline() *EmbeddingPipeline {
+	return m.pipeline
+}
+
+// enqueueEmbedding adds a record to the embedding queue if pipeline is enabled.
+func (m *Memory) enqueueEmbedding(recordID, kind, content string) {
+	if m.pipeline != nil {
+		m.pipeline.Enqueue(recordID, kind, content)
+	}
 }
 
 // DB returns the underlying database connection for advanced queries.

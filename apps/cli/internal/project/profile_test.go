@@ -303,7 +303,7 @@ func TestDefaultTestCommand(t *testing.T) {
 	}{
 		{[]string{"go"}, "go test ./..."},
 		{[]string{"javascript"}, "npm test"},
-		{[]string{"dart"}, "dart test"},
+		{[]string{"dart"}, "flutter test || dart test"},
 		{[]string{"rust"}, "cargo test"},
 		{[]string{"python"}, "pytest"},
 		{[]string{"ruby"}, "bundle exec rspec"},
@@ -332,7 +332,7 @@ func TestDefaultLintCommand(t *testing.T) {
 	}{
 		{[]string{"go"}, "go vet ./..."},
 		{[]string{"javascript"}, "npm run lint"},
-		{[]string{"dart"}, "dart analyze"},
+		{[]string{"dart"}, "flutter analyze || dart analyze"},
 		{[]string{"rust"}, "cargo clippy"},
 		{[]string{"python"}, "ruff check . || flake8"},
 		{[]string{"ruby"}, "bundle exec rubocop"},
@@ -400,4 +400,142 @@ func TestPriorityLanguageSelection(t *testing.T) {
 	if profile.Capabilities["tests.run"].Command != "go test ./..." {
 		t.Errorf("Expected Go test command, got %q", profile.Capabilities["tests.run"].Command)
 	}
+}
+
+func TestHasMonorepoSubproject(t *testing.T) {
+	t.Run("detects Flutter monorepo with apps/*/pubspec.yaml", func(t *testing.T) {
+		dir := t.TempDir()
+		appsDir := filepath.Join(dir, "apps", "my_app")
+		if err := os.MkdirAll(appsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(appsDir, "pubspec.yaml"), []byte("name: my_app"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		if !hasMonorepoSubproject(dir, "pubspec.yaml") {
+			t.Error("hasMonorepoSubproject() = false, want true")
+		}
+	})
+
+	t.Run("detects Flutter monorepo with packages/*/pubspec.yaml", func(t *testing.T) {
+		dir := t.TempDir()
+		pkgDir := filepath.Join(dir, "packages", "shared_utils")
+		if err := os.MkdirAll(pkgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(pkgDir, "pubspec.yaml"), []byte("name: shared_utils"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		if !hasMonorepoSubproject(dir, "pubspec.yaml") {
+			t.Error("hasMonorepoSubproject() = false, want true")
+		}
+	})
+
+	t.Run("returns false for empty directory", func(t *testing.T) {
+		dir := t.TempDir()
+		if hasMonorepoSubproject(dir, "pubspec.yaml") {
+			t.Error("hasMonorepoSubproject() = true, want false")
+		}
+	})
+
+	t.Run("returns false when apps dir exists but no subprojects", func(t *testing.T) {
+		dir := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(dir, "apps", "empty_dir"), 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		if hasMonorepoSubproject(dir, "pubspec.yaml") {
+			t.Error("hasMonorepoSubproject() = true, want false")
+		}
+	})
+
+	t.Run("detects Java monorepo with modules/*/build.gradle", func(t *testing.T) {
+		dir := t.TempDir()
+		moduleDir := filepath.Join(dir, "modules", "api")
+		if err := os.MkdirAll(moduleDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(moduleDir, "build.gradle"), []byte(""), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		if !hasMonorepoSubproject(dir, "build.gradle") {
+			t.Error("hasMonorepoSubproject() = false, want true")
+		}
+	})
+}
+
+func TestDetectLanguagesWithMelos(t *testing.T) {
+	t.Run("detects Dart with melos.yaml at root", func(t *testing.T) {
+		dir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(dir, "melos.yaml"), []byte("name: my_project"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		result := detectLanguages(dir)
+
+		found := false
+		for _, lang := range result {
+			if lang == "dart" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("detectLanguages() = %v, expected to contain 'dart'", result)
+		}
+	})
+}
+
+func TestDetectLanguagesWithMonorepoPattern(t *testing.T) {
+	t.Run("detects Dart in monorepo without root pubspec.yaml", func(t *testing.T) {
+		dir := t.TempDir()
+		// Create a Flutter monorepo structure without root pubspec.yaml
+		appsDir := filepath.Join(dir, "apps", "driver_app")
+		if err := os.MkdirAll(appsDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(appsDir, "pubspec.yaml"), []byte("name: driver_app"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		result := detectLanguages(dir)
+
+		found := false
+		for _, lang := range result {
+			if lang == "dart" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("detectLanguages() = %v, expected to contain 'dart' for monorepo pattern", result)
+		}
+	})
+
+	t.Run("detects Java in monorepo with modules pattern", func(t *testing.T) {
+		dir := t.TempDir()
+		moduleDir := filepath.Join(dir, "modules", "core")
+		if err := os.MkdirAll(moduleDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(moduleDir, "build.gradle"), []byte(""), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		result := detectLanguages(dir)
+
+		found := false
+		for _, lang := range result {
+			if lang == "java" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("detectLanguages() = %v, expected to contain 'java' for monorepo pattern", result)
+		}
+	})
 }

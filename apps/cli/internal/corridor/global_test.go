@@ -1,7 +1,11 @@
 package corridor
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
 )
 
 // Note: These tests use the real home directory via OpenGlobal().
@@ -102,4 +106,129 @@ func TestGetLinks(t *testing.T) {
 
 	// links could be empty, that's fine
 	_ = links
+}
+
+func TestGlobalCorridorLinksAndLearnings(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	gc, err := OpenGlobal()
+	if err != nil {
+		t.Fatalf("OpenGlobal() error = %v", err)
+	}
+	defer gc.Close()
+
+	workspace := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(workspace, ".palace"), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	if err := gc.Link("ws1", workspace); err != nil {
+		t.Fatalf("Link() error = %v", err)
+	}
+
+	links, err := gc.GetLinks()
+	if err != nil || len(links) == 0 {
+		t.Fatalf("GetLinks() = %v, err = %v", links, err)
+	}
+
+	if err := gc.Unlink("ws1"); err != nil {
+		t.Fatalf("Unlink() error = %v", err)
+	}
+	if err := gc.Unlink("ws1"); err == nil {
+		t.Fatalf("expected error unlinking missing link")
+	}
+}
+
+func TestLinkedLearningsAndPromotion(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	gc, err := OpenGlobal()
+	if err != nil {
+		t.Fatalf("OpenGlobal() error = %v", err)
+	}
+	defer gc.Close()
+
+	workspace := t.TempDir()
+	mem, err := memory.Open(workspace)
+	if err != nil {
+		t.Fatalf("memory.Open() error = %v", err)
+	}
+	defer mem.Close()
+
+	_, err = mem.AddLearning(memory.Learning{
+		Scope:      "palace",
+		Content:    "shared learning",
+		Confidence: 0.9,
+		UseCount:   3,
+	})
+	if err != nil {
+		t.Fatalf("AddLearning() error = %v", err)
+	}
+
+	if err := gc.Link("ws1", workspace); err != nil {
+		t.Fatalf("Link() error = %v", err)
+	}
+
+	linked, err := gc.GetLinkedLearnings("ws1", 10)
+	if err != nil || len(linked) == 0 {
+		t.Fatalf("GetLinkedLearnings() = %v, err = %v", linked, err)
+	}
+
+	allLinked, err := gc.GetAllLinkedLearnings(10)
+	if err != nil || len(allLinked) == 0 {
+		t.Fatalf("GetAllLinkedLearnings() = %v, err = %v", allLinked, err)
+	}
+
+	promoted, err := gc.AutoPromote("ws1", mem)
+	if err != nil || len(promoted) == 0 {
+		t.Fatalf("AutoPromote() = %v, err = %v", promoted, err)
+	}
+
+	if err := gc.PromoteFromWorkspace("ws1", memory.Learning{ID: "manual", Content: "manual learning", Confidence: 0.9}); err != nil {
+		t.Fatalf("PromoteFromWorkspace() error = %v", err)
+	}
+
+	personal, err := gc.GetPersonalLearnings("shared", 10)
+	if err != nil || len(personal) == 0 {
+		t.Fatalf("GetPersonalLearnings() = %v, err = %v", personal, err)
+	}
+
+	if err := gc.ReinforceLearning(personal[0].ID); err != nil {
+		t.Fatalf("ReinforceLearning() error = %v", err)
+	}
+	if err := gc.DeleteLearning(personal[0].ID); err != nil {
+		t.Fatalf("DeleteLearning() error = %v", err)
+	}
+}
+
+func TestValidateAndPruneLinks(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	gc, err := OpenGlobal()
+	if err != nil {
+		t.Fatalf("OpenGlobal() error = %v", err)
+	}
+	defer gc.Close()
+
+	workspace := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(workspace, ".palace"), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	if err := gc.Link("stale", workspace); err != nil {
+		t.Fatalf("Link() error = %v", err)
+	}
+
+	stale, err := gc.ValidateLinks()
+	if err != nil || len(stale) == 0 {
+		t.Fatalf("ValidateLinks() = %v, err = %v", stale, err)
+	}
+
+	pruned, err := gc.PruneStaleLinks()
+	if err != nil || len(pruned) == 0 {
+		t.Fatalf("PruneStaleLinks() = %v, err = %v", pruned, err)
+	}
 }

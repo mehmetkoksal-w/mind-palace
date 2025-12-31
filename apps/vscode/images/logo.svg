@@ -1,21 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Mind Palace Logo - Primary -->
 <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <!-- Brand gradient: Palace Purple to Memory Blue -->
-    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6B5B95"/>
-      <stop offset="100%" style="stop-color:#4A90D9"/>
-    </linearGradient>
-    <!-- Subtle inner glow for depth -->
-    <filter id="innerGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-    </filter>
-  </defs>
-
-  <!-- Main brain outline with gradient fill -->
-  <g fill="url(#brandGradient)">
+  <!-- Main brain outline with solid Palace Purple fill -->
+  <g fill="#6B5B95">
     <!-- Brain shell / outer structure -->
     <path d="M499.51,335.772l-46.048-130.234C445.439,90.702,349.802,0,232.917,0C110.768,0,11.759,99.019,11.759,221.158
       v69.684C11.759,412.982,110.768,512,232.917,512c100.571,0,185.406-67.154,212.256-159.054h42.186c4.181,0,8.104-2.032,10.518-5.45
@@ -25,7 +12,7 @@
       c25.03,2.023,59.219,31.269,59.219,65.415C384.267,181.244,370.074,214.59,328.82,214.59z"/>
   </g>
 
-  <!-- Internal structure (corridors/rooms) - slightly lighter for contrast -->
+  <!-- Internal structure (corridors/rooms) - white for contrast -->
   <g fill="#FFFFFF" opacity="0.95">
     <!-- Upper pathway -->
     <path d="M259.252,135.818c0,3.453,2.76,6.258,6.204,6.258h9.799v5.184c0,3.453,2.84,6.284,6.213,6.284

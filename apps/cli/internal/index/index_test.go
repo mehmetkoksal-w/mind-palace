@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
 )
@@ -749,10 +750,10 @@ func TestSanitizeFTSQuery(t *testing.T) {
 		{"hello", "\"hello\""},
 		{"hello world", "\"hello world\""},
 		{"hello*", "\"hello*\""},
-		{"test\"quote", "\"test\"\"quote\""},   // quotes are doubled for escaping
+		{"test\"quote", "\"test\"\"quote\""},       // quotes are doubled for escaping
 		{"special@#$chars", "\"special@#$chars\""}, // special chars preserved
 		{"", "\"\""},
-		{"   spaces   ", "\"spaces\""},  // trimmed then quoted
+		{"   spaces   ", "\"spaces\""}, // trimmed then quoted
 	}
 
 	for _, tt := range tests {
@@ -888,5 +889,104 @@ func TestChunkHit(t *testing.T) {
 	}
 	if !strings.Contains(hit.Content, "func") {
 		t.Error("expected content to contain 'func'")
+	}
+}
+
+func TestBuildFileRecords(t *testing.T) {
+	root := t.TempDir()
+	content := []byte("package main\n\nfunc main() {}\n")
+	if err := os.WriteFile(filepath.Join(root, "main.go"), content, 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	records, err := BuildFileRecords(root, config.Guardrails{})
+	if err != nil {
+		t.Fatalf("BuildFileRecords() error = %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("records length = %d, want 1", len(records))
+	}
+	if records[0].Path != "main.go" {
+		t.Fatalf("record path = %q, want main.go", records[0].Path)
+	}
+	if records[0].Hash == "" || records[0].Size == 0 {
+		t.Fatalf("record hash/size not set")
+	}
+	if len(records[0].Chunks) == 0 {
+		t.Fatalf("expected chunks")
+	}
+}
+
+func TestGetIndexSchemaVersion(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "palace.db")
+	db, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	version, err := GetIndexSchemaVersion(db)
+	if err != nil {
+		t.Fatalf("GetIndexSchemaVersion() error = %v", err)
+	}
+	if version != 0 {
+		t.Fatalf("schema version = %d, want 0", version)
+	}
+}
+
+func TestWriteScanWithSymbols(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "palace.db")
+	db, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	records := []FileRecord{
+		{
+			Path:     "main.go",
+			Hash:     fmt.Sprintf("%x", sha256.Sum256([]byte("package main"))),
+			Size:     12,
+			ModTime:  time.Now().UTC(),
+			Chunks:   []fsutil.Chunk{{Index: 0, StartLine: 1, EndLine: 2, Content: "package main\nfunc DoWork() {}"}},
+			Language: "go",
+			Analysis: &analysis.FileAnalysis{
+				Symbols: []analysis.Symbol{
+					{
+						Name:      "DoWork",
+						Kind:      analysis.KindFunction,
+						LineStart: 2,
+						LineEnd:   2,
+						Exported:  true,
+						Children: []analysis.Symbol{
+							{
+								Name:      "helper",
+								Kind:      analysis.KindFunction,
+								LineStart: 3,
+								LineEnd:   3,
+							},
+						},
+					},
+				},
+				Relationships: []analysis.Relationship{
+					{
+						TargetFile:   "other.go",
+						TargetSymbol: "Other",
+						Kind:         analysis.RelCall,
+						Line:         2,
+					},
+				},
+			},
+		},
+	}
+
+	summary, err := WriteScan(db, dir, records, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("WriteScan() error = %v", err)
+	}
+	if summary.SymbolCount == 0 || summary.RelationshipCount == 0 {
+		t.Fatalf("expected symbols and relationships, got %+v", summary)
 	}
 }

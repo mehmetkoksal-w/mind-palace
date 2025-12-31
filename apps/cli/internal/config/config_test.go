@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/koksalmehmet/mind-palace/apps/cli/schemas"
@@ -103,5 +104,113 @@ func TestCopySchemasRefreshesDrift(t *testing.T) {
 	}
 	if string(got) != string(want) {
 		t.Fatalf("schema not refreshed to embedded copy")
+	}
+}
+func TestWriteTemplate(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "room.jsonc")
+
+	// Should fail for unknown template
+	err := WriteTemplate(dest, "nonexistent", nil, false)
+	if err == nil {
+		t.Error("expected error for nonexistent template")
+	}
+
+	// Should succeed for valid template
+	err = WriteTemplate(dest, "rooms/project-overview.jsonc", map[string]string{"name": "test"}, false)
+	if err != nil {
+		t.Fatalf("WriteTemplate failed: %v", err)
+	}
+
+	if _, err := os.Stat(dest); err != nil {
+		t.Error("Expected file to be created")
+	}
+}
+
+func TestLoadPalaceConfigCorrupted(t *testing.T) {
+	dir := t.TempDir()
+	palaceDir := filepath.Join(dir, ".palace")
+	os.MkdirAll(palaceDir, 0755)
+
+	os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte("{ broken json"), 0644)
+
+	_, err := LoadPalaceConfig(dir)
+	if err == nil {
+		t.Error("expected error for corrupted config")
+	}
+
+	// LoadGuardrails should fallback to default on error
+	g := LoadGuardrails(dir)
+	if len(g.DoNotTouchGlobs) == 0 {
+		t.Error("expected default guardrails when config is corrupted")
+	}
+}
+
+func TestMergeGlobs(t *testing.T) {
+	defaults := []string{"a", "b"}
+	user := []string{"b", "c", "  ", ""}
+	merged := mergeGlobs(defaults, user)
+
+	expected := []string{"a", "b", "c"}
+	if !equalSlices(merged, expected) {
+		t.Errorf("got %v, want %v", merged, expected)
+	}
+}
+
+func TestWriteJSONError(t *testing.T) {
+	// Root IS a file, so WriteJSON should fail to create directory/file if path is invalid
+	dir := t.TempDir()
+	path := filepath.Join(dir, "file")
+	os.WriteFile(path, []byte("test"), 0644)
+
+	err := WriteJSON(filepath.Join(path, "impossible"), map[string]string{})
+	if err == nil {
+		t.Error("expected error for impossible path")
+	}
+}
+
+func TestWriteJSON(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "test.json")
+	data := map[string]string{"foo": "bar"}
+
+	if err := WriteJSON(dest, data); err != nil {
+		t.Fatalf("WriteJSON failed: %v", err)
+	}
+
+	content, _ := os.ReadFile(dest)
+	if !strings.Contains(string(content), `"foo": "bar"`) {
+		t.Errorf("Unexpected content: %s", string(content))
+	}
+}
+
+func TestNormalizeGlob(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"  foo/bar  ", "foo/bar"},
+		{"foo\\\\bar", "foo/bar"},
+		{"foo//bar", "foo/bar"},
+		{"", ""},
+		{"  ", ""},
+	}
+	for _, c := range cases {
+		got := normalizeGlob(c.input)
+		if got != c.expected {
+			t.Errorf("normalizeGlob(%q) = %q, want %q", c.input, got, c.expected)
+		}
+	}
+}
+
+func TestEnsureLayoutErrors(t *testing.T) {
+	// Root is a file, MkdirAll should fail
+	dir := t.TempDir()
+	path := filepath.Join(dir, "file")
+	os.WriteFile(path, []byte("test"), 0644)
+
+	_, err := EnsureLayout(filepath.Join(path, "subdir"))
+	if err == nil {
+		t.Error("expected error when root path prefix is a file")
 	}
 }

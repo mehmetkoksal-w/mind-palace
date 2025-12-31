@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-
 // GetFileIntel retrieves intelligence about a specific file.
 func (m *Memory) GetFileIntel(path string) (*FileIntel, error) {
 	row := m.db.QueryRow(`

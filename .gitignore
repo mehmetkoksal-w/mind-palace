@@ -13,6 +13,7 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+*.cov
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -56,8 +57,8 @@ apps/vscode/node_modules/
 apps/dashboard/dist/
 apps/dashboard/node_modules/
 apps/dashboard/.angular/
-apps/cli/internal/dashboard/dist/*
-!apps/cli/internal/dashboard/dist/.gitkeep
+apps/cli/internal/dashboard/dist/
+apps/cli/palace
 
 # Next.js (apps/docs)
 apps/docs/.next/
@@ -76,3 +77,4 @@ yarn.lock
 # OS files
 .DS_Store
 Thumbs.db
+/.claude

@@ -48,6 +48,99 @@ type PalaceConfig struct {
 	Guardrails  Guardrails                `json:"guardrails"`
 	Neighbors   map[string]NeighborConfig `json:"neighbors,omitempty"`
 	Provenance  any                       `json:"provenance"`
+
+	// Embedding configuration for semantic search
+	EmbeddingBackend string `json:"embeddingBackend,omitempty"` // "ollama", "openai", or "disabled"
+	EmbeddingModel   string `json:"embeddingModel,omitempty"`   // e.g., "nomic-embed-text", "text-embedding-3-small"
+	EmbeddingURL     string `json:"embeddingUrl,omitempty"`     // Base URL for Ollama API
+	EmbeddingAPIKey  string `json:"embeddingApiKey,omitempty"`  // API key for OpenAI
+
+	// LLM configuration for text generation (extraction, contradiction detection)
+	LLMBackend string `json:"llmBackend,omitempty"` // "ollama", "openai", "anthropic", or "disabled"
+	LLMModel   string `json:"llmModel,omitempty"`   // e.g., "llama3.2", "gpt-4o-mini", "claude-3-haiku-20240307"
+	LLMURL     string `json:"llmUrl,omitempty"`     // Base URL for Ollama API
+	LLMAPIKey  string `json:"llmApiKey,omitempty"`  // API key for cloud providers
+
+	// Auto-extraction configuration
+	AutoExtract bool `json:"autoExtract,omitempty"` // Enable auto-extraction on session end
+
+	// Contradiction detection configuration
+	ContradictionAutoLink      bool    `json:"contradictionAutoLink,omitempty"`      // Auto-create contradiction links
+	ContradictionMinConfidence float64 `json:"contradictionMinConfidence,omitempty"` // Minimum confidence for auto-linking (default 0.8)
+	ContradictionAutoCheck     bool    `json:"contradictionAutoCheck,omitempty"`     // Auto-check for contradictions on store
+
+	// Confidence decay configuration
+	ConfidenceDecay *DecayConfig `json:"confidenceDecay,omitempty"`
+
+	// Auto-injection configuration for AI agents
+	AutoInjection *AutoInjectionConfig `json:"autoInjection,omitempty"`
+
+	// Scope configuration for inheritance rules
+	Scope *ScopeConfig `json:"scope,omitempty"`
+}
+
+// DecayConfig holds configuration for confidence decay of learnings.
+type DecayConfig struct {
+	Enabled       bool    `json:"enabled"`
+	DecayDays     int     `json:"decayDays"`     // Days before decay starts (default: 30)
+	DecayRate     float64 `json:"decayRate"`     // Decay per period (default: 0.05)
+	DecayInterval int     `json:"decayInterval"` // Days between decay (default: 7)
+	MinConfidence float64 `json:"minConfidence"` // Floor (default: 0.1)
+}
+
+// DefaultDecayConfig returns the default decay configuration.
+func DefaultDecayConfig() *DecayConfig {
+	return &DecayConfig{
+		Enabled:       false,
+		DecayDays:     30,
+		DecayRate:     0.05,
+		DecayInterval: 7,
+		MinConfidence: 0.1,
+	}
+}
+
+// AutoInjectionConfig holds configuration for automatic context injection.
+type AutoInjectionConfig struct {
+	Enabled          bool    `json:"enabled"`
+	MaxTokens        int     `json:"maxTokens"`        // Maximum tokens for context (default: 2000)
+	IncludeLearnings bool    `json:"includeLearnings"` // Include learnings in context
+	IncludeDecisions bool    `json:"includeDecisions"` // Include decisions in context
+	IncludeFailures  bool    `json:"includeFailures"`  // Include failure info in context
+	MinConfidence    float64 `json:"minConfidence"`    // Minimum learning confidence (default: 0.5)
+	PrioritizeRecent bool    `json:"prioritizeRecent"` // Prioritize recent over old
+	ScopeInheritance bool    `json:"scopeInheritance"` // Include room+palace scope
+}
+
+// DefaultAutoInjectionConfig returns the default auto-injection configuration.
+func DefaultAutoInjectionConfig() *AutoInjectionConfig {
+	return &AutoInjectionConfig{
+		Enabled:          true,
+		MaxTokens:        2000,
+		IncludeLearnings: true,
+		IncludeDecisions: true,
+		IncludeFailures:  true,
+		MinConfidence:    0.5,
+		PrioritizeRecent: true,
+		ScopeInheritance: true,
+	}
+}
+
+// ScopeConfig holds configuration for scope inheritance rules.
+type ScopeConfig struct {
+	InheritFromRoom     bool   `json:"inheritFromRoom"`     // Include room-level knowledge
+	InheritFromPalace   bool   `json:"inheritFromPalace"`   // Include palace-level knowledge
+	InheritFromCorridor bool   `json:"inheritFromCorridor"` // Include corridor knowledge (opt-in)
+	RoomDetection       string `json:"roomDetection"`       // "first_dir", "manifest", or "custom"
+}
+
+// DefaultScopeConfig returns the default scope configuration.
+func DefaultScopeConfig() *ScopeConfig {
+	return &ScopeConfig{
+		InheritFromRoom:     true,
+		InheritFromPalace:   true,
+		InheritFromCorridor: false,
+		RoomDetection:       "first_dir",
+	}
 }
 
 func EnsureLayout(root string) (string, error) {
@@ -115,25 +208,61 @@ func LoadGuardrails(root string) Guardrails {
 func defaultGuardrails() Guardrails {
 	return Guardrails{
 		DoNotTouchGlobs: []string{
+			// Version control & IDE
 			".git/**",
 			".palace/**",
+			".idea/**",
+			"**/.idea/**",
+			".vscode/**",
+			"**/.DS_Store",
+
+			// Package managers & dependencies
 			"node_modules/**",
 			"vendor/**",
+			"**/Pods/**",           // iOS CocoaPods
+			"**/.symlinks/**",      // Flutter iOS symlinks
+			"**/DerivedData/**",    // Xcode derived data
+
+			// Build outputs
 			"dist/**",
 			"build/**",
+			"**/build/**",          // Nested build directories
 			"coverage/**",
-			"target/**",
+			"target/**",            // Rust/Maven
+			"out/**",
+
+			// Flutter/Dart specific
 			".dart_tool/**",
+			"**/.dart_tool/**",
+			"**/*.dill",            // Dart compiled files
+			"**/*.dill.track.dill",
+			"**/test_cache/**",
+
+			// JavaScript/TypeScript
 			".next/**",
 			".turbo/**",
 			".nx/**",
+			".nuxt/**",
+			".output/**",
+
+			// Mobile
 			".gradle/**",
-			".idea/**",
-			".vscode/**",
+			"**/.gradle/**",
+			"**/android/.gradle/**",
+			"**/android/build/**",
+			"**/ios/build/**",
+			"**/*.apk",
+			"**/*.aab",
+			"**/*.ipa",
+
+			// Generated/minified files
 			"**/*.min.*",
 			"**/*.lock",
 			"**/*.generated.*",
-			"**/*.g.*",
+			"**/*.g.dart",          // Dart generated files
+			"**/*.freezed.dart",    // Freezed generated
+			"**/*.gr.dart",         // Auto-route generated
+			"**/*.mocks.dart",      // Mockito generated
 		},
 	}
 }

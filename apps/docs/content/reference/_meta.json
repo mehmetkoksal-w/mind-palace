@@ -2,5 +2,6 @@
   "cli": "CLI Reference",
   "extension": "VS Code Extension",
   "public-api": "Public API",
-  "errors": "Error Reference"
+  "errors": "Error Reference",
+  "migration": "Migration Guide"
 }

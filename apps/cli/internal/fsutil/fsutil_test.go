@@ -338,39 +338,75 @@ func TestSymbolBoundary(t *testing.T) {
 	}
 }
 
-func TestChunkStruct(t *testing.T) {
-	chunk := fsutil.Chunk{
-		Index:     0,
-		StartLine: 1,
-		EndLine:   10,
-		Content:   "test content",
+func TestListFilesWithSymlinks(t *testing.T) {
+	tmpDir, _ := filepath.EvalSymlinks(t.TempDir())
+
+	realFile := filepath.Join(tmpDir, "real.txt")
+	os.WriteFile(realFile, []byte("data"), 0644)
+
+	linkFile := filepath.Join(tmpDir, "link.txt")
+	if err := os.Symlink(realFile, linkFile); err != nil {
+		t.Skip("symlinks not supported")
 	}
 
-	if chunk.Index != 0 {
-		t.Error("index not set correctly")
+	subDir := filepath.Join(tmpDir, "sub")
+	os.Mkdir(subDir, 0755)
+	os.Symlink(subDir, filepath.Join(tmpDir, "linkdir"))
+
+	files, err := fsutil.ListFiles(tmpDir, config.Guardrails{})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if chunk.StartLine != 1 {
-		t.Error("startLine not set correctly")
-	}
-	if chunk.EndLine != 10 {
-		t.Error("endLine not set correctly")
-	}
-	if chunk.Content != "test content" {
-		t.Error("content not set correctly")
+
+	if len(files) == 0 {
+		t.Error("expected some files to be found")
 	}
 }
 
-func TestFileStat(t *testing.T) {
-	fs := fsutil.FileStat{
-		Size:    1024,
-		ModTime: time.Now(),
-		Hash:    "abc123",
+func TestChunkContentSmartNoSymbolsInRange(t *testing.T) {
+	content := "line1\nline2\nline3\nline4\nline5\nline6"
+	// Symbols at the END, so the beginning has no symbols
+	symbols := []fsutil.SymbolBoundary{
+		{Name: "end", StartLine: 5, EndLine: 6},
 	}
+	// Currently splitLargeChunk groups 1-6 together if no breaks found within it before the first symbol.
+	// This covers the branch but produces only 1 chunk for the whole range.
+	chunks := fsutil.ChunkContentSmart(content, symbols, 2, 1000)
+	if len(chunks) == 0 {
+		t.Error("expected chunks")
+	}
+}
 
-	if fs.Size != 1024 {
-		t.Error("size not set correctly")
+func TestChunkContentMaxBytes(t *testing.T) {
+	content := "aaaaa\nbbbbb\nccccc"
+	// Each line is 5 chars + 1 newline = 6 bytes. Total 18.
+	// Split at 10 bytes: first line (6) fits, second (6) makes it 12 > 10.
+	chunks := fsutil.ChunkContent(content, 100, 10)
+	if len(chunks) < 2 {
+		t.Errorf("expected at least 2 chunks, got %d", len(chunks))
 	}
-	if fs.Hash != "abc123" {
-		t.Error("hash not set correctly")
+}
+
+func TestChunkContentSmartLargeSymbol(t *testing.T) {
+	content := "func big() {\n line1 \n line2 \n line3 \n line4 \n}"
+	symbols := []fsutil.SymbolBoundary{
+		{Name: "big", Kind: "func", StartLine: 1, EndLine: 6},
+	}
+	// Max lines 2 - symbol is 6 lines. should NOT be split but kept as one large chunk
+	chunks := fsutil.ChunkContentSmart(content, symbols, 2, 1000)
+	if len(chunks) != 1 {
+		t.Errorf("expected 1 chunk for indivisible large symbol, got %d", len(chunks))
+	}
+}
+
+func TestChunkContentSmartOverlappingSymbols(t *testing.T) {
+	content := "1\n2\n3\n4\n5"
+	symbols := []fsutil.SymbolBoundary{
+		{Name: "ov1", StartLine: 1, EndLine: 3},
+		{Name: "ov2", StartLine: 2, EndLine: 4}, // overlapping
+	}
+	chunks := fsutil.ChunkContentSmart(content, symbols, 10, 1000)
+	if len(chunks) == 0 {
+		t.Error("expected chunks even with overlapping symbols")
 	}
 }
