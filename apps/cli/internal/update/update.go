@@ -1,6 +1,9 @@
 package update
 
 import (
+	"archive/tar"
+	"archive/zip"
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -131,18 +134,19 @@ func Update(currentVersion string, progressFn func(string)) error {
 	}
 
 	progressFn(fmt.Sprintf("Downloading v%s...", result.LatestVersion))
-	tmpFile, err := downloadToTemp(result.DownloadURL)
+	archivePath, err := downloadToTemp(result.DownloadURL)
 	if err != nil {
 		return fmt.Errorf("download: %w", err)
 	}
-	defer os.Remove(tmpFile)
+	defer os.Remove(archivePath)
 
-	if result.ChecksumURL != "" {
-		progressFn("Verifying checksum...")
-		if err := verifyChecksum(tmpFile, result.ChecksumURL); err != nil {
-			return fmt.Errorf("checksum verification failed: %w", err)
-		}
+	// Extract binary from archive
+	progressFn("Extracting...")
+	binaryPath, err := extractBinary(archivePath, result.DownloadURL)
+	if err != nil {
+		return fmt.Errorf("extract: %w", err)
 	}
+	defer os.Remove(binaryPath)
 
 	execPath, err := os.Executable()
 	if err != nil {
@@ -154,7 +158,7 @@ func Update(currentVersion string, progressFn func(string)) error {
 	}
 
 	progressFn("Installing update...")
-	if err := replaceExecutable(execPath, tmpFile); err != nil {
+	if err := replaceExecutable(execPath, binaryPath); err != nil {
 		return fmt.Errorf("replace executable: %w", err)
 	}
 
@@ -197,12 +201,120 @@ func buildAssetName() string {
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 
-	ext := ""
+	// Use archive format for releases
+	ext := ".tar.gz"
 	if goos == "windows" {
-		ext = ".exe"
+		ext = ".zip"
 	}
 
 	return fmt.Sprintf("palace-%s-%s%s", goos, goarch, ext)
+}
+
+func buildBinaryName() string {
+	if runtime.GOOS == "windows" {
+		return "palace.exe"
+	}
+	return "palace"
+}
+
+// extractBinary extracts the palace binary from an archive
+func extractBinary(archivePath, downloadURL string) (string, error) {
+	binaryName := buildBinaryName()
+
+	if strings.HasSuffix(downloadURL, ".tar.gz") {
+		return extractFromTarGz(archivePath, binaryName)
+	}
+	if strings.HasSuffix(downloadURL, ".zip") {
+		return extractFromZip(archivePath, binaryName)
+	}
+	// If not an archive, assume it's a raw binary
+	return archivePath, nil
+}
+
+func extractFromTarGz(archivePath, binaryName string) (string, error) {
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	gzr, err := gzip.NewReader(f)
+	if err != nil {
+		return "", err
+	}
+	defer gzr.Close()
+
+	tr := tar.NewReader(gzr)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", err
+		}
+
+		// Look for the palace binary
+		if header.Typeflag == tar.TypeReg && filepath.Base(header.Name) == binaryName {
+			tmpFile, err := os.CreateTemp("", "palace-binary-*")
+			if err != nil {
+				return "", err
+			}
+			defer tmpFile.Close()
+
+			if _, err := io.Copy(tmpFile, tr); err != nil {
+				os.Remove(tmpFile.Name())
+				return "", err
+			}
+
+			if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
+				os.Remove(tmpFile.Name())
+				return "", err
+			}
+
+			return tmpFile.Name(), nil
+		}
+	}
+
+	return "", fmt.Errorf("binary %s not found in archive", binaryName)
+}
+
+func extractFromZip(archivePath, binaryName string) (string, error) {
+	r, err := zip.OpenReader(archivePath)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		if filepath.Base(f.Name) == binaryName {
+			rc, err := f.Open()
+			if err != nil {
+				return "", err
+			}
+			defer rc.Close()
+
+			tmpFile, err := os.CreateTemp("", "palace-binary-*")
+			if err != nil {
+				return "", err
+			}
+			defer tmpFile.Close()
+
+			if _, err := io.Copy(tmpFile, rc); err != nil {
+				os.Remove(tmpFile.Name())
+				return "", err
+			}
+
+			if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
+				os.Remove(tmpFile.Name())
+				return "", err
+			}
+
+			return tmpFile.Name(), nil
+		}
+	}
+
+	return "", fmt.Errorf("binary %s not found in archive", binaryName)
 }
 
 func downloadToTemp(url string) (string, error) {

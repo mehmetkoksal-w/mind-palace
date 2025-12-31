@@ -1,13 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
   <Package Name="Mind Palace"
            Manufacturer="Mind Palace"
            Version="$(var.Version)"
-           UpgradeCode="f8c92e8a-5a1d-4c9e-b8f7-3e2a1d4c6f9b">
-    
+           UpgradeCode="f8c92e8a-5a1d-4c9e-b8f7-3e2a1d4c6f9b"
+           Scope="perMachine">
+
+    <SummaryInformation Description="Mind Palace - AI-native codebase memory for intelligent agents" />
+
     <MajorUpgrade DowngradeErrorMessage="A newer version of Mind Palace is already installed." />
     <MediaTemplate EmbedCab="yes" />
-    
+
+    <!-- Use WixUI for installer wizard -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <!-- License agreement -->
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+
+    <!-- Custom banner and dialog images (optional) -->
+    <!-- <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" /> -->
+    <!-- <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" /> -->
+
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="MindPalace">
         <Component Id="MainExecutable" Bitness="always64">
@@ -15,19 +30,17 @@
         </Component>
       </Directory>
     </StandardDirectory>
-    
+
     <!-- Add to PATH -->
-    <StandardDirectory Id="ProgramFiles64Folder">
-      <Component Id="PathEnv" Bitness="always64">
-        <Environment Id="PATH" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
-        <RegistryValue Root="HKLM" Key="Software\MindPalace" Name="PathEnvInstalled" Type="integer" Value="1" KeyPath="yes" />
-      </Component>
-    </StandardDirectory>
-    
+    <Component Id="PathEnv" Directory="INSTALLFOLDER" Bitness="always64">
+      <Environment Id="PATH" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
+      <RegistryValue Root="HKLM" Key="Software\MindPalace" Name="PathEnvInstalled" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
     <Feature Id="ProductFeature" Title="Mind Palace" Level="1">
       <ComponentRef Id="MainExecutable" />
       <ComponentRef Id="PathEnv" />
     </Feature>
+
   </Package>
 </Wix>
-
