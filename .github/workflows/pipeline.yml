@@ -271,11 +271,11 @@ jobs:
           - os: macos-15-intel
             platform: darwin-amd64
             goarch: amd64
-            installer: dmg
+            installer: pkg
           - os: macos-latest
             platform: darwin-arm64
             goarch: arm64
-            installer: dmg
+            installer: pkg
           - os: ubuntu-latest
             platform: linux-amd64
             goarch: amd64
@@ -316,19 +316,19 @@ jobs:
             -o "$BINARY_NAME" ./apps/cli
           echo "Built: $BINARY_NAME"
 
-      # ── macOS: Create DMG ──────────────────────────────────────────
-      - name: Create DMG (macOS)
-        if: matrix.installer == 'dmg'
+      # ── macOS: Create PKG ──────────────────────────────────────────
+      - name: Create PKG (macOS)
+        if: matrix.installer == 'pkg'
         env:
           VERSION: ${{ needs.check.outputs.version_tag }}
         run: |
-          chmod +x packaging/macos/create-dmg.sh
-          ./packaging/macos/create-dmg.sh \
+          chmod +x packaging/macos/create-pkg.sh
+          ./packaging/macos/create-pkg.sh \
             ./palace \
             "$VERSION" \
-            "palace-${{ matrix.platform }}.dmg"
-          
-          # Also create tar.gz for users who prefer it
+            "palace-${{ matrix.platform }}.pkg"
+
+          # Also create tar.gz for palace update command
           tar -czvf "palace-${{ matrix.platform }}.tar.gz" palace
 
       # ── Linux: Create DEB ──────────────────────────────────────────
@@ -352,7 +352,8 @@ jobs:
         if: matrix.installer == 'msi'
         run: |
           dotnet tool install --global wix --version 4.0.4
-          echo "WiX installed"
+          wix extension add WixToolset.UI.wixext/4.0.4
+          echo "WiX with UI extension installed"
 
       - name: Create MSI (Windows)
         if: matrix.installer == 'msi'
@@ -367,14 +368,16 @@ jobs:
           } else {
             $msiVersion = "0.0.1"
           }
-          
-          # Build MSI using WiX v4 (without UI extension for simplicity)
+
+          # Build MSI using WiX v4 with UI wizard
           wix build packaging/windows/palace.wxs `
+            -ext WixToolset.UI.wixext `
             -d Version="$msiVersion" `
             -d BinaryPath="$(Get-Location)\palace.exe" `
+            -b packaging/windows `
             -o "palace-${{ matrix.platform }}.msi"
-          
-          # Also create zip for users who prefer it
+
+          # Also create zip for palace update command
           Compress-Archive -Path palace.exe -DestinationPath "palace-${{ matrix.platform }}.zip"
 
       # ── Upload Artifacts ───────────────────────────────────────────
@@ -383,7 +386,7 @@ jobs:
         with:
           name: installer-${{ matrix.platform }}
           path: |
-            palace-${{ matrix.platform }}.dmg
+            palace-${{ matrix.platform }}.pkg
             palace-${{ matrix.platform }}.deb
             palace-${{ matrix.platform }}.msi
             palace-${{ matrix.platform }}.tar.gz
