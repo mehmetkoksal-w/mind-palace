@@ -122,6 +122,60 @@ Manage cross-project knowledge sharing.
 - Browse personal learnings
 - View average confidence levels
 
+### Insights
+
+The Insights section provides advanced knowledge management views:
+
+#### Sessions
+Track AI agent work sessions with activity timelines.
+
+#### Learnings
+Browse, search, and manage captured learnings with confidence scores.
+
+#### Ideas
+View and manage captured ideas with status tracking (draft, active, archived).
+
+#### Decisions
+Track architectural decisions with rationale and outcome recording.
+
+#### Corridors
+Manage cross-workspace knowledge sharing.
+
+#### Conversations
+Browse past AI conversations with full transcripts and extracted knowledge.
+
+#### Contradictions
+Detect and resolve conflicting learnings or decisions.
+
+#### Postmortems
+Track and learn from failures:
+- **Severity levels**: Low, Medium, High, Critical
+- **Status tracking**: Open, Resolved, Recurring
+- **Structured analysis**: What happened, root cause, lessons learned
+- **Convert to learnings**: Promote lessons to permanent learnings
+- **File linking**: Associate affected files with failures
+
+#### Decision Timeline
+Visualize the evolution of architectural decisions:
+- **Horizontal timeline**: See decisions over time
+- **Outcome colors**: Green (success), Red (failed), Yellow (mixed), Gray (unknown)
+- **Decision chains**: Track predecessors and successors
+- **Scope filtering**: Filter by file, room, or palace scope
+
+#### Context Preview
+Preview what context AI agents will receive:
+- **File path input**: Enter any file path to preview
+- **Token budget**: See breakdown of token usage
+- **Toggles**: Include/exclude learnings, decisions, failures
+- **Priority scores**: Understand why items are included
+
+#### Scope Explorer
+Visualize knowledge inheritance:
+- **4-level hierarchy**: File → Room → Palace → Corridor
+- **Record counts**: See how many records at each scope
+- **Inheritance chain**: Visualize how knowledge flows
+- **Scope resolution**: Understand what applies to any file
+
 ## API Reference
 
 The dashboard exposes a REST API:
@@ -150,6 +204,55 @@ GET /api/activity?sessionId=xxx&path=xxx&limit=50
 
 ```
 GET /api/learnings?scope=file&scopePath=xxx&query=xxx&limit=50
+```
+
+### Ideas
+
+```
+GET /api/ideas?scope=palace&status=active&limit=50
+GET /api/ideas/{id}
+```
+
+### Decisions
+
+```
+GET /api/decisions?scope=palace&status=unknown&limit=50
+GET /api/decisions/{id}
+GET /api/decisions/{id}/chain
+GET /api/decisions/timeline?scope=palace&limit=100
+```
+
+### Postmortems
+
+```
+GET /api/postmortems?status=open&severity=high&limit=50
+GET /api/postmortems/{id}
+POST /api/postmortems
+POST /api/postmortems/{id}/resolve
+POST /api/postmortems/{id}/learnings
+GET /api/postmortems/stats
+```
+
+### Conversations
+
+```
+GET /api/conversations?sessionId=xxx&limit=50
+GET /api/conversations/{id}
+```
+
+### Contradictions
+
+```
+GET /api/contradictions?resolved=false&limit=50
+GET /api/contradictions/summary
+```
+
+### Context & Scope
+
+```
+POST /api/context/preview
+POST /api/scope/explain
+GET /api/scope/hierarchy
 ```
 
 ### File Intelligence
