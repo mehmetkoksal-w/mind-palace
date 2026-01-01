@@ -1,75 +1,51 @@
 # Workflows
 
-## Setup (Once)
+Mind Palace supports three primary workflows: **The Individual Developer**, **The Agentic Loop**, and **The CI Guardian**.
+
+---
+
+## 🛠️ The Individual Developer
+
+### 1. Setup (Once)
 
 ```sh
-palace init          # Create .palace/ structure
-palace scan          # Build initial index
+palace init --detect   # Auto-detect project and create rooms
+palace scan            # Build the first index
 ```
 
-## Daily Loop
+### 2. Daily Loop
 
-### Terminal
+As you code, the Palace keeps track of your decisions and provides context.
 
 ```sh
-# After changes
-palace scan                    # Rebuild index
-palace context "your goal"     # Generate context pack
+# Record a decision while it's fresh
+palace store "Let's use JWT instead of sessions"
 
-# Before agent work
-palace check                   # Confirm freshness
-palace query "auth logic"      # Find relevant code
+# Find that utility function you wrote last week
+palace explore "data transformation utility"
+
+# Get a quick brief before editing a complex file
+palace brief src/core/auth_handler.go
 ```
 
-### VS Code (Automatic)
+### 3. Housekeeping
 
-```
-Edit files → Save → Extension runs check → Auto-heal if stale
-```
-
-The Observer extension handles the loop automatically:
-
-1. **Save file** - triggers debounced check
-2. **If stale** - runs `palace scan`
-3. **HUD updates** - green (fresh) or red (stale)
-
-## Diff-Scoped Workflows
-
-Constrain context to only changed files:
+Keep your Palace tidy and up-to-date.
 
 ```sh
-# Verify only changed files
-palace check --diff HEAD~1..HEAD
-
-# Generate context for only affected files
-palace context "fix bug" --diff HEAD~1..HEAD
-
-# CI signal for change tracking
-palace ci signal --diff HEAD~1..HEAD
+palace clean          # Cleanup old sessions/agents
+palace update          # Keep the CLI tool current
 ```
 
-Useful for:
-- CI pipelines (verify only PR changes)
-- Large monorepos (avoid full scans)
-- Focused agent sessions
+---
 
-## CI Integration
+## 🤖 The Agentic Loop (MCP)
 
-```yaml
-# .github/workflows/verify.yml
-- name: Verify Mind Palace
-  run: |
-    palace ci verify --strict --diff ${{ github.event.pull_request.base.sha }}..${{ github.sha }}
-```
+This is where the Palace truly shines, providing high-fidelity context to AI agents like Claude or Cursor.
 
-Exit codes:
-- `0` - Fresh, proceed
-- `1` - Stale, fail CI
-- `2` - Config error
+### 1. Connection
 
-## Agent Sessions
-
-### Via MCP (Recommended)
+Configure your MCP client to use the `serve` command:
 
 ```json
 {
@@ -82,113 +58,59 @@ Exit codes:
 }
 ```
 
-Agent can then:
-1. Call `search_mind_palace` to find code
-2. Call `list_rooms` to understand structure
-3. Call `get_context` to generate context packs
-4. Call `get_graph` to explore call relationships
-5. Read files via `palace://files/{path}`
+### 2. The Loop
 
-### Via Context Pack
+1.  **Agent asks**: "How do I add a new route?"
+2.  **Palace provides**:
+    - `search_mind_palace` results.
+    - `get_graph` call relationships.
+    - Relevant `learnings` and `decisions`.
+3.  **Agent implements**: Based on curated context.
+4.  **Agent learns**: Calls `store` to record what it discovered about the code.
+
+---
+
+## 🛡️ The CI Guardian
+
+Ensure your index is never stale and valid schemas are enforced.
+
+### 1. Verification
+
+Add a step to your CI pipeline:
 
 ```sh
-palace context "Fix the auth bug"
-# Hand context-pack.json to agent
+palace check --strict --diff ${{ github.sha }}
 ```
 
-## Brain Workflow
+### 2. Context Collection
 
-Track ideas, decisions, and outcomes:
-
-```sh
-# Capture decisions as you make them
-palace remember "Let's use JWT for authentication"
-palace remember "What if we add caching here?"
-
-# Record outcomes
-palace outcome d_abc123 successful
-palace outcome d_xyz789 failed --notes "Performance issues"
-
-# Review old decisions
-palace review --days 7
-
-# Link related decisions
-palace link d_new --supersedes d_old
-```
-
-## Session Memory Workflow
-
-Track agent sessions and learnings:
+Generate context for the change set to assist AI PR reviewers:
 
 ```sh
-# Start a session
-palace session start --agent claude --goal "Fix auth bug"
-
-# Capture learnings during work
-palace learn "Always check for null users first"
-palace learn "This file has edge cases" --scope file --path auth.go
-
-# Get briefing before editing
-palace brief src/auth.go
-
-# End session
-palace session end SESSION_ID
-
-# Later, recall learnings
-palace recall "authentication"
-palace intel src/auth.go
+palace check --collect --signal --diff origin/main..HEAD
 ```
 
 ---
 
-## Command Reference
+## 🧠 Brain Workflow
 
-| Command | Purpose | Key Flags |
-|---------|---------|-----------|
-| `palace init` | Create .palace/ | `--with-outputs` |
-| `palace scan` | Build/rebuild index | `--incremental` |
-| `palace check` | Verify freshness | `--fast`, `--strict`, `--diff` |
-| `palace query` | Search index | `--room`, `--limit` |
-| `palace context` | Generate context pack | `--diff`, `--allow-stale` |
-| `palace graph` | Explore call relationships | `--callers`, `--callees` |
-| `palace serve` | Start MCP server | `--root` |
-| `palace remember` | Store idea/decision | - |
-| `palace outcome` | Record decision outcome | `--notes` |
-| `palace session` | Manage sessions | `start`, `end`, `list` |
-| `palace learn` | Store learning | `--scope`, `--path` |
-| `palace recall` | Search learnings | `--decisions`, `--ideas` |
-| `palace intel` | File intelligence | - |
-| `palace brief` | Get briefing | `--verbose` |
+Don't let your architectural knowledge rot in Slack or Jira. Commit it to the code.
+
+1.  **Capture**: `palace store "Decision: use FTS5 for search"`
+2.  **Link**: `palace recall link d_search --inspired-by d_sqlite`
+3.  **Outcome**: `palace recall update d_search success`
+4.  **Review**: See the timeline in the **Dashboard**.
 
 ---
 
-## VS Code Extension
+## 🗺️ Visualizing with the Dashboard
 
-### HUD States
+For a high-level view of your palace:
 
-| State | Meaning | Action |
-|-------|---------|--------|
-| Green | Index is fresh | None needed |
-| Red | Files changed | Auto-heal or manual scan |
-| Amber | Scanning | Wait |
-
-### Configuration
-
-Settings in `.palace/palace.jsonc` override VS Code settings:
-
-```jsonc
-{
-  "vscode": {
-    "autoSync": true,
-    "autoSyncDelay": 3000,
-    "decorations": { "enabled": true },
-    "sidebar": { "defaultView": "tree" }
-  }
-}
+```sh
+palace dashboard
 ```
 
-### Sidebar
-
-- **Tree view** - Rooms as folders, files as entries
-- **Graph view** - Cytoscape visualization of connections
-- **Search** - Query Butler directly from sidebar
+- **Hotspot Map**: See which files are changing most frequently.
+- **Dependency Graph**: Explore how rooms and services interact.
+- **Knowledge Timeline**: See the history of project decisions.

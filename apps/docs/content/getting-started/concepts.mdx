@@ -32,8 +32,12 @@ Mind Palace has two types of artifacts: **curated** (you write, commit to git) a
   "guardrails": {
     "doNotTouchGlobs": ["*.secret", "vendor/**"]
   },
-  "neighbors": { /* corridors to other repos */ },
-  "vscode": { /* extension settings */ }
+  "neighbors": {
+    /* corridors to other repos */
+  },
+  "vscode": {
+    /* extension settings */
+  }
 }
 ```
 
@@ -53,26 +57,6 @@ Mind Palace has two types of artifacts: **curated** (you write, commit to git) a
 }
 ```
 
-### Playbooks
-
-`.palace/playbooks/*.jsonc` - Workflow contracts answering "how do I execute this change?"
-
-```jsonc
-// playbooks/add-endpoint.jsonc
-{
-  "schemaVersion": "1.0.0",
-  "kind": "palace/playbook",
-  "name": "add-endpoint",
-  "rooms": ["api", "validation"],
-  "steps": [
-    "Define route in src/routes/",
-    "Add validation schema",
-    "Write handler",
-    "Add tests"
-  ]
-}
-```
-
 ---
 
 ## Generated Artifacts
@@ -80,35 +64,24 @@ Mind Palace has two types of artifacts: **curated** (you write, commit to git) a
 ### Index (Tier-0)
 
 `palace.db` - SQLite database with:
+
 - **WAL mode** - Concurrent reads during writes
 - **FTS5** - Full-text search with BM25 ranking
 - **File hashes** - SHA-256 for staleness detection
 
-Created by `palace scan`. This is the source of truth.
+Created by `palace scan`. This is the source of truth for the codebase structure.
 
 ### Context Pack
 
 `context-pack.json` - Portable context for agents.
 
-```json
-{
-  "goal": "Fix auth bug",
-  "scanId": "abc-123",
-  "files": [
-    {"path": "src/auth/login.ts", "hash": "sha256:...", "snippet": "..."}
-  ],
-  "rooms": ["auth"],
-  "provenance": { "createdAt": "2025-01-15T10:00:00Z" }
-}
-```
-
-Created by `palace context "goal"`. Schema-validated.
+Created by `palace explore "goal" --full` or `palace check --collect`. Contains file snippets, related learnings, and project metadata.
 
 ### Change Signal
 
 `change-signal.json` - Diff metadata for scoped workflows.
 
-Created by `palace ci signal --diff HEAD~1..HEAD`. Enables CI to verify only changed files.
+Created by `palace check --signal --diff HEAD~1..HEAD`. Tells the palace exactly what has changed between two points.
 
 ---
 
@@ -116,11 +89,11 @@ Created by `palace ci signal --diff HEAD~1..HEAD`. Enables CI to verify only cha
 
 ### Butler
 
-The search engine. Uses FTS5 with BM25 ranking + entry-point boosting.
+The search engine. Uses FTS5 with BM25 ranking + entry-point boosting. Exposed via `palace explore`.
 
 ```sh
-palace query "where is authentication"
-palace query --room api "rate limiting"
+palace explore "where is authentication"
+palace explore --room api "rate limiting"
 ```
 
 ### MCP Server
@@ -131,76 +104,25 @@ JSON-RPC 2.0 server for AI agents.
 palace serve
 ```
 
-Exposes:
-- `search_mind_palace` - Query the index
-- `list_rooms` - Enumerate rooms
-- `get_context` - Generate context packs
-- `get_graph` - Explore call relationships
-- `palace://files/{path}` - Read files
-- `palace://rooms/{name}` - Read room manifests
+Exposes tools like `search_mind_palace`, `get_context`, and `get_graph`.
 
 ### Observer
 
-VS Code extension. Automates check/scan on file save.
-
----
-
-## Data Flow
-
-```
-┌──────────────┐   scan    ┌──────────────┐  context  ┌──────────────┐
-│ Source Files │ ────────► │  palace.db   │ ────────► │ context-pack │
-│   + Rooms    │           │   (Index)    │           │    .json     │
-└──────────────┘           └──────────────┘           └──────────────┘
-                                  │
-                                  │ query / serve
-                                  ▼
-                           ┌──────────────┐
-                           │   Results    │
-                           │ (ranked,     │
-                           │  grouped)    │
-                           └──────────────┘
-```
+The VS Code extension HUD. Automates command execution and provides a "Traffic Light" for codebase health.
 
 ---
 
 ## Verification Model
 
-```
-palace check [--fast|--strict]
+Mind Palace uses a tiered verification system to ensure AI agents aren't working on stale information.
 
---fast (default):
-  1. Check mtime/size of files
-  2. Hash only candidates that changed
-  3. Compare against stored hashes
-
---strict:
-  1. Hash all indexed files
-  2. Compare against stored hashes
-  3. Fail if any mismatch
-
-Exit codes:
-  0 = Fresh (index matches filesystem)
-  1 = Stale (files changed)
-  2 = Error (config/schema issues)
+```sh
+palace check [--strict] [--diff <range>]
 ```
 
----
-
-## Guardrails
-
-Patterns the CLI will never touch:
-
-```jsonc
-{
-  "guardrails": {
-    "doNotTouchGlobs": [".git/**", "node_modules/**", ".env*"],
-    "readOnlyGlobs": ["package-lock.json"]
-  }
-}
-```
-
-Defaults are always applied. Your patterns extend, never replace.
+1.  **Fast Mode** (Default): Checks modification times and file sizes. Hashes only files that look different.
+2.  **Strict Mode**: Re-hashes every file in the workspace to guarantee 100% correctness.
+3.  **Scoped Mode**: Verifies only the files within a specific Git diff range.
 
 ---
 
@@ -216,10 +138,10 @@ Import context from other Mind Palace repositories.
       "ttl": "24h"
     },
     "shared-lib": {
-      "localPath": "../shared-lib"  // monorepo
+      "localPath": "../shared-lib" // monorepo
     }
   }
 }
 ```
 
-Remote files are namespaced: `corridor://backend/src/api.ts`
+Remote files are namespaced: `corridor://backend/src/api.ts`. This allows the Palace to search across repository boundaries.

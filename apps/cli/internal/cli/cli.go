@@ -37,7 +37,7 @@ func Run(args []string) error {
 	// Core commands
 	case "explore":
 		return cmdExplore(args[1:])
-	case "store", "remember", "learn":
+	case "store":
 		return cmdStore(args[1:])
 	case "recall":
 		return cmdRecall(args[1:])
@@ -45,7 +45,7 @@ func Run(args []string) error {
 		return cmdBrief(args[1:])
 
 	// Setup & Index
-	case "build", "enter", "init":
+	case "init":
 		return cmdInit(args[1:])
 	case "scan":
 		return cmdScan(args[1:])
@@ -66,12 +66,8 @@ func Run(args []string) error {
 	case "corridor":
 		return cmdCorridor(args[1:])
 
-	// CI/CD
-	case "ci":
-		return cmdCI(args[1:])
-
 	// Housekeeping
-	case "clean", "maintenance":
+	case "clean":
 		return cmdMaintenance(args[1:])
 	case "update":
 		return cmdUpdate(args[1:])
@@ -168,13 +164,6 @@ func cmdCorridor(args []string) error {
 }
 
 // ============================================================================
-// CI & Housekeeping Commands - delegating to commands package
-// ============================================================================
-
-// cmdCI delegates to commands.RunCI
-func cmdCI(args []string) error {
-	return commands.RunCI(args)
-}
 
 // cmdMaintenance delegates to commands.RunMaintenance (clean command)
 func cmdMaintenance(args []string) error {
