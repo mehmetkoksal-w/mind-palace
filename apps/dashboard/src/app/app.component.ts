@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal, ElementRef, ViewChild } from '@angular/core';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { WebSocketService } from './core/services/websocket.service';
 import { ApiService } from './core/services/api.service';
@@ -14,10 +14,9 @@ interface SearchResult {
 }
 
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, ContradictionAlertComponent],
-  template: `
+    selector: 'app-root',
+    imports: [FormsModule, RouterOutlet, RouterLink, RouterLinkActive, ContradictionAlertComponent],
+    template: `
     <div class="app-container">
       <!-- Top Header -->
       <header class="top-header">
@@ -252,7 +251,7 @@ interface SearchResult {
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     :host {
       display: block;
       height: 100vh;

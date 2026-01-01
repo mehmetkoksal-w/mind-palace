@@ -4,10 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, Postmortem, PostmortemStats } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-postmortems',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-postmortems',
+    imports: [CommonModule, FormsModule],
+    template: `
     <div class="postmortems-page">
       <div class="page-header">
         <h2>Failure Postmortems</h2>
@@ -204,7 +203,7 @@ import { ApiService, Postmortem, PostmortemStats } from '../../core/services/api
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .postmortems-page {
       height: 100%;
       display: flex;

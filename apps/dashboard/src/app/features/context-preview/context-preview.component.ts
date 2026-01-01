@@ -4,10 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, AutoInjectedContext, PrioritizedLearning, Decision } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-context-preview',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-context-preview',
+    imports: [CommonModule, FormsModule],
+    template: `
     <div class="context-preview-page">
       <div class="page-header">
         <h2>AI Context Preview</h2>
@@ -218,7 +217,7 @@ import { ApiService, AutoInjectedContext, PrioritizedLearning, Decision } from '
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .context-preview-page {
       max-width: 900px;
     }

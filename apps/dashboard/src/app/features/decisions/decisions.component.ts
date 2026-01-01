@@ -1,13 +1,12 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, Decision } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-decisions',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-decisions',
+    imports: [FormsModule],
+    template: `
     <div class="decisions-page">
       <div class="page-header">
         <h2>Decisions</h2>
@@ -76,7 +75,7 @@ import { ApiService, Decision } from '../../core/services/api.service';
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .decisions-page {
       max-width: 900px;
     }

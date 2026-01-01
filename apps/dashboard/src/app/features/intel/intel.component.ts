@@ -12,10 +12,9 @@ interface TreeNode {
 }
 
 @Component({
-  selector: 'app-intel',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-intel',
+    imports: [CommonModule, FormsModule],
+    template: `
     <div class="intel-container">
       <header class="page-header">
         <h1>File Intelligence</h1>
@@ -245,7 +244,7 @@ interface TreeNode {
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .intel-container {
       padding: 24px;
       max-width: 1400px;

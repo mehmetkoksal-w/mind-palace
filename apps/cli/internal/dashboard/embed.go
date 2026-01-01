@@ -14,20 +14,28 @@ var distFS embed.FS
 var embeddedAssets fs.FS
 
 func init() {
-	// Use dist/browser/ subdirectory (Angular 17+ output structure)
-	sub, err := fs.Sub(distFS, "dist/browser")
-	if err != nil {
-		// Try legacy dist/ structure for backwards compatibility
-		sub, err = fs.Sub(distFS, "dist")
+	var sub fs.FS
+	var err error
+
+	// Try different structures based on how the dashboard was built/packaged:
+	// 1. Local Angular 17+ build: dist/browser/index.html
+	// 2. CI flattened build: dist/index.html
+	structures := []string{
+		"dist/browser", // Local Angular 17+ output
+		"dist",         // CI flattened or legacy structure
+	}
+
+	for _, path := range structures {
+		sub, err = fs.Sub(distFS, path)
 		if err != nil {
-			panic("dashboard: dist directory not found - run 'npm run build' in apps/dashboard first")
+			continue
+		}
+		// Check if index.html exists at this level
+		if _, openErr := sub.Open("index.html"); openErr == nil {
+			embeddedAssets = sub
+			return
 		}
 	}
 
-	// Verify index.html exists
-	if _, err := sub.Open("index.html"); err != nil {
-		panic("dashboard: index.html not found in dist - run 'npm run build' in apps/dashboard first")
-	}
-
-	embeddedAssets = sub
+	panic("dashboard: index.html not found in embedded assets - run 'npm run build' in apps/dashboard first")
 }

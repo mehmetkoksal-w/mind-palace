@@ -4,10 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, TimelineDecision, DecisionChain, Learning } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-decision-timeline',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-decision-timeline',
+    imports: [CommonModule, FormsModule],
+    template: `
     <div class="decision-timeline-page">
       <div class="page-header">
         <h2>Decision Timeline</h2>
@@ -192,7 +191,7 @@ import { ApiService, TimelineDecision, DecisionChain, Learning } from '../../cor
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .decision-timeline-page {
       max-width: 1000px;
     }

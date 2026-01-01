@@ -155,7 +155,7 @@ Content is auto-classified (e.g., "Let's..." -> decision).
 
 Usage: palace recall [query] [options]
        palace recall update <decision-id> <outcome>
-       palace recall link <source-id> --<relation> <target>
+       palace recall link --<relation> <target> <source-id>
 
 Options:
   --root <path>       Workspace root (default: current directory)

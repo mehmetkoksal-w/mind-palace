@@ -1,13 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, Room } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-rooms',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-rooms',
+    imports: [FormsModule],
+    template: `
     <div class="rooms-container">
       <header class="page-header">
         <h1>Rooms Explorer</h1>
@@ -126,7 +125,7 @@ import { ApiService, Room } from '../../core/services/api.service';
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .rooms-container {
       padding: 24px;
       max-width: 1400px;

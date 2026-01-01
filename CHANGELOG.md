@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2-alpha] - 2026-01-01
+
+### Fixed
+
+- **Dashboard Embedding**: Fixed panic on startup when dashboard assets were embedded with different directory structures (local vs CI builds)
+- **Recall Link Flags**: Fixed flag parsing for `palace recall link` - flags must now come before the source ID (documented correctly)
+- **Dart Call Graph**: Deep analysis (LSP-based call tracking) now runs automatically for Dart/Flutter projects
+
+### Added
+
+- **Explore Rooms**: New `palace explore --rooms` flag to list all configured rooms in the workspace
+- **Auto Deep Analysis**: Dart/Flutter projects are automatically detected and deep analysis runs during scan
+
+### Changed
+
+- Dashboard upgraded from Angular 17 to Angular 21
+- Dashboard components updated to Angular 21 standalone defaults
+- TypeScript upgraded to 5.9.3
+- Zone.js upgraded to 0.15.1
+
+---
+
 ## [0.0.1-alpha] - 2026-01-01
 
 ### Welcome to the Mind Palace

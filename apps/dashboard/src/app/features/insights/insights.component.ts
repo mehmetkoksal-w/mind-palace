@@ -1,12 +1,11 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
-  selector: 'app-insights',
-  standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
-  template: `
+    selector: 'app-insights',
+    imports: [RouterOutlet, RouterLink, RouterLinkActive],
+    template: `
     <div class="insights-container">
       <!-- Sub Navigation -->
       <nav class="sub-nav">
@@ -95,7 +94,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .insights-container {
       display: flex;
       flex-direction: column;

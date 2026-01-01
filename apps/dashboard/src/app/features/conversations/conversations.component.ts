@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
@@ -50,10 +50,9 @@ interface TimelineEvent {
 }
 
 @Component({
-  selector: 'app-conversations',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
-  template: `
+    selector: 'app-conversations',
+    imports: [FormsModule, RouterLink],
+    template: `
     <div class="conversations-container">
       <!-- Header -->
       <div class="page-header">
@@ -258,7 +257,7 @@ interface TimelineEvent {
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .conversations-container {
       padding: 1.5rem;
       max-width: 1600px;

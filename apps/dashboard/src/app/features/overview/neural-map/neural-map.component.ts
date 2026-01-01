@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, inject, signal, input, output, ElementRef, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import * as d3 from 'd3';
 import { NeuralMapService } from './neural-map.service';
@@ -7,10 +7,9 @@ import { NeuralNode, NeuralLink, NeuralMapData, LINK_COLORS, NodeType } from './
 import { NeuralMapLegendComponent } from './neural-map-legend.component';
 
 @Component({
-  selector: 'app-neural-map',
-  standalone: true,
-  imports: [CommonModule, FormsModule, NeuralMapLegendComponent],
-  template: `
+    selector: 'app-neural-map',
+    imports: [FormsModule, NeuralMapLegendComponent],
+    template: `
     <div class="neural-map-container" #container [style.height.px]="height()">
       @if (loading()) {
         <div class="loading-overlay">
@@ -108,7 +107,7 @@ import { NeuralMapLegendComponent } from './neural-map-legend.component';
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .neural-map-container {
       position: relative;
       width: 100%;

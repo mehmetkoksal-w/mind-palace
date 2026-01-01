@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ApiService } from '../../core/services/api.service';
 
 interface PersonalLearning {
@@ -18,10 +18,9 @@ interface LinkedWorkspace {
 }
 
 @Component({
-  selector: 'app-corridors',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-corridors',
+    imports: [],
+    template: `
     <div class="corridors">
       <h2>Corridors</h2>
 
@@ -77,7 +76,7 @@ interface LinkedWorkspace {
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .corridors h2 {
       color: #9d4edd;
       margin-bottom: 1.5rem;

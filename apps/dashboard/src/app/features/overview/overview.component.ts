@@ -1,13 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ApiService, Stats, ActiveAgent } from '../../core/services/api.service';
 import { NeuralMapComponent } from './neural-map/neural-map.component';
 
 @Component({
-  selector: 'app-overview',
-  standalone: true,
-  imports: [CommonModule, NeuralMapComponent],
-  template: `
+    selector: 'app-overview',
+    imports: [NeuralMapComponent],
+    template: `
     <div class="overview">
       <h2>Overview</h2>
 
@@ -75,7 +74,7 @@ import { NeuralMapComponent } from './neural-map/neural-map.component';
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .overview h2 {
       color: #9d4edd;
       margin-bottom: 1.5rem;

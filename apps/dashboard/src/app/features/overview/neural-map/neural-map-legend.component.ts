@@ -1,11 +1,10 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
-  selector: 'app-neural-map-legend',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-neural-map-legend',
+    imports: [],
+    template: `
     <div class="legend">
       <div class="legend-section">
         <span class="section-title">Nodes</span>
@@ -67,7 +66,7 @@ import { CommonModule } from '@angular/common';
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .legend {
       background: rgba(26, 26, 46, 0.95);
       border-radius: 6px;
