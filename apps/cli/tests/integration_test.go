@@ -30,7 +30,7 @@ func TestPalaceLifecycle(t *testing.T) {
 	dbPath := filepath.Join(workspace, ".palace", "index", "palace.db")
 	assertSQLiteFile(t, dbPath)
 
-	runPalace(t, binPath, workspace, "ci", "collect", "--root", workspace)
+	runPalace(t, binPath, workspace, "check", "--collect", "--root", workspace)
 
 	contextPath := filepath.Join(workspace, ".palace", "outputs", "context-pack.json")
 	data, err := os.ReadFile(contextPath)
@@ -46,13 +46,13 @@ func TestPalaceLifecycle(t *testing.T) {
 		t.Fatalf("expected scanHash in context pack")
 	}
 
-	runPalace(t, binPath, workspace, "ci", "verify", "--root", workspace)
+	runPalace(t, binPath, workspace, "check", "--root", workspace)
 
 	if err := os.WriteFile(seedPath, []byte("hello world\nupdated\n"), 0o644); err != nil {
 		t.Fatalf("modify seed file: %v", err)
 	}
 
-	output := runPalaceExpectFail(t, binPath, workspace, "ci", "verify", "--root", workspace)
+	output := runPalaceExpectFail(t, binPath, workspace, "check", "--root", workspace)
 	if !bytes.Contains([]byte(output), []byte("stale")) {
 		t.Fatalf("expected stale verification output, got: %s", output)
 	}
