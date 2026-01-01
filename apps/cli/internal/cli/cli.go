@@ -68,7 +68,7 @@ func Run(args []string) error {
 
 	// Housekeeping
 	case "clean":
-		return cmdMaintenance(args[1:])
+		return cmdClean(args[1:])
 	case "update":
 		return cmdUpdate(args[1:])
 	case "version", "--version", "-v":
@@ -165,9 +165,9 @@ func cmdCorridor(args []string) error {
 
 // ============================================================================
 
-// cmdMaintenance delegates to commands.RunMaintenance (clean command)
-func cmdMaintenance(args []string) error {
-	return commands.RunMaintenance(args)
+// cmdClean delegates to commands.RunClean (maintenance command)
+func cmdClean(args []string) error {
+	return commands.RunClean(args)
 }
 
 // cmdUpdate delegates to commands.RunUpdate
