@@ -17,39 +17,39 @@ func init() {
 		Name:        "clean",
 		Aliases:     []string{"maintenance"}, // Keep maintenance as alias for backwards compatibility
 		Description: "Clean up stale data (sessions, agents, learnings, links)",
-		Run:         RunMaintenance,
+		Run:         RunClean,
 	})
 }
 
-// MaintenanceOptions contains the configuration for the maintenance command.
-type MaintenanceOptions struct {
+// CleanOptions contains the configuration for the clean command.
+type CleanOptions struct {
 	Root   string
 	DryRun bool
 }
 
-// RunMaintenance executes the maintenance command with parsed arguments.
-func RunMaintenance(args []string) error {
-	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
+// RunClean executes the clean command with parsed arguments.
+func RunClean(args []string) error {
+	fs := flag.NewFlagSet("clean", flag.ContinueOnError)
 	root := fs.String("root", ".", "workspace root")
 	dryRun := fs.Bool("dry-run", false, "show what would be done without making changes")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	return ExecuteMaintenance(MaintenanceOptions{
+	return ExecuteClean(CleanOptions{
 		Root:   *root,
 		DryRun: *dryRun,
 	})
 }
 
-// ExecuteMaintenance performs maintenance tasks on the workspace.
-func ExecuteMaintenance(opts MaintenanceOptions) error {
+// ExecuteClean performs clean tasks on the workspace.
+func ExecuteClean(opts CleanOptions) error {
 	rootPath, err := filepath.Abs(opts.Root)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("\n🧹 Palace Maintenance")
+	fmt.Println("\n🧹 Palace Maintenance (Clean)")
 	fmt.Println(strings.Repeat("─", 60))
 	if opts.DryRun {
 		fmt.Println("(dry-run mode - no changes will be made)")

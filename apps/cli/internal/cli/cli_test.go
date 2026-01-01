@@ -378,8 +378,8 @@ func TestExplainAll(t *testing.T) {
 		t.Error("ExplainAll() should return non-empty string")
 	}
 
-	// Check for expected sections
-	expectedSections := []string{"SCAN", "CHECK", "QUERY", "CONTEXT", "GRAPH", "CI COMMANDS", "ARTIFACTS"}
+	// Check for expected sections (Canonical commands)
+	expectedSections := []string{"SCAN", "CHECK", "EXPLORE", "BRIEF", "CLEAN"}
 	for _, section := range expectedSections {
 		if !strings.Contains(result, section) {
 			t.Errorf("ExplainAll() should contain section %q", section)
@@ -457,8 +457,8 @@ func TestCmdCorridorUnknownSubcommand(t *testing.T) {
 	}
 }
 
-func TestCmdMaintenanceInvalidFlag(t *testing.T) {
-	err := cmdMaintenance([]string{"--invalid-flag"})
+func TestCmdCleanInvalidFlag(t *testing.T) {
+	err := cmdClean([]string{"--invalid-flag"})
 	if err == nil {
 		t.Error("expected error for invalid flag")
 	}
@@ -466,8 +466,8 @@ func TestCmdMaintenanceInvalidFlag(t *testing.T) {
 
 func TestCmdHelpKnownCommands(t *testing.T) {
 	// Only test commands that have help topics defined in cmdHelp
-	commands := []string{"build", "enter", "init", "scan", "check", "explore", "store", "recall",
-		"brief", "serve", "ci", "session", "corridor", "dashboard", "clean"}
+	commands := []string{"init", "scan", "check", "explore", "store", "recall",
+		"brief", "serve", "session", "corridor", "dashboard", "clean"}
 
 	for _, cmd := range commands {
 		t.Run(cmd, func(t *testing.T) {

@@ -237,17 +237,20 @@ CHECK (formerly verify + lint)
   Purpose: Detect staleness and validate configuration.
   Modes: Default (fast mtime check), --strict (full hash check)
 
-EXPLORE (formerly ask/query/graph)
+EXPLORE
   Purpose: Search codebase and trace relationships.
   Features: Full-text search, call graphs (--map), full context (--full).
 
-STORE (formerly remember)
+BRIEF
+  Purpose: Get briefing on workspace or file.
+
+STORE
   Purpose: Capture ideas, decisions, and learnings.
 
 RECALL
   Purpose: Retrieve knowledge and record outcomes.
 
-MAINTENANCE (formerly clean)
+CLEAN
   Purpose: Cleanup stale sessions and decay old learnings.
 
 CI INTEGRATION
