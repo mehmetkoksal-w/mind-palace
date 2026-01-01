@@ -86,8 +86,8 @@ type Cache interface {
 		output := runPalace(t, binPath, workspace, "recall", "--root", workspace, "--type", "decision")
 		t.Logf("Decisions for outcome:\n%s", output)
 
-		// The outcome command typically needs a decision ID
-		// For now, verify the recall works
+		// Get all IDs from the output to find d_...
+		// In a real CLI output we'd parse this.
 	})
 
 	// Step 5: Link related items
@@ -411,14 +411,14 @@ func App() {}
 
 	// Run maintenance (dry-run first)
 	t.Run("maintenance_dryrun", func(t *testing.T) {
-		output := runPalace(t, binPath, workspace, "maintenance",
+		output := runPalace(t, binPath, workspace, "clean",
 			"--root", workspace, "--dry-run")
 		t.Logf("Maintenance dry-run:\n%s", output)
 	})
 
 	// Run actual maintenance
 	t.Run("maintenance_execute", func(t *testing.T) {
-		output := runPalace(t, binPath, workspace, "maintenance", "--root", workspace)
+		output := runPalace(t, binPath, workspace, "clean", "--root", workspace)
 		t.Logf("Maintenance output:\n%s", output)
 	})
 }
@@ -627,12 +627,12 @@ func Helper() {}
 
 	// Verify CI commands work
 	t.Run("ci_verify_fresh", func(t *testing.T) {
-		output := runPalace(t, binPath, workspace, "ci", "verify", "--root", workspace)
+		output := runPalace(t, binPath, workspace, "check", "--root", workspace)
 		t.Logf("CI verify (fresh):\n%s", output)
 	})
 
 	t.Run("ci_collect", func(t *testing.T) {
-		output := runPalace(t, binPath, workspace, "ci", "collect", "--root", workspace)
+		output := runPalace(t, binPath, workspace, "check", "--collect", "--root", workspace)
 		t.Logf("CI collect:\n%s", output)
 
 		// Verify context pack was created
@@ -650,7 +650,7 @@ func NewHelper() {} // Added
 `), 0644)
 
 	t.Run("ci_verify_stale", func(t *testing.T) {
-		output := runPalaceExpectFail(t, binPath, workspace, "ci", "verify", "--root", workspace)
+		output := runPalaceExpectFail(t, binPath, workspace, "check", "--root", workspace)
 		if !strings.Contains(strings.ToLower(output), "stale") {
 			t.Logf("CI verify (stale):\n%s", output)
 		}
@@ -664,7 +664,7 @@ func NewHelper() {} // Added
 		// Rescan to update the index after the file change
 		runPalace(t, binPath, workspace, "scan", "--root", workspace)
 
-		output := runPalace(t, binPath, workspace, "ci", "signal",
+		output := runPalace(t, binPath, workspace, "check",
 			"--root", workspace, "--diff", "HEAD~1..HEAD")
 		t.Logf("CI signal:\n%s", output)
 	})
@@ -682,10 +682,9 @@ func main() {}
 
 	// These are the valid help topics (from the help system)
 	commands := []string{
-		"init", "scan", "check", "query", "context",
-		"session", "learn", "recall", "brief",
-		"corridor", "graph", "intel",
-		"ci", "maintenance", "dashboard", "artifacts",
+		"init", "scan", "check", "explore",
+		"session", "store", "recall", "brief",
+		"corridor", "clean", "dashboard", "artifacts",
 	}
 
 	for _, cmd := range commands {
