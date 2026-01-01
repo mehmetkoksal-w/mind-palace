@@ -1,12 +1,11 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
-  selector: 'app-explore',
-  standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
-  template: `
+    selector: 'app-explore',
+    imports: [RouterOutlet, RouterLink, RouterLinkActive],
+    template: `
     <div class="explore-container">
       <!-- Sub Navigation -->
       <nav class="sub-nav">
@@ -45,7 +44,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .explore-container {
       display: flex;
       flex-direction: column;

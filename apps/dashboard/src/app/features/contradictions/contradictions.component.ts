@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { HttpClient } from '@angular/common/http';
 
 interface ContradictionLink {
@@ -28,10 +28,9 @@ interface RecordDetail {
 }
 
 @Component({
-  selector: 'app-contradictions',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-contradictions',
+    imports: [],
+    template: `
     <div class="contradictions-container">
       <header class="page-header">
         <h1>Contradictions</h1>
@@ -161,7 +160,7 @@ interface RecordDetail {
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .contradictions-container {
       padding: 1.5rem;
       max-width: 900px;

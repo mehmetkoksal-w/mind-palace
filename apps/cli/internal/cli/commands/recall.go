@@ -489,15 +489,15 @@ func runRecallLink(args []string) error {
 
 	// Create a new link - need source ID and a relation flag
 	if len(remaining) == 0 {
-		return errors.New(`usage: palace recall link <source-id> --<relation> <target>
+		return errors.New(`usage: palace recall link --<relation> <target> <source-id>
 
-Create links between records:
-  palace recall link d_abc123 --supersedes d_xyz789     # New decision supersedes old
-  palace recall link i_abc123 --implements auth/jwt.go:15-45  # Idea implemented in code
-  palace recall link i_abc123 --supports d_xyz789       # Idea supports decision
-  palace recall link i_abc123 --contradicts d_xyz789    # Idea contradicts decision
-  palace recall link i_abc123 --inspired-by i_other     # Idea inspired by another
-  palace recall link i_abc123 --related l_xyz           # General relationship
+Create links between records (flags must come before the source ID):
+  palace recall link --supersedes d_xyz789 d_abc123     # New decision supersedes old
+  palace recall link --implements auth/jwt.go:15-45 i_abc123  # Idea implemented in code
+  palace recall link --supports d_xyz789 i_abc123       # Idea supports decision
+  palace recall link --contradicts d_xyz789 i_abc123    # Idea contradicts decision
+  palace recall link --inspired-by i_other i_abc123     # Idea inspired by another
+  palace recall link --related l_xyz i_abc123           # General relationship
 
 List links:
   palace recall link --from <id>       # Links where ID is source

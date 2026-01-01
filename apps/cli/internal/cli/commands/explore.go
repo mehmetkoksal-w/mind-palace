@@ -58,6 +58,7 @@ func RunExplore(args []string) error {
 	file := fs.String("file", "", "file path for --map mode")
 	depth := fs.Int("depth", 0, "recursion depth for call chain tracing (1-10)")
 	direction := fs.String("direction", "up", "trace direction: up (callers), down (callees), or both")
+	listRooms := fs.Bool("rooms", false, "list all configured rooms")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -65,6 +66,11 @@ func RunExplore(args []string) error {
 	// Validate inputs
 	if err := flags.ValidateLimit(*limit); err != nil {
 		return err
+	}
+
+	// List rooms mode
+	if *listRooms {
+		return runExploreListRooms(*root)
 	}
 
 	remaining := fs.Args()
@@ -90,6 +96,9 @@ Search the codebase:
 
 Get full context for a task:
   palace explore "add user authentication" --full
+
+List configured rooms:
+  palace explore --rooms
 
 Trace call relationships (direct):
   palace explore --map handleAuth              # Who calls handleAuth?
@@ -463,4 +472,53 @@ func printCallChainTree(nodes []*index.CallChainNode, prefix string) {
 			printCallChainTree(node.Children, childPrefix)
 		}
 	}
+}
+
+// runExploreListRooms lists all configured rooms.
+func runExploreListRooms(root string) error {
+	rootPath, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+
+	dbPath := filepath.Join(rootPath, ".palace", "index", "palace.db")
+	if _, err := os.Stat(dbPath); err != nil {
+		return fmt.Errorf("index missing; run 'palace scan' first: %w", err)
+	}
+	db, err := index.Open(dbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	b, err := butler.New(db, rootPath)
+	if err != nil {
+		return fmt.Errorf("initialize butler: %w", err)
+	}
+
+	rooms := b.ListRooms()
+
+	if len(rooms) == 0 {
+		fmt.Println("No rooms configured.")
+		fmt.Println("Rooms are defined in .palace/rooms/*.jsonc files.")
+		return nil
+	}
+
+	fmt.Printf("\n🏠 Configured Rooms (%d)\n", len(rooms))
+	fmt.Println(strings.Repeat("─", 60))
+
+	for _, room := range rooms {
+		fmt.Printf("\n📁 %s\n", room.Name)
+		if room.Summary != "" {
+			fmt.Printf("   %s\n", room.Summary)
+		}
+		if len(room.EntryPoints) > 0 {
+			fmt.Printf("   Entry points: %d\n", len(room.EntryPoints))
+		}
+		if len(room.Capabilities) > 0 {
+			fmt.Printf("   Capabilities: %s\n", strings.Join(room.Capabilities, ", "))
+		}
+	}
+
+	return nil
 }

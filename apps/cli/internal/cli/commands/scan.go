@@ -60,12 +60,41 @@ func ExecuteScan(opts ScanOptions) error {
 		return err
 	}
 
-	// Run deep analysis if requested
-	if opts.Deep {
+	// Auto-detect Dart/Flutter projects and run deep analysis
+	// unless explicitly disabled with --deep=false
+	rootPath, _ := filepath.Abs(opts.Root)
+	if opts.Deep || isDartFlutterProject(rootPath) {
 		return executeDeepAnalysis(opts.Root)
 	}
 
 	return nil
+}
+
+// isDartFlutterProject checks if the workspace is a Dart/Flutter project
+func isDartFlutterProject(rootPath string) bool {
+	// Check for pubspec.yaml at root
+	if _, err := os.Stat(filepath.Join(rootPath, "pubspec.yaml")); err == nil {
+		return true
+	}
+
+	// Check common monorepo directories for pubspec.yaml
+	monorepoPatterns := []string{"apps", "packages", "modules", "lib"}
+	for _, dir := range monorepoPatterns {
+		dirPath := filepath.Join(rootPath, dir)
+		entries, err := os.ReadDir(dirPath)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				if _, err := os.Stat(filepath.Join(dirPath, entry.Name(), "pubspec.yaml")); err == nil {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 func executeFullScan(root string) error {

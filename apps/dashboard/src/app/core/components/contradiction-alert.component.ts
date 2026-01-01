@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Router } from '@angular/router';
 import { WebSocketService } from '../services/websocket.service';
 import { Subscription } from 'rxjs';
@@ -25,10 +25,9 @@ interface ContradictionAlert {
 }
 
 @Component({
-  selector: 'app-contradiction-alert',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-contradiction-alert',
+    imports: [],
+    template: `
     <div class="alerts-container">
       @for (alert of alerts(); track alert.id) {
         <div class="alert-toast" [class.entering]="!alert.id.includes('exiting')" @fadeSlide>
@@ -75,7 +74,7 @@ interface ContradictionAlert {
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .alerts-container {
       position: fixed;
       bottom: 1.5rem;

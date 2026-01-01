@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, inject, signal, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import * as d3 from 'd3';
@@ -22,10 +22,9 @@ interface Link {
 }
 
 @Component({
-  selector: 'app-graph',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-graph',
+    imports: [FormsModule],
+    template: `
     <div class="graph-container">
       <header class="page-header">
         <h1>Call Graph Visualizer</h1>
@@ -124,7 +123,7 @@ interface Link {
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .graph-container {
       padding: 24px;
       height: 100%;

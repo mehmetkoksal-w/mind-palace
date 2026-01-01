@@ -1,12 +1,11 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ApiService, Session } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-sessions',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-sessions',
+    imports: [],
+    template: `
     <div class="sessions">
       <h2>Sessions</h2>
 
@@ -41,7 +40,7 @@ import { ApiService, Session } from '../../core/services/api.service';
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .sessions h2 {
       color: #9d4edd;
       margin-bottom: 1.5rem;

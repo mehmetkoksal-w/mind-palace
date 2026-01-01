@@ -1,13 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, Learning } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-learnings',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-learnings',
+    imports: [FormsModule],
+    template: `
     <div class="learnings">
       <h2>Learnings</h2>
 
@@ -44,7 +43,7 @@ import { ApiService, Learning } from '../../core/services/api.service';
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .learnings h2 {
       color: #9d4edd;
       margin-bottom: 1.5rem;

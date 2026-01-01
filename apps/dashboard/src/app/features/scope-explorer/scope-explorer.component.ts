@@ -1,13 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, ScopeExplanation, ScopeLevel, Learning, Decision, Idea } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-scope-explorer',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-scope-explorer',
+    imports: [FormsModule],
+    template: `
     <div class="scope-explorer-page">
       <div class="page-header">
         <h2>Scope Explorer</h2>
@@ -183,7 +182,7 @@ import { ApiService, ScopeExplanation, ScopeLevel, Learning, Decision, Idea } fr
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .scope-explorer-page {
       max-width: 900px;
     }
