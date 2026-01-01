@@ -1,0 +1,107 @@
+# The Brain: Knowledge Memory
+
+Mind Palace doesn't just index your code; it remembers your **intentions**, **decisions**, and **learnings**. This "Brain" system ensures that AI agents (and future you) understand _why_ something was implemented, not just _what_ was implemented.
+
+---
+
+## 🧠 Knowledge Types
+
+Knowledge in the Palace is categorized into three types:
+
+| Type         | Purpose                                   | Signal Example                                              |
+| ------------ | ----------------------------------------- | ----------------------------------------------------------- |
+| **Decision** | Explicit choices that affect the codebase | "We should use Postgres for the main DB."                   |
+| **Idea**     | Potential future changes or hypotheses    | "What if we added a Redis cache here?"                      |
+| **Learning** | Verified facts or patterns discovered     | "TIL: JSONC is faster than standard JSON for our use case." |
+
+---
+
+## 📥 Storing Knowledge
+
+The CLI uses natural language processing to auto-classify your thoughts.
+
+```sh
+palace store "Let's use JWT for authentication"
+```
+
+### Explicit Typing
+
+You can force a type if the auto-classifier doesn't match your intent:
+
+```sh
+palace store "Maybe use Svelte?" --as idea
+palace store "Always use 8080 as internal port" --as learning
+```
+
+### Scoping
+
+Knowledge can be restricted to a specific part of the project:
+
+```sh
+palace store "TIL: This file has a race condition" --scope file --path src/main.go
+palace store "We decided to move auth here" --scope room --path auth
+```
+
+---
+
+## 🔍 Recalling Knowledge
+
+Retrieving knowledge is as simple as searching for it.
+
+```sh
+palace recall "authentication"
+```
+
+### Filtering
+
+```sh
+palace recall --type decision  # See only decisions
+palace recall --pending        # See decisions awaiting an outcome
+```
+
+---
+
+## 📈 Decision Lifecycles
+
+Decisions aren't static. You can track their outcomes to prevent repeating mistakes.
+
+### Recording Outcomes
+
+Once a decision is tested in reality, record its success or failure:
+
+```sh
+palace recall update d_abc123 successful
+palace recall update d_xyz789 failed --notes "Performance was too low"
+```
+
+### Linking Records
+
+Knowledge exists in a web of relationships:
+
+```sh
+palace recall link d_new --supersedes d_old
+palace recall link l_pattern --supports d_choice
+```
+
+#### Supported Relations:
+
+- `--supersedes`
+- `--implements`
+- `--supports`
+- `--contradicts`
+- `--inspired-by`
+- `--related`
+
+---
+
+## 🤖 AI Context Injection
+
+When you generate a context pack (via `palace explore --full` or `check --collect`), the Palace automatically injects relevant learnings and decisions based on the files referenced in the pack.
+
+This enables AI agents to be aware of:
+
+- **Avoidance Patterns**: "Note: We tried X but it failed because Y."
+- **Architectural Rules**: "Remember: All API responses must follow schema Z."
+- **Ongoing Discussions**: "Active Idea: We are planning to deprecate this utility."
+
+By committing these curated knowledge items to Git (stored in `.palace/memory/`), you build a permanent, shared intelligence for your codebase.

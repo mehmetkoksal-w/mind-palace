@@ -3,5 +3,6 @@
   "extension": "VS Code Extension",
   "public-api": "Public API",
   "errors": "Error Reference",
-  "migration": "Migration Guide"
+  "migration": "Migration Guide",
+  "versions": "Version History"
 }

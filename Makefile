@@ -1,10 +1,10 @@
-.PHONY: all build test clean dev deps lint release package help
+.PHONY: all build test clean dev deps lint release package help sync-versions
 
 # Build info
 VERSION ?= $(shell cat VERSION 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS := -ldflags="-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
+LDFLAGS := -ldflags="-s -w -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildVersion=$(VERSION) -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildCommit=$(COMMIT) -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildDate=$(DATE)"
 
 # Default target
 all: build
@@ -37,6 +37,7 @@ help:
 	@echo "  make lint           - Run linters"
 	@echo "  make clean          - Clean build artifacts"
 	@echo "  make package-vscode - Package VS Code extension"
+	@echo "  make sync-versions  - Sync all app versions with root VERSION file"
 
 # =============================================================================
 # Build Commands
@@ -230,6 +231,11 @@ clean-all: clean
 # =============================================================================
 # Utility
 # =============================================================================
+
+# Sync all versions
+sync-versions:
+	@echo "Syncing ecosystem versions..."
+	@./scripts/sync-versions.sh
 
 # Show project info
 info:

@@ -57,18 +57,38 @@ Source: https://github.com/koksalmehmet/mind-palace
 
 Files: *
 Copyright: 2024 Mind Palace
-License: Apache-2.0
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
+License: PolyForm-Shield-1.0.0
+ PolyForm Shield License 1.0.0
  .
-     http://www.apache.org/licenses/LICENSE-2.0
+ https://polyformproject.org/licenses/shield/1.0.0
  .
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
+ 1.  Rights Granted. Licensor grants you a non-exclusive, royalty-free,
+     worldwide, non-sublicensable, non-transferable license to use, modify,
+     and distribute the Software, provided that you do not use the Software
+     to create, provide, or otherwise make available a Service that competes
+     with the Software.
+ .
+ 2.  Conditions.
+     a.  If you distribute the Software, you must provide a copy of this
+         license and retain all copyright, patent, trademark, and
+         attribution notices.
+     b.  You may not use the licensor's trademarks or logos except as
+         required for reasonable and customary use in describing the
+         origin of the Software.
+ .
+ 3.  Limitations.
+     a.  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+         EXPRESS OR IMPLIED.
+     b.  IN NO EVENT SHALL LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES OR
+         OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+         OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE.
+ .
+ 4.  Definitions.
+     a.  "Licensor" means the copyright owner or entity authorized by the
+         copyright owner that is granting the License.
+     b.  "Software" means the Mind Palace software and documentation.
+     c.  "Service" means a product or service that allows third parties to
+         use the functionality of the Software.
 COPYRIGHT_EOF
 
 # Create changelog

@@ -15,9 +15,9 @@ import (
 
 func init() {
 	Register(&Command{
-		Name:        "build",
-		Aliases:     []string{"init", "enter"}, // Keep init and enter as aliases for backwards compatibility
-		Description: "Build the palace (initialize in current directory)",
+		Name:        "init",
+		Aliases:     []string{"build", "enter"},
+		Description: "Initialize a new Mind Palace in the current directory",
 		Run:         RunInit,
 	})
 }
@@ -200,20 +200,20 @@ func detectEntryPoints(dir, name string) []string {
 
 	// Check for common project manifest files (indicates valid subproject)
 	manifests := []string{
-		"pubspec.yaml",       // Dart/Flutter
-		"package.json",       // Node.js
-		"Cargo.toml",         // Rust
-		"go.mod",             // Go
-		"pom.xml",            // Maven (Java)
-		"build.gradle",       // Gradle (Java/Kotlin)
-		"build.gradle.kts",   // Gradle Kotlin DSL
-		"pyproject.toml",     // Python
-		"setup.py",           // Python legacy
-		"Gemfile",            // Ruby
-		"composer.json",      // PHP
-		"Package.swift",      // Swift
-		"CMakeLists.txt",     // C/C++
-		"*.csproj",           // .NET
+		"pubspec.yaml",     // Dart/Flutter
+		"package.json",     // Node.js
+		"Cargo.toml",       // Rust
+		"go.mod",           // Go
+		"pom.xml",          // Maven (Java)
+		"build.gradle",     // Gradle (Java/Kotlin)
+		"build.gradle.kts", // Gradle Kotlin DSL
+		"pyproject.toml",   // Python
+		"setup.py",         // Python legacy
+		"Gemfile",          // Ruby
+		"composer.json",    // PHP
+		"Package.swift",    // Swift
+		"CMakeLists.txt",   // C/C++
+		"*.csproj",         // .NET
 	}
 
 	hasManifest := false
@@ -237,23 +237,23 @@ func detectEntryPoints(dir, name string) []string {
 
 	// Add relative paths for common entry points
 	commonEntries := []string{
-		"lib/main.dart",             // Flutter
-		"lib/" + name + ".dart",     // Dart package
-		"src/index.ts",              // TypeScript
-		"src/index.tsx",             // React TypeScript
-		"src/index.js",              // JavaScript
-		"src/main.ts",               // Angular/other
-		"src/App.tsx",               // React
-		"src/App.vue",               // Vue
-		"index.ts",                  // Root index
-		"index.js",                  // Root index JS
-		"main.go",                   // Go
-		"cmd/main.go",               // Go cmd pattern
-		"src/main.rs",               // Rust
-		"src/lib.rs",                // Rust library
-		"__init__.py",               // Python
-		"app.py",                    // Python Flask
-		"main.py",                   // Python
+		"lib/main.dart",         // Flutter
+		"lib/" + name + ".dart", // Dart package
+		"src/index.ts",          // TypeScript
+		"src/index.tsx",         // React TypeScript
+		"src/index.js",          // JavaScript
+		"src/main.ts",           // Angular/other
+		"src/App.tsx",           // React
+		"src/App.vue",           // Vue
+		"index.ts",              // Root index
+		"index.js",              // Root index JS
+		"main.go",               // Go
+		"cmd/main.go",           // Go cmd pattern
+		"src/main.rs",           // Rust
+		"src/lib.rs",            // Rust library
+		"__init__.py",           // Python
+		"app.py",                // Python Flask
+		"main.py",               // Python
 	}
 
 	for _, entry := range commonEntries {

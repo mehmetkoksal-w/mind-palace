@@ -3,24 +3,42 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"runtime/debug"
 
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/update"
 )
 
 var (
-	buildVersion = "dev"
+	buildVersion = "0.0.1-alpha"
 	buildCommit  = "unknown"
 	buildDate    = "unknown"
 )
 
+func init() {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				if buildCommit == "unknown" || buildCommit == "" {
+					buildCommit = setting.Value
+				}
+			case "vcs.time":
+				if buildDate == "unknown" || buildDate == "" {
+					buildDate = setting.Value
+				}
+			}
+		}
+	}
+}
+
 func SetBuildInfo(version, commit, date string) {
-	if version != "" {
+	if version != "" && version != "dev" {
 		buildVersion = version
 	}
-	if commit != "" {
+	if commit != "" && commit != "unknown" {
 		buildCommit = commit
 	}
-	if date != "" {
+	if date != "" && date != "unknown" {
 		buildDate = date
 	}
 }

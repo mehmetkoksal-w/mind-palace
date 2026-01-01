@@ -429,20 +429,6 @@ func TestCmdExploreMapNoArgs(t *testing.T) {
 	}
 }
 
-func TestCmdCINoArgs(t *testing.T) {
-	err := cmdCI([]string{})
-	if err == nil {
-		t.Error("expected error for missing subcommand")
-	}
-}
-
-func TestCmdCIUnknownSubcommand(t *testing.T) {
-	err := cmdCI([]string{"unknown"})
-	if err == nil {
-		t.Error("expected error for unknown subcommand")
-	}
-}
-
 func TestCmdSessionNoArgs(t *testing.T) {
 	err := cmdSession([]string{})
 	if err == nil {

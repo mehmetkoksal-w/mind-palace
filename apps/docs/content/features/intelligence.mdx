@@ -1,0 +1,86 @@
+# Intelligence & Search
+
+Mind Palace provides deep, structural intelligence about your codebase, going beyond simple text search to understand symbols, call relationships, and failure patterns.
+
+---
+
+## 🔎 Smart Exploration
+
+The `explore` command is your primary tool for navigating the palace.
+
+### Intent Search
+
+Search for code by what it _does_, not just what it _contains_.
+
+```sh
+palace explore "authentication logic" --room core
+```
+
+### Symbols & Graphing
+
+Trace how code is connected across your workspace.
+
+```sh
+palace explore --map handleUserLogin  # Trace who calls this function
+palace explore --map --file src/auth.go # Visualize a file's entire call tree
+```
+
+#### Advanced Tracing
+
+You can specify recursion depth and direction:
+
+```sh
+palace explore --map save --depth 3 --direction up   # Grandparents of 'save'
+palace explore --map init --depth 2 --direction down # Children and grandchildren of 'init'
+```
+
+---
+
+## 📝 File Briefing (Intel)
+
+Before you start editing a file, get a high-level "Intel Update" to avoid context-switching and common pitfalls.
+
+```sh
+palace brief src/auth/jwt.go
+```
+
+**Intel includes**:
+
+- **Purpose**: What this file does (derived from code structure).
+- **Edit Hotspots**: How frequently this file changes.
+- **Agent Presence**: Is someone else (e.g., Claude, Aider) currently working on this?
+- **Related Brain Memory**: Decisions or learnings that specifically mention this file.
+- **Failures**: Known postmortems or failure incidents associated with this logic.
+
+---
+
+## 💀 Postmortems
+
+When things go wrong, the Palace records the failure to prevent it from happening again.
+
+### Auto-Detection
+
+The Palace detects failures through:
+
+1.  **Session Ends**: When an agent ends a session with a `failed` state.
+2.  **Linting**: When `palace check` finds persistent schema violations.
+
+### Reviewing Failures
+
+You can see failure hotspots in the **Dashboard** or through the `brief` command.
+
+---
+
+## 🗺️ Scope Navigator
+
+Manage large-scale changes by defining a **Scope**.
+
+### Git-Scoped Operations
+
+Focus operations only on what's changed:
+
+```sh
+palace check --diff HEAD~1..HEAD --collect
+```
+
+This generates a "Change Signal" that tells the Palace exactly which parts of the codebase are under pressure, enabling smarter context generation and boosting relevant knowledge retrieval.
