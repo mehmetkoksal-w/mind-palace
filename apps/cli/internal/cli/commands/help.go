@@ -99,8 +99,11 @@ Usage: palace scan [options]
 
 Options:
   --root <path>    Workspace root (default: current directory)
+  --full           Force full rescan (default: incremental)
+  --deep           Enable LSP-based deep analysis for call tracking
 
 The scan command parses your codebase using Tree-sitter and builds a structural index.
+For Dart/Flutter projects, deep analysis runs automatically to extract accurate call graphs.
 `)
 	case "check":
 		fmt.Print(`palace check - Verify index freshness
@@ -121,10 +124,12 @@ The check command ensures the index is up-to-date and validates configuration.
 
 Usage: palace explore <query> [options]
        palace explore --map <symbol> [--file <path>]
+       palace explore --rooms
 
 Options:
   --root <path>     Workspace root (default: current directory)
   --room <name>     Filter to specific room
+  --rooms           List all configured rooms
   --limit <n>       Maximum results (default: 10)
   --fuzzy           Enable fuzzy matching
   --full            Get full context (generates context-pack.json)
@@ -135,6 +140,7 @@ Options:
 
 Examples:
   palace explore "auth logic"
+  palace explore --rooms
   palace explore --map handleAuth
 `)
 	case "store":

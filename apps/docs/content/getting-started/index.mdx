@@ -4,22 +4,44 @@ Mind Palace is a deterministic context system for codebases. Unlike RAG or embed
 
 ## Installation
 
-### macOS / Linux
+### macOS
 
 ```sh
-# Download the latest release
-curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
+# Apple Silicon (M1/M2/M3)
+curl -LO https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-arm64.pkg
+sudo installer -pkg palace-darwin-arm64.pkg -target /
 
-# Make it executable
-chmod +x palace
+# Intel Mac
+curl -LO https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-amd64.pkg
+sudo installer -pkg palace-darwin-amd64.pkg -target /
+```
 
-# Move to your PATH
+### Linux
+
+```sh
+# Debian/Ubuntu (x64)
+curl -LO https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-linux-amd64.deb
+sudo dpkg -i palace-linux-amd64.deb
+
+# Debian/Ubuntu (ARM64)
+curl -LO https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-linux-arm64.deb
+sudo dpkg -i palace-linux-arm64.deb
+
+# Other Linux (manual)
+curl -LO https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-linux-amd64.tar.gz
+tar xzf palace-linux-amd64.tar.gz
 sudo mv palace /usr/local/bin/
 ```
 
 ### Windows
 
-Download from the [releases page](https://github.com/koksalmehmet/mind-palace/releases) and add to your PATH.
+Download and run the MSI installer from the [releases page](https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-windows-amd64.msi).
+
+Or via PowerShell:
+```powershell
+Invoke-WebRequest -Uri "https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-windows-amd64.msi" -OutFile palace.msi
+Start-Process msiexec.exe -Wait -ArgumentList '/i palace.msi /quiet'
+```
 
 ### Verify Installation
 
@@ -33,12 +55,12 @@ palace version
 
 ```sh
 cd your-project
-palace init
+palace init --detect
 ```
 
 This creates the `.palace/` directory with:
 - `palace.jsonc` - Project configuration
-- `rooms/` - Room definitions
+- `rooms/` - Auto-detected room definitions based on your project structure
 - `playbooks/` - Workflow templates
 
 ### 2. Build the Index
@@ -50,23 +72,33 @@ palace scan
 This creates a SQLite database with full-text search (FTS5) containing:
 - File metadata and hashes
 - Symbols (functions, types, classes)
-- Call relationships
+- Call relationships (extracted via Tree-sitter or LSP)
 
-### 3. Query Your Codebase
+For Dart/Flutter projects, deep analysis with LSP runs automatically to extract accurate call graphs.
+
+### 3. Explore Your Codebase
 
 ```sh
-palace query "where is authentication handled"
+palace explore "where is authentication handled"
 ```
 
 Results are ranked using BM25 with entry-point boosting.
 
-### 4. Generate Context for AI Agents
+### 4. Store Knowledge
 
 ```sh
-palace context "fix the login bug"
+palace store "We decided to use JWT for authentication"
 ```
 
-This creates a context pack with relevant files, rooms, and metadata.
+Auto-classifies as decision, idea, or learning (95%+ accuracy).
+
+### 5. Get Context for AI Agents
+
+```sh
+palace explore "fix the login bug" --full
+```
+
+This creates a context pack with relevant files, learnings, and decisions.
 
 ## What's Next
 
