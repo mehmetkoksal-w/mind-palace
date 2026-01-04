@@ -34,16 +34,19 @@ Search the codebase, symbols, and call graphs.
 ```sh
 palace explore "<query>" [options]
 palace explore --map <symbol> [options]
+palace explore --rooms
 ```
 
 **Options**:
 | Flag | Description |
 |------|-------------|
 | `--room <name>` | Filter to specific room |
+| `--rooms` | List all configured rooms |
 | `--limit <n>` | Maximum results (default: 10) |
 | `--fuzzy` | Enable fuzzy matching |
 | `--full` | Get full context (generates `context-pack.json`) |
 | `--map <symbol>` | Trace call graph for a symbol or file |
+| `--file <path>` | File path for `--map` mode |
 | `--depth <n>` | Recursion depth for call chain (1-10) |
 | `--direction <d>` | Trace direction: `up`, `down`, or `both` |
 
@@ -83,7 +86,7 @@ palace recall [query] [options]
 **Subcommands**:
 
 - `update <id> <outcome>`: Record decision outcome (`success`, `failed`, `mixed`)
-- `link <src> --<rel> <tgt>`: Create relationships between records
+- `link --<rel> <target> <source>`: Create relationships between records (flags before source ID)
 
 ---
 
@@ -126,10 +129,16 @@ palace init [options]
 Build or refresh the Index (Tier-0).
 
 ```sh
-palace scan
+palace scan [options]
 ```
 
-Parses files using Tree-sitter and stores symbols in SQLite.
+**Options**:
+| Flag | Description |
+|------|-------------|
+| `--full` | Force full rescan (default: incremental) |
+| `--deep` | Enable LSP-based deep analysis |
+
+Parses files using Tree-sitter and stores symbols in SQLite. For Dart/Flutter projects, deep analysis runs automatically to extract accurate call relationships via LSP.
 
 ---
 

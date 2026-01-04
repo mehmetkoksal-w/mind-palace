@@ -7,12 +7,17 @@ Mind Palace has two types of artifacts: **curated** (you write, commit to git) a
 ├── palace.jsonc          # Curated: project config
 ├── rooms/*.jsonc         # Curated: room definitions
 ├── playbooks/*.jsonc     # Curated: workflow templates
+├── brain/                # Generated: knowledge storage
+│   ├── decisions/*.json  # Decisions with outcomes
+│   ├── ideas/*.json      # Ideas and hypotheses
+│   └── learnings/*.json  # Verified learnings
+├── sessions/             # Generated: agent sessions
+│   └── *.json            # Session transcripts
 ├── index/
 │   ├── palace.db         # Generated: SQLite + FTS5 index
 │   └── scan.json         # Generated: scan metadata
 └── outputs/
-    ├── context-pack.json # Generated: assembled context
-    └── change-signal.json# Generated: diff information
+    └── context-pack.json # Generated: assembled context
 ```
 
 ---

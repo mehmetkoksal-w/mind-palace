@@ -70,17 +70,19 @@ Decisions aren't static. You can track their outcomes to prevent repeating mista
 Once a decision is tested in reality, record its success or failure:
 
 ```sh
-palace recall update d_abc123 successful
-palace recall update d_xyz789 failed --notes "Performance was too low"
+palace recall update d_abc123 success
+palace recall update d_xyz789 failed
 ```
+
+Outcome values: `success`, `failed`, `mixed`
 
 ### Linking Records
 
-Knowledge exists in a web of relationships:
+Knowledge exists in a web of relationships. Note: flags must come **before** the source ID:
 
 ```sh
-palace recall link d_new --supersedes d_old
-palace recall link l_pattern --supports d_choice
+palace recall link --supersedes d_old d_new
+palace recall link --supports d_choice l_pattern
 ```
 
 #### Supported Relations:
@@ -104,4 +106,4 @@ This enables AI agents to be aware of:
 - **Architectural Rules**: "Remember: All API responses must follow schema Z."
 - **Ongoing Discussions**: "Active Idea: We are planning to deprecate this utility."
 
-By committing these curated knowledge items to Git (stored in `.palace/memory/`), you build a permanent, shared intelligence for your codebase.
+By committing these curated knowledge items to Git (stored in `.palace/brain/`), you build a permanent, shared intelligence for your codebase.
