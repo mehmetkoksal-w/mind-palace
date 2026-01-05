@@ -2,8 +2,8 @@
   "name": "mind-palace-vscode",
   "displayName": "Mind Palace Observer",
   "description": "Head-Up Display for the Mind Palace CLI",
-  "version": "0.0.1-alpha",
-  "license": "PolyForm-Shield-1.0.0",
+  "version": "0.0.2-alpha",
+  "license": "MIT",
   "publisher": "mind-palace",
   "icon": "images/icon.png",
   "repository": {

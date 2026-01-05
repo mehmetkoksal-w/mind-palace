@@ -74,6 +74,24 @@ jobs:
           fi
           echo "Version: $VER"
 
+      - name: Verify Version Sync
+        run: |
+          ROOT_VER=$(cat VERSION)
+          DASH_VER=$(jq -r '.version' apps/dashboard/package.json)
+          VSCODE_VER=$(jq -r '.version' apps/vscode/package.json)
+          DOCS_VER=$(jq -r '.version' apps/docs/package.json)
+          
+          echo "Root VERSION: $ROOT_VER"
+          echo "Dashboard: $DASH_VER"
+          echo "VS Code: $VSCODE_VER"
+          echo "Docs: $DOCS_VER"
+          
+          if [ "$ROOT_VER" != "$DASH_VER" ] || [ "$ROOT_VER" != "$VSCODE_VER" ] || [ "$ROOT_VER" != "$DOCS_VER" ]; then
+            echo "❌ Version mismatch detected!"
+            exit 1
+          fi
+          echo "✅ All versions synchronized"
+
       - name: Build
         run: go build -v ./apps/cli
 

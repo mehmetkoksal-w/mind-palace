@@ -19,33 +19,47 @@ import (
 
 // Server provides the dashboard HTTP server.
 type Server struct {
-	butler   *butler.Butler
-	memory   *memory.Memory
-	corridor *corridor.GlobalCorridor
-	port     int
-	root     string
-	wsHub    *WSHub       // WebSocket hub for real-time updates
-	mu       sync.RWMutex // Protects butler, memory, and root during workspace switch
+	butler         *butler.Butler
+	memory         *memory.Memory
+	corridor       *corridor.GlobalCorridor
+	port           int
+	root           string
+	allowedOrigins []string     // CORS allowed origins
+	wsHub          *WSHub       // WebSocket hub for real-time updates
+	mu             sync.RWMutex // Protects butler, memory, and root during workspace switch
 }
 
 // Config holds dashboard server configuration.
 type Config struct {
-	Butler   *butler.Butler
-	Memory   *memory.Memory
-	Corridor *corridor.GlobalCorridor
-	Port     int
-	Root     string
+	Butler         *butler.Butler
+	Memory         *memory.Memory
+	Corridor       *corridor.GlobalCorridor
+	Port           int
+	Root           string
+	AllowedOrigins []string // CORS allowed origins
 }
 
 // New creates a new dashboard server.
 func New(cfg Config) *Server {
+	// Default to localhost origins if none specified (development mode)
+	allowedOrigins := cfg.AllowedOrigins
+	if len(allowedOrigins) == 0 {
+		allowedOrigins = []string{
+			"http://localhost:4200",
+			"http://localhost:3000",
+			"http://127.0.0.1:4200",
+			"http://127.0.0.1:3000",
+		}
+	}
+
 	return &Server{
-		butler:   cfg.Butler,
-		memory:   cfg.Memory,
-		corridor: cfg.Corridor,
-		port:     cfg.Port,
-		root:     cfg.Root,
-		wsHub:    NewWSHub(),
+		butler:         cfg.Butler,
+		memory:         cfg.Memory,
+		corridor:       cfg.Corridor,
+		port:           cfg.Port,
+		root:           cfg.Root,
+		allowedOrigins: allowedOrigins,
+		wsHub:          NewWSHub(),
 	}
 }
 
@@ -132,7 +146,7 @@ func (s *Server) Start(openBrowser bool) error {
 	}
 
 	server := &http.Server{
-		Handler:      corsMiddleware(mux),
+		Handler:      s.configureCORS(mux),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 	}
@@ -140,15 +154,35 @@ func (s *Server) Start(openBrowser bool) error {
 	return server.Serve(listener)
 }
 
-// corsMiddleware adds CORS headers for development.
-func corsMiddleware(next http.Handler) http.Handler {
+// configureCORS returns a CORS middleware with origin checking.
+func (s *Server) configureCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		origin := r.Header.Get("Origin")
+		
+		// Check if origin is allowed
+		allowed := false
+		for _, allowedOrigin := range s.allowedOrigins {
+			if origin == allowedOrigin {
+				allowed = true
+				break
+			}
+		}
 
+		// Set CORS headers only for allowed origins
+		if allowed {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
+
+		// Handle preflight OPTIONS request
 		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
+			if allowed {
+				w.WriteHeader(http.StatusOK)
+			} else {
+				w.WriteHeader(http.StatusForbidden)
+			}
 			return
 		}
 
@@ -190,7 +224,7 @@ func openURL(url string) {
 
 // handleWebSocket upgrades HTTP connections to WebSocket
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	ServeWS(s.wsHub, w, r)
+	ServeWS(s.wsHub, s.allowedOrigins, w, r)
 }
 
 // Broadcast sends an event to all connected WebSocket clients

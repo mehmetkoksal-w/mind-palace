@@ -1,5 +1,5 @@
-import { Injectable, signal } from '@angular/core';
-import { Subject, Observable } from 'rxjs';
+import { Injectable, signal } from "@angular/core";
+import { Subject, Observable } from "rxjs";
 
 export interface WebSocketEvent {
   type: string;
@@ -7,7 +7,7 @@ export interface WebSocketEvent {
   timestamp?: string;
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class WebSocketService {
   private socket: WebSocket | null = null;
   private eventsSubject = new Subject<WebSocketEvent>();
@@ -25,26 +25,24 @@ export class WebSocketService {
       return;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/api/ws`;
 
     try {
       this.socket = new WebSocket(wsUrl);
 
       this.socket.onopen = () => {
-        console.log('[WebSocket] Connected');
         this.connected.set(true);
         this.reconnectAttempts = 0;
       };
 
       this.socket.onclose = (event) => {
-        console.log('[WebSocket] Disconnected:', event.reason || 'Connection closed');
         this.connected.set(false);
         this.attemptReconnect();
       };
 
       this.socket.onerror = (error) => {
-        console.error('[WebSocket] Error:', error);
+        console.error("[WebSocket] Error:", error);
         this.connected.set(false);
       };
 
@@ -53,11 +51,11 @@ export class WebSocketService {
           const data = JSON.parse(event.data);
           this.eventsSubject.next(data);
         } catch (e) {
-          console.error('[WebSocket] Failed to parse message:', e);
+          console.error("[WebSocket] Failed to parse message:", e);
         }
       };
     } catch (e) {
-      console.error('[WebSocket] Failed to connect:', e);
+      console.error("[WebSocket] Failed to connect:", e);
       this.attemptReconnect();
     }
   }
@@ -87,7 +85,7 @@ export class WebSocketService {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message));
     } else {
-      console.warn('[WebSocket] Cannot send message - not connected');
+      console.warn("[WebSocket] Cannot send message - not connected");
     }
   }
 
@@ -96,14 +94,11 @@ export class WebSocketService {
    */
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('[WebSocket] Max reconnect attempts reached');
       return;
     }
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-
-    console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     setTimeout(() => {
       this.connect();

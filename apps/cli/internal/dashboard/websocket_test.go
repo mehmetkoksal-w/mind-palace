@@ -118,7 +118,8 @@ func TestWebSocketConnection(t *testing.T) {
 
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ServeWS(hub, w, r)
+		allowedOrigins := []string{"http://localhost"}
+		ServeWS(hub, allowedOrigins, w, r)
 	}))
 	defer server.Close()
 
@@ -145,7 +146,8 @@ func TestWebSocketBroadcast(t *testing.T) {
 
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ServeWS(hub, w, r)
+		allowedOrigins := []string{"http://localhost"}
+		ServeWS(hub, allowedOrigins, w, r)
 	}))
 	defer server.Close()
 
@@ -191,7 +193,8 @@ func TestWebSocketDisconnect(t *testing.T) {
 
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ServeWS(hub, w, r)
+		allowedOrigins := []string{"http://localhost"}
+		ServeWS(hub, allowedOrigins, w, r)
 	}))
 	defer server.Close()
 
@@ -226,7 +229,8 @@ func TestMultipleClients(t *testing.T) {
 
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ServeWS(hub, w, r)
+		allowedOrigins := []string{"http://localhost"}
+		ServeWS(hub, allowedOrigins, w, r)
 	}))
 	defer server.Close()
 

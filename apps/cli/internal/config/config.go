@@ -35,6 +35,14 @@ type AuthConfig struct {
 	Value  string `json:"value,omitempty"`
 }
 
+type DashboardConfig struct {
+	CORS *CORSConfig `json:"cors,omitempty"`
+}
+
+type CORSConfig struct {
+	AllowedOrigins []string `json:"allowedOrigins,omitempty"`
+}
+
 type PalaceConfig struct {
 	SchemaVersion string `json:"schemaVersion"`
 	Kind          string `json:"kind"`
@@ -48,6 +56,7 @@ type PalaceConfig struct {
 	Guardrails  Guardrails                `json:"guardrails"`
 	Neighbors   map[string]NeighborConfig `json:"neighbors,omitempty"`
 	Provenance  any                       `json:"provenance"`
+	Dashboard   *DashboardConfig          `json:"dashboard,omitempty"`
 
 	// Embedding configuration for semantic search
 	EmbeddingBackend string `json:"embeddingBackend,omitempty"` // "ollama", "openai", or "disabled"

@@ -277,13 +277,13 @@ func TestMCPToolHandlersMemory(t *testing.T) {
 		t.Fatalf("log activity output unexpected: %s", text)
 	}
 
-	resp = server.toolAddLearning(3, map[string]interface{}{
-		"content":    "Remember to test",
-		"scope":      "palace",
-		"confidence": float64(0.8),
+	resp = server.toolStore(3, map[string]interface{}{
+		"content": "Remember to test",
+		"scope":   "palace",
+		"as":      "learning",
 	})
-	if text := toolText(t, resp); !strings.Contains(text, "Learning Stored") {
-		t.Fatalf("add learning output unexpected: %s", text)
+	if text := toolText(t, resp); !strings.Contains(text, "Stored") {
+		t.Fatalf("store learning output unexpected: %s", text)
 	}
 
 	resp = server.toolRecall(4, map[string]interface{}{"limit": float64(5)})

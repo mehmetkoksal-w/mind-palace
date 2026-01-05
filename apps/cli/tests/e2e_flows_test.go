@@ -28,7 +28,7 @@ func TestBrainWorkflowE2E(t *testing.T) {
 		"main.go": `package main
 
 func main() {
-	// TODO: Add caching layer
+	// Main entry point
 }
 `,
 		"cache/cache.go": `package cache

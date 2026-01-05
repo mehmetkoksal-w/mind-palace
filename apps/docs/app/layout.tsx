@@ -67,7 +67,7 @@ const navbar = (
 
 const footer = (
   <Footer>
-    {new Date().getFullYear()} © Mind Palace. Licensed under PolyForm Shield 1.0.0
+    {new Date().getFullYear()} © Mind Palace. Licensed under MIT License
   </Footer>
 )
 

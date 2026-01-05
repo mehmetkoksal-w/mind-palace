@@ -234,4 +234,4 @@ We welcome contributions! Please see [Contributing Guide](./docs/contributing.md
 
 ## License
 
-PolyForm Shield 1.0.0 — see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE) for details.

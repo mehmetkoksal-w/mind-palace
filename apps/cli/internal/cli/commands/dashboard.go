@@ -8,6 +8,7 @@ import (
 
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/butler"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/corridor"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/dashboard"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
@@ -58,6 +59,13 @@ func ExecuteDashboard(opts DashboardOptions) error {
 		return err
 	}
 
+	// Load configuration to get CORS settings
+	var allowedOrigins []string
+	cfg, err := config.LoadPalaceConfig(rootPath)
+	if err == nil && cfg.Dashboard != nil && cfg.Dashboard.CORS != nil {
+		allowedOrigins = cfg.Dashboard.CORS.AllowedOrigins
+	}
+
 	// Open memory database
 	mem, err := memory.Open(rootPath)
 	if err != nil {
@@ -86,11 +94,12 @@ func ExecuteDashboard(opts DashboardOptions) error {
 	}
 
 	server := dashboard.New(dashboard.Config{
-		Butler:   b,
-		Memory:   mem,
-		Corridor: gc,
-		Port:     opts.Port,
-		Root:     rootPath,
+		Butler:         b,
+		Memory:         mem,
+		Corridor:       gc,
+		Port:           opts.Port,
+		Root:           rootPath,
+		AllowedOrigins: allowedOrigins,
 	})
 
 	fmt.Printf("Starting Mind Palace Dashboard...\n")

@@ -121,49 +121,6 @@ func (s *MCPServer) toolSessionEnd(id any, args map[string]interface{}) jsonRPCR
 	}
 }
 
-// toolAddLearning stores a learning for future reference (deprecated: use toolStore).
-func (s *MCPServer) toolAddLearning(id any, args map[string]interface{}) jsonRPCResponse {
-	content, _ := args["content"].(string)
-	if content == "" {
-		return s.toolError(id, "content is required")
-	}
-
-	scope, _ := args["scope"].(string)
-	if scope == "" {
-		scope = "palace"
-	}
-
-	scopePath, _ := args["scopePath"].(string)
-
-	confidence := 0.5
-	if c, ok := args["confidence"].(float64); ok {
-		confidence = c
-	}
-
-	learning := memory.Learning{
-		Scope:      scope,
-		ScopePath:  scopePath,
-		Content:    content,
-		Confidence: confidence,
-		Source:     "agent",
-	}
-
-	learningID, err := s.butler.AddLearning(learning)
-	if err != nil {
-		return s.toolError(id, fmt.Sprintf("add learning failed: %v", err))
-	}
-
-	var output strings.Builder
-	output.WriteString("# Learning Stored\n\n")
-	fmt.Fprintf(&output, "**ID:** `%s`\n", learningID)
-	fmt.Fprintf(&output, "**Scope:** %s", scope)
-	if scopePath != "" {
-		fmt.Fprintf(&output, " (%s)", scopePath)
-	}
-	output.WriteString("\n")
-	fmt.Fprintf(&output, "**Confidence:** %.0f%%\n", confidence*100)
-	fmt.Fprintf(&output, "**Content:** %s\n", content)
-
 	return jsonRPCResponse{
 		JSONRPC: "2.0",
 		ID:      id,
