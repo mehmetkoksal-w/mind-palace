@@ -1,14 +1,14 @@
-import { expect } from 'chai';
-import * as sinon from 'sinon';
-import * as cp from 'child_process';
-import { EventEmitter } from 'events';
-import { PalaceBridge, MCP_TOOLS } from '../../bridge';
+import { expect } from "chai";
+import * as sinon from "sinon";
+import * as cp from "child_process";
+import { EventEmitter } from "events";
+import { PalaceBridge, MCP_TOOLS } from "../../bridge";
 
 /**
  * Bridge Tests
  * Tests MCP communication, tool calling, and error handling
  */
-describe('PalaceBridge Tests', () => {
+describe("PalaceBridge Tests", () => {
   let sandbox: sinon.SinonSandbox;
   let bridge: PalaceBridge;
 
@@ -22,68 +22,68 @@ describe('PalaceBridge Tests', () => {
     sandbox.restore();
   });
 
-  describe('Initialization', () => {
-    it('should create bridge instance', () => {
+  describe("Initialization", () => {
+    it("should create bridge instance", () => {
       expect(bridge).to.exist;
       expect(bridge).to.be.instanceOf(PalaceBridge);
     });
 
-    it('should dispose cleanly', () => {
+    it("should dispose cleanly", () => {
       bridge.dispose();
       expect(() => bridge.dispose()).to.not.throw();
     });
   });
 
-  describe('High-Level API Methods', () => {
-    it('should provide getBrief method', () => {
-      expect(bridge.getBrief).to.be.a('function');
+  describe("High-Level API Methods", () => {
+    it("should provide getBrief method", () => {
+      expect(bridge.getBrief).to.be.a("function");
     });
 
-    it('should provide getFileIntel method', () => {
-      expect(bridge.getFileIntel).to.be.a('function');
+    it("should provide getFileIntel method", () => {
+      expect(bridge.getFileIntel).to.be.a("function");
     });
 
-    it('should provide recall methods', () => {
-      expect(bridge.recallLearnings).to.be.a('function');
-      expect(bridge.recallDecisions).to.be.a('function');
-      expect(bridge.recallIdeas).to.be.a('function');
+    it("should provide recall methods", () => {
+      expect(bridge.recallLearnings).to.be.a("function");
+      expect(bridge.recallDecisions).to.be.a("function");
+      expect(bridge.recallIdeas).to.be.a("function");
     });
 
-    it('should provide session methods', () => {
-      expect(bridge.startSession).to.be.a('function');
-      expect(bridge.listSessions).to.be.a('function');
-      expect(bridge.endSession).to.be.a('function');
+    it("should provide session methods", () => {
+      expect(bridge.startSession).to.be.a("function");
+      expect(bridge.listSessions).to.be.a("function");
+      expect(bridge.endSession).to.be.a("function");
     });
 
-    it('should provide corridor methods', () => {
-      expect(bridge.getCorridorLearnings).to.be.a('function');
-      expect(bridge.getCorridorStats).to.be.a('function');
+    it("should provide corridor methods", () => {
+      expect(bridge.getCorridorLearnings).to.be.a("function");
+      expect(bridge.getCorridorStats).to.be.a("function");
     });
 
-    it('should provide semantic search methods', () => {
-      expect(bridge.semanticSearch).to.be.a('function');
-      expect(bridge.hybridSearch).to.be.a('function');
+    it("should provide semantic search methods", () => {
+      expect(bridge.semanticSearch).to.be.a("function");
+      expect(bridge.hybridSearch).to.be.a("function");
     });
 
-    it('should provide store method', () => {
-      expect(bridge.store).to.be.a('function');
+    it("should provide store method", () => {
+      expect(bridge.store).to.be.a("function");
     });
 
-    it('should provide search method', () => {
-      expect(bridge.search).to.be.a('function');
+    it("should provide search method", () => {
+      expect(bridge.search).to.be.a("function");
     });
 
-    it('should provide runHeal method', () => {
-      expect(bridge.runHeal).to.be.a('function');
+    it("should provide runHeal method", () => {
+      expect(bridge.runHeal).to.be.a("function");
     });
 
-    it('should provide runVerify method', () => {
-      expect(bridge.runVerify).to.be.a('function');
+    it("should provide runVerify method", () => {
+      expect(bridge.runVerify).to.be.a("function");
     });
   });
 
-  describe('API Behavior', () => {
-    it('should handle errors when CLI is not available', async () => {
+  describe("API Behavior", () => {
+    it("should handle errors when CLI is not available", async () => {
       // When CLI is not available, methods should handle gracefully
       try {
         await bridge.getBrief();
@@ -94,7 +94,7 @@ describe('PalaceBridge Tests', () => {
       }
     });
 
-    it('should handle recallLearnings without errors', async () => {
+    it("should handle recallLearnings without errors", async () => {
       try {
         await bridge.recallLearnings({});
       } catch (error) {
@@ -103,7 +103,7 @@ describe('PalaceBridge Tests', () => {
       }
     });
 
-    it('should handle recallDecisions without errors', async () => {
+    it("should handle recallDecisions without errors", async () => {
       try {
         await bridge.recallDecisions({});
       } catch (error) {
@@ -111,7 +111,7 @@ describe('PalaceBridge Tests', () => {
       }
     });
 
-    it('should handle recallIdeas without errors', async () => {
+    it("should handle recallIdeas without errors", async () => {
       try {
         await bridge.recallIdeas({});
       } catch (error) {
@@ -119,87 +119,96 @@ describe('PalaceBridge Tests', () => {
       }
     });
 
-    it('should accept store options', async () => {
+    it("should accept store options", async () => {
       try {
-        await bridge.store('test content', {
-          as: 'idea',
-          scope: 'palace',
+        await bridge.store("test content", {
+          as: "idea",
+          scope: "palace",
         });
       } catch (error) {
         expect(error).to.exist;
       }
     });
 
-    it('should accept session start parameters', async () => {
+    it("should accept session start parameters", async () => {
       try {
-        await bridge.startSession('copilot', 'Test goal');
+        await bridge.startSession("copilot", "Test goal");
       } catch (error) {
         expect(error).to.exist;
       }
     });
   });
 
-  describe('MCP Tools Constants', () => {
-    it('should export MCP_TOOLS constants', () => {
+  describe("MCP Tools Constants", () => {
+    it("should export MCP_TOOLS constants", () => {
       expect(MCP_TOOLS).to.exist;
-      expect(MCP_TOOLS.BRIEF).to.equal('brief');
-      expect(MCP_TOOLS.EXPLORE).to.equal('explore');
-      expect(MCP_TOOLS.STORE).to.equal('store');
-      expect(MCP_TOOLS.RECALL).to.equal('recall');
+      expect(MCP_TOOLS.BRIEF).to.equal("brief");
+      expect(MCP_TOOLS.EXPLORE).to.equal("explore");
+      expect(MCP_TOOLS.STORE).to.equal("store");
+      expect(MCP_TOOLS.RECALL).to.equal("recall");
     });
 
-    it('should have all required tool names', () => {
+    it("should have all required tool names", () => {
       const requiredTools = [
-        'explore', 'explore_rooms', 'explore_context',
-        'store', 'recall', 'brief', 'brief_file',
-        'session_start', 'session_list', 'session_end',
-        'corridor_learnings', 'corridor_stats',
-        'search_semantic', 'search_hybrid',
+        "explore",
+        "explore_rooms",
+        "explore_context",
+        "store",
+        "recall",
+        "brief",
+        "brief_file",
+        "session_start",
+        "session_list",
+        "session_end",
+        "corridor_learnings",
+        "corridor_stats",
+        "search_semantic",
+        "search_hybrid",
       ];
 
       const toolValues = Object.values(MCP_TOOLS);
-      requiredTools.forEach(tool => {
+      requiredTools.forEach((tool) => {
         expect(toolValues).to.include(tool, `MCP_TOOLS should include ${tool}`);
       });
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle connection failures gracefully', async () => {
+  describe("Error Handling", () => {
+    it("should handle connection failures gracefully", async () => {
       // Stub child_process.spawn to simulate failure
-      const spawnStub = sandbox.stub(cp, 'spawn');
+      const spawnStub = sandbox.stub(cp, "spawn");
       const mockProcess = new EventEmitter() as any;
       mockProcess.stdin = { write: sandbox.stub(), end: sandbox.stub() };
       mockProcess.stdout = new EventEmitter();
       mockProcess.stderr = new EventEmitter();
       mockProcess.kill = sandbox.stub();
-      
+
       spawnStub.returns(mockProcess);
 
       // Test should not throw - bridge handles errors gracefully
       const result = await bridge.getBrief();
-      
+
       // Emit error after call to simulate async error
       setTimeout(() => {
-        mockProcess.emit('error', new Error('ENOENT: palace not found'));
+        mockProcess.emit("error", new Error("ENOENT: palace not found"));
       }, 10);
-      
+
       // Bridge should return gracefully even if CLI not available
       expect(result).to.exist;
     });
 
-    it('should handle invalid responses', async () => {
-      const spawnStub = sandbox.stub(cp, 'spawn');
+    it("should handle invalid responses", async () => {
+      const spawnStub = sandbox.stub(cp, "spawn");
       const mockProcess = new EventEmitter() as any;
       mockProcess.stdin = { write: sandbox.stub(), end: sandbox.stub() };
       mockProcess.stdout = new EventEmitter();
       mockProcess.stderr = new EventEmitter();
       mockProcess.kill = sandbox.stub();
-      
+
       spawnStub.returns(mockProcess);
 
       setTimeout(() => {
-        mockProcess.stdout.emit('data', 'invalid json response\n');
+        mockProcess.stdout.emit("data", "invalid json response\n");
       }, 10);
 
       try {
@@ -210,14 +219,14 @@ describe('PalaceBridge Tests', () => {
     });
   });
 
-  describe('Disposal', () => {
-    it('should clean up resources on dispose', () => {
-      const spy = sandbox.spy(bridge, 'dispose');
+  describe("Disposal", () => {
+    it("should clean up resources on dispose", () => {
+      const spy = sandbox.spy(bridge, "dispose");
       bridge.dispose();
       expect(spy.called).to.be.true;
     });
 
-    it('should be idempotent', () => {
+    it("should be idempotent", () => {
       bridge.dispose();
       bridge.dispose();
       bridge.dispose();

@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 // ============================================================================
 // Types & Interfaces
@@ -9,7 +9,7 @@ export enum LogLevel {
   INFO = 1,
   WARN = 2,
   ERROR = 3,
-  FATAL = 4
+  FATAL = 4,
 }
 
 export interface LogEntry {
@@ -40,7 +40,7 @@ class ExtensionLogger {
     showTimestamp: true,
     showContext: true,
     showNotifications: true,
-    outputChannelName: 'Mind Palace'
+    outputChannelName: "Mind Palace",
   };
 
   // --------------------------------------------------------------------------
@@ -50,17 +50,18 @@ class ExtensionLogger {
   initialize(context: vscode.ExtensionContext): void {
     this.outputChannel = vscode.window.createOutputChannel(
       this.config.outputChannelName,
-      'log'
+      "log"
     );
 
     context.subscriptions.push(this.outputChannel);
 
-    const isDevelopment = context.extensionMode === vscode.ExtensionMode.Development;
+    const isDevelopment =
+      context.extensionMode === vscode.ExtensionMode.Development;
     this.config.minLevel = isDevelopment ? LogLevel.DEBUG : LogLevel.INFO;
 
-    this.info('Logger initialized', 'ExtensionLogger', {
-      mode: isDevelopment ? 'development' : 'production',
-      minLevel: LogLevel[this.config.minLevel]
+    this.info("Logger initialized", "ExtensionLogger", {
+      mode: isDevelopment ? "development" : "production",
+      minLevel: LogLevel[this.config.minLevel],
     });
   }
 
@@ -72,15 +73,27 @@ class ExtensionLogger {
   // Public API
   // --------------------------------------------------------------------------
 
-  debug(message: string, context?: string, metadata?: Record<string, any>): void {
+  debug(
+    message: string,
+    context?: string,
+    metadata?: Record<string, any>
+  ): void {
     this.log(LogLevel.DEBUG, message, context, metadata);
   }
 
-  info(message: string, context?: string, metadata?: Record<string, any>): void {
+  info(
+    message: string,
+    context?: string,
+    metadata?: Record<string, any>
+  ): void {
     this.log(LogLevel.INFO, message, context, metadata);
   }
 
-  warn(message: string, context?: string, metadata?: Record<string, any>): void {
+  warn(
+    message: string,
+    context?: string,
+    metadata?: Record<string, any>
+  ): void {
     this.log(LogLevel.WARN, message, context, metadata);
   }
 
@@ -107,11 +120,13 @@ class ExtensionLogger {
     this.log(LogLevel.FATAL, message, context, { ...metadata, error });
 
     // Always show notification for fatal errors
-    vscode.window.showErrorMessage(`Mind Palace (FATAL): ${message}`, 'Show Logs').then(selection => {
-      if (selection === 'Show Logs') {
-        this.show();
-      }
-    });
+    vscode.window
+      .showErrorMessage(`Mind Palace (FATAL): ${message}`, "Show Logs")
+      .then((selection) => {
+        if (selection === "Show Logs") {
+          this.show();
+        }
+      });
   }
 
   forContext(context: string): ContextLogger {
@@ -141,7 +156,7 @@ class ExtensionLogger {
       level,
       message,
       context,
-      metadata
+      metadata,
     };
 
     // Extract error if present
@@ -179,7 +194,7 @@ class ExtensionLogger {
     // Message
     parts.push(entry.message);
 
-    const line = parts.join(' ');
+    const line = parts.join(" ");
     this.outputChannel.appendLine(line);
 
     // Metadata
@@ -196,14 +211,18 @@ class ExtensionLogger {
           this.outputChannel.appendLine(`  Stack:\n${entry.error.stack}`);
         }
       } else {
-        this.outputChannel.appendLine(`  Error: ${JSON.stringify(entry.error)}`);
+        this.outputChannel.appendLine(
+          `  Error: ${JSON.stringify(entry.error)}`
+        );
       }
     }
   }
 
   private formatTimestamp(date: Date): string {
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${date.getMilliseconds().toString().padStart(3, '0')}`;
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
+      date.getSeconds()
+    )}.${date.getMilliseconds().toString().padStart(3, "0")}`;
   }
 }
 
@@ -229,11 +248,19 @@ export class ContextLogger {
     this.logger.warn(message, this.context, metadata);
   }
 
-  error(message: string, error?: Error | unknown, metadata?: Record<string, any>): void {
+  error(
+    message: string,
+    error?: Error | unknown,
+    metadata?: Record<string, any>
+  ): void {
     this.logger.error(message, error, this.context, metadata);
   }
 
-  fatal(message: string, error?: Error | unknown, metadata?: Record<string, any>): void {
+  fatal(
+    message: string,
+    error?: Error | unknown,
+    metadata?: Record<string, any>
+  ): void {
     this.logger.fatal(message, error, this.context, metadata);
   }
 

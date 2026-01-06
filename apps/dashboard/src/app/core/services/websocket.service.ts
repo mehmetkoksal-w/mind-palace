@@ -1,5 +1,6 @@
-import { Injectable, signal } from "@angular/core";
+import { Injectable, signal, inject } from "@angular/core";
 import { Subject, Observable } from "rxjs";
+import { LoggerService } from "./logger.service";
 
 export interface WebSocketEvent {
   type: string;
@@ -9,6 +10,8 @@ export interface WebSocketEvent {
 
 @Injectable({ providedIn: "root" })
 export class WebSocketService {
+  private readonly logger =
+    inject(LoggerService).forContext("WebSocketService");
   private socket: WebSocket | null = null;
   private eventsSubject = new Subject<WebSocketEvent>();
   private reconnectAttempts = 0;
@@ -42,7 +45,7 @@ export class WebSocketService {
       };
 
       this.socket.onerror = (error) => {
-        console.error("[WebSocket] Error:", error);
+        this.logger.error("WebSocket error occurred", error, { url: wsUrl });
         this.connected.set(false);
       };
 
@@ -51,11 +54,15 @@ export class WebSocketService {
           const data = JSON.parse(event.data);
           this.eventsSubject.next(data);
         } catch (e) {
-          console.error("[WebSocket] Failed to parse message:", e);
+          this.logger.error("Failed to parse WebSocket message", e, {
+            rawData: event.data?.substring(0, 100),
+          });
         }
       };
     } catch (e) {
-      console.error("[WebSocket] Failed to connect:", e);
+      this.logger.error("Failed to create WebSocket connection", e, {
+        url: wsUrl,
+      });
       this.attemptReconnect();
     }
   }
@@ -85,7 +92,10 @@ export class WebSocketService {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message));
     } else {
-      console.warn("[WebSocket] Cannot send message - not connected");
+      this.logger.warn("Cannot send message - WebSocket not connected", {
+        messageType: message?.type,
+        readyState: this.socket?.readyState,
+      });
     }
   }
 

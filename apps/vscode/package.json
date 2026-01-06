@@ -374,9 +374,9 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "cross-env NODE_ENV=production node esbuild.config.js",
+    "compile": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch",
     "test": "node ./out/test/runTests.js",
     "test:unit": "mocha --require ts-node/register 'src/test/unit/**/*.test.ts'",
     "test:coverage": "nyc npm run test:unit",
@@ -385,6 +385,7 @@
   "devDependencies": {
     "@types/chai": "^5.2.3",
     "@types/cytoscape": "^3.21.9",
+    "@types/d3": "^7.4.3",
     "@types/minimatch": "^5.1.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "^18.14.6",
@@ -392,7 +393,10 @@
     "@types/vscode": "^1.80.0",
     "@vscode/test-electron": "^2.4.1",
     "chai": "^6.2.2",
+    "cross-env": "^10.1.0",
     "cytoscape": "^3.33.1",
+    "d3": "^7.9.0",
+    "esbuild": "^0.20.2",
     "mocha": "^10.8.2",
     "nyc": "^17.1.0",
     "sinon": "^19.0.2",
