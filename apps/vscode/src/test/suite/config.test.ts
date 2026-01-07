@@ -1,9 +1,12 @@
 import { expect } from "chai";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import * as fs from "fs";
-import * as path from "path";
-import { getConfig, watchProjectConfig, readProjectConfig } from "../../config";
+import {
+  getConfig,
+  watchProjectConfig,
+  readProjectConfig,
+  fsAdapter,
+} from "../../config";
 
 /**
  * Configuration Tests
@@ -127,9 +130,9 @@ describe("Configuration Tests", () => {
         .value([{ uri: { fsPath: "/test/workspace" } }]);
 
       const readFileStub = sandbox
-        .stub(fs, "readFileSync")
+        .stub(fsAdapter, "readFileSync")
         .returns(JSON.stringify(mockProjectConfig));
-      sandbox.stub(fs, "existsSync").returns(true);
+      sandbox.stub(fsAdapter, "existsSync").returns(true);
 
       const config = getConfig();
 
@@ -159,9 +162,9 @@ describe("Configuration Tests", () => {
         .value([{ uri: { fsPath: "/test/workspace" } }]);
 
       sandbox
-        .stub(fs, "readFileSync")
+        .stub(fsAdapter, "readFileSync")
         .returns(JSON.stringify(mockProjectConfig));
-      sandbox.stub(fs, "existsSync").returns(true);
+      sandbox.stub(fsAdapter, "existsSync").returns(true);
 
       const config = getConfig();
       expect(config.autoSync).to.equal(false); // Project config wins
@@ -176,7 +179,7 @@ describe("Configuration Tests", () => {
         .stub(vscode.workspace, "workspaceFolders")
         .value([{ uri: { fsPath: "/test/workspace" } }]);
 
-      sandbox.stub(fs, "existsSync").returns(false);
+      sandbox.stub(fsAdapter, "existsSync").returns(false);
 
       const config = getConfig();
       expect(config.autoSync).to.equal(true); // Falls back to defaults
@@ -191,8 +194,8 @@ describe("Configuration Tests", () => {
         .stub(vscode.workspace, "workspaceFolders")
         .value([{ uri: { fsPath: "/test/workspace" } }]);
 
-      sandbox.stub(fs, "existsSync").returns(true);
-      sandbox.stub(fs, "readFileSync").returns("{ invalid json }");
+      sandbox.stub(fsAdapter, "existsSync").returns(true);
+      sandbox.stub(fsAdapter, "readFileSync").returns("{ invalid json }");
 
       const config = getConfig();
       expect(config.autoSync).to.equal(true); // Falls back to defaults
@@ -213,9 +216,14 @@ describe("Configuration Tests", () => {
       };
       createFileSystemWatcherStub.returns(mockWatcher as any);
 
+      const mockUri = {
+        fsPath: "/test/workspace",
+        scheme: "file",
+        path: "/test/workspace",
+      };
       sandbox
         .stub(vscode.workspace, "workspaceFolders")
-        .value([{ uri: { fsPath: "/test/workspace" } }]);
+        .value([{ uri: mockUri, name: "test", index: 0 }]);
 
       const callback = sandbox.stub();
       const watcher = watchProjectConfig(callback);
@@ -225,6 +233,15 @@ describe("Configuration Tests", () => {
     });
 
     it("should trigger callback on config change", () => {
+      const mockUri = {
+        fsPath: "/test/workspace",
+        scheme: "file",
+        path: "/test/workspace",
+      };
+      sandbox
+        .stub(vscode.workspace, "workspaceFolders")
+        .value([{ uri: mockUri, name: "test", index: 0 }]);
+
       let changeHandler: any;
       const mockWatcher = {
         onDidChange: (handler: any) => {

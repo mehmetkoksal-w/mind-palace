@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import * as jsonc from "jsonc-parser";
+import { logger } from "./services/logger";
 
 /**
  * VS Code extension configuration from .palace/palace.jsonc
@@ -68,6 +69,12 @@ const DEFAULTS: Omit<MergedConfig, "binaryPath"> = {
   },
 };
 
+// Adapter for filesystem calls so tests can stub without touching core module
+export const fsAdapter = {
+  existsSync: (p: string) => fs.existsSync(p),
+  readFileSync: (p: string, enc: BufferEncoding) => fs.readFileSync(p, enc),
+};
+
 /**
  * Reads and merges configuration from .palace/palace.jsonc and VS Code settings.
  * Project config takes precedence over VS Code settings.
@@ -132,22 +139,22 @@ export function readProjectConfig(): PalaceVSCodeConfig | null {
   );
 
   try {
-    if (!fs.existsSync(configPath)) {
+    if (!fsAdapter.existsSync(configPath)) {
       return null;
     }
 
-    const content = fs.readFileSync(configPath, "utf-8");
+    const content = fsAdapter.readFileSync(configPath, "utf-8");
     const errors: jsonc.ParseError[] = [];
     const parsed = jsonc.parse(content, errors);
 
     if (errors.length > 0) {
-      console.warn("[Config] Errors parsing palace.jsonc:", errors);
+      logger.warn("Errors parsing palace.jsonc", "Config", { errors });
       return null;
     }
 
     return parsed?.vscode ?? null;
   } catch (error) {
-    console.error("[Config] Error reading palace.jsonc:", error);
+    logger.error("Error reading palace.jsonc", error, "Config");
     return null;
   }
 }
@@ -159,10 +166,15 @@ export function readProjectConfig(): PalaceVSCodeConfig | null {
 export function watchProjectConfig(
   onConfigChange: () => void
 ): vscode.Disposable {
-  const pattern = new vscode.RelativePattern(
-    vscode.workspace.workspaceFolders?.[0] ?? "",
-    ".palace/palace.jsonc"
-  );
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  if (!workspaceFolder) {
+    // No workspace open: return a no-op disposable to avoid errors in tests/runtime
+    return { dispose: () => {} } as vscode.Disposable;
+  }
+
+  // Use string base path for broader compatibility in tests and runtime
+  const basePath = workspaceFolder.uri.fsPath;
+  const pattern = new vscode.RelativePattern(basePath, ".palace/palace.jsonc");
 
   const watcher = vscode.workspace.createFileSystemWatcher(pattern);
 

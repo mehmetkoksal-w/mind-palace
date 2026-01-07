@@ -3,6 +3,7 @@ import { parse as parseJSONC } from "jsonc-parser";
 import * as path from "path";
 import * as vscode from "vscode";
 import { PalaceBridge } from "./bridge";
+import { logger } from "./logger";
 
 interface RoomConfig {
   name: string;
@@ -127,7 +128,7 @@ export class PalaceSidebarProvider implements vscode.WebviewViewProvider {
         connected: true,
       });
     } catch (error) {
-      console.error("Failed to connect to MCP:", error);
+      logger.error("Failed to connect to MCP", error, "PalaceSidebar");
       this._view?.webview.postMessage({
         command: "connectionStatus",
         connected: false,
@@ -179,7 +180,7 @@ export class PalaceSidebarProvider implements vscode.WebviewViewProvider {
         results,
       });
     } catch (error: any) {
-      console.error("Search failed:", error);
+      logger.error("Search failed", error, "PalaceSidebar");
       this._view?.webview.postMessage({
         command: "searchState",
         state: "error",
@@ -298,7 +299,11 @@ export class PalaceSidebarProvider implements vscode.WebviewViewProvider {
           });
         }
       } catch (e) {
-        console.error(`Error parsing room file: ${uri.fsPath}`, e);
+        logger.error(
+          `Error parsing room file: ${uri.fsPath}`,
+          e,
+          "PalaceSidebar"
+        );
       }
     }
 

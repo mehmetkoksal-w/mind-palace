@@ -2,7 +2,7 @@
   "name": "mind-palace-vscode",
   "displayName": "Mind Palace Observer",
   "description": "Head-Up Display for the Mind Palace CLI",
-  "version": "0.0.2-alpha",
+  "version": "0.2.0-alpha",
   "license": "MIT",
   "publisher": "mind-palace",
   "icon": "images/icon.png",
@@ -380,7 +380,7 @@
     "test": "node ./out/test/runTests.js",
     "test:unit": "mocha --require ts-node/register 'src/test/unit/**/*.test.ts'",
     "test:coverage": "nyc npm run test:unit",
-    "pretest": "npm run compile"
+    "pretest": "npm run compile && tsc -p ."
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",

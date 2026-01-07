@@ -3,7 +3,7 @@
  * Bundled with Cytoscape to run in VS Code webview
  */
 
-import * as cytoscape from "cytoscape";
+import cytoscape from "cytoscape";
 
 // Declare vscode API (injected by VS Code)
 declare const acquireVsCodeApi: () => any;

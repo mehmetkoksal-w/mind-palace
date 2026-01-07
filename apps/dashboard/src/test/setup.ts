@@ -1,7 +1,14 @@
-import { beforeAll, afterEach, vi } from 'vitest';
-import '@testing-library/jest-dom/vitest';
-import { TestBed } from '@angular/core/testing';
-import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
+import { beforeAll, afterEach, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { TestBed } from "@angular/core/testing";
+import {
+  BrowserDynamicTestingModule,
+  platformBrowserDynamicTesting,
+} from "@angular/platform-browser-dynamic/testing";
+import { ɵresetCompiledComponents } from "@angular/core";
+
+// Mock all SCSS imports
+vi.mock("*.scss", () => ({}));
 
 // Initialize Angular testing environment
 beforeAll(() => {
@@ -10,12 +17,12 @@ beforeAll(() => {
     BrowserDynamicTestingModule,
     platformBrowserDynamicTesting(),
     {
-      teardown: { destroyAfterEach: true }
+      teardown: { destroyAfterEach: true },
     }
   );
 
   // Mock window.matchMedia for responsive components
-  Object.defineProperty(window, 'matchMedia', {
+  Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: (query: string) => ({
       matches: false,

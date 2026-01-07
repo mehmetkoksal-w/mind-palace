@@ -1,161 +1,188 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
-import { PalaceBridge, StoreResult } from '../bridge';
+import * as vscode from "vscode";
+import * as path from "path";
+import { PalaceBridge, StoreResult } from "../bridge";
 
 /**
  * Store command types
  */
-export type StoreType = 'idea' | 'decision' | 'learning';
+export type StoreType = "idea" | "decision" | "learning";
 
 /**
  * Determine scope from a file path
  */
-function determineScope(filePath: string | undefined, workspaceRoot: string | undefined): { scope: 'palace' | 'room' | 'file'; scopePath?: string } {
-    if (!filePath || !workspaceRoot) {
-        return { scope: 'palace' };
-    }
+function determineScope(
+  filePath: string | undefined,
+  workspaceRoot: string | undefined
+): { scope: "palace" | "room" | "file"; scopePath?: string } {
+  if (!filePath || !workspaceRoot) {
+    return { scope: "palace" };
+  }
 
-    // Get relative path from workspace root
-    const relativePath = path.relative(workspaceRoot, filePath);
+  // Get relative path from workspace root
+  const relativePath = path.relative(workspaceRoot, filePath);
 
-    // Check if inside a room (.palace/rooms/*.jsonc defines rooms)
-    // For now, use file scope for specific files
-    if (relativePath) {
-        return {
-            scope: 'file',
-            scopePath: relativePath,
-        };
-    }
+  // Check if inside a room (.palace/rooms/*.jsonc defines rooms)
+  // For now, use file scope for specific files
+  if (relativePath) {
+    return {
+      scope: "file",
+      scopePath: relativePath,
+    };
+  }
 
-    return { scope: 'palace' };
+  return { scope: "palace" };
 }
 
 /**
  * Get selected text or prompt for input
  */
-async function getContent(preselectedText?: string): Promise<string | undefined> {
-    if (preselectedText) {
-        // If text is selected, optionally allow editing it
-        const result = await vscode.window.showInputBox({
-            prompt: 'Edit content (or leave as-is)',
-            value: preselectedText,
-            placeHolder: 'Enter your thought...',
-            validateInput: (value) => {
-                if (!value.trim()) {
-                    return 'Content cannot be empty';
-                }
-                return undefined;
-            },
-        });
-        return result;
-    }
-
-    // No pre-selected text, prompt for input
+async function getContent(
+  preselectedText?: string
+): Promise<string | undefined> {
+  if (preselectedText) {
+    // If text is selected, optionally allow editing it
     const result = await vscode.window.showInputBox({
-        prompt: 'What do you want to remember?',
-        placeHolder: 'Enter your thought...',
-        validateInput: (value) => {
-            if (!value.trim()) {
-                return 'Content cannot be empty';
-            }
-            return undefined;
-        },
+      prompt: "Edit content (or leave as-is)",
+      value: preselectedText,
+      placeHolder: "Enter your thought...",
+      validateInput: (value) => {
+        if (!value.trim()) {
+          return "Content cannot be empty";
+        }
+        return undefined;
+      },
     });
     return result;
+  }
+
+  // No pre-selected text, prompt for input
+  const result = await vscode.window.showInputBox({
+    prompt: "What do you want to remember?",
+    placeHolder: "Enter your thought...",
+    validateInput: (value) => {
+      if (!value.trim()) {
+        return "Content cannot be empty";
+      }
+      return undefined;
+    },
+  });
+  return result;
 }
 
 /**
  * Show success notification with stored item info
  */
 function showSuccessNotification(type: StoreType, result: StoreResult): void {
-    const typeLabels: Record<StoreType, string> = {
-        'idea': 'Idea',
-        'decision': 'Decision',
-        'learning': 'Learning',
-    };
+  const typeLabels: Record<StoreType, string> = {
+    idea: "Idea",
+    decision: "Decision",
+    learning: "Learning",
+  };
 
-    const icons: Record<StoreType, string> = {
-        'idea': '$(lightbulb)',
-        'decision': '$(law)',
-        'learning': '$(book)',
-    };
+  const icons: Record<StoreType, string> = {
+    idea: "$(lightbulb)",
+    decision: "$(law)",
+    learning: "$(book)",
+  };
 
-    const message = `${icons[type]} ${typeLabels[type]} stored successfully`;
+  const message = `${icons[type]} ${typeLabels[type]} stored successfully`;
 
-    // Show with view action
-    vscode.window.showInformationMessage(
-        message,
-        'View in Knowledge Panel'
-    ).then(selection => {
-        if (selection === 'View in Knowledge Panel') {
-            vscode.commands.executeCommand('mindPalace.knowledgeView.focus');
-            vscode.commands.executeCommand('mindPalace.refreshKnowledge');
-        }
+  // Show with view action
+  vscode.window
+    .showInformationMessage(message, "View in Knowledge Panel")
+    .then((selection) => {
+      if (selection === "View in Knowledge Panel") {
+        vscode.commands.executeCommand("mindPalace.knowledgeView.focus");
+        vscode.commands.executeCommand("mindPalace.refreshKnowledge");
+      }
     });
 
-    // Check for contradictions and show warning
-    if (result.contradictions && result.contradictions.length > 0) {
-        showContradictionWarning(result);
-    }
+  // Check for contradictions and show warning
+  if (result.contradictions && result.contradictions.length > 0) {
+    showContradictionWarning(result);
+  }
 }
 
 /**
  * Show contradiction warning when storing conflicts with existing knowledge
  */
 async function showContradictionWarning(result: StoreResult): Promise<void> {
-    const contradictions = result.contradictions!;
-    const count = contradictions.length;
+  const contradictions = result.contradictions!;
+  const count = contradictions.length;
 
-    const firstContradiction = contradictions[0];
-    const confidence = Math.round(firstContradiction.confidence * 100);
+  const firstContradiction = contradictions[0];
+  const confidence = Math.round(firstContradiction.confidence * 100);
 
-    const message = count === 1
-        ? `$(warning) Contradiction detected (${confidence}% confidence): ${firstContradiction.explanation?.substring(0, 80) || 'This may conflict with existing knowledge'}...`
-        : `$(warning) ${count} contradictions detected with existing knowledge`;
+  const message =
+    count === 1
+      ? `$(warning) Contradiction detected (${confidence}% confidence): ${
+          firstContradiction.explanation?.substring(0, 80) ||
+          "This may conflict with existing knowledge"
+        }...`
+      : `$(warning) ${count} contradictions detected with existing knowledge`;
 
-    const selection = await vscode.window.showWarningMessage(
-        message,
-        { modal: false },
-        'View Details',
-        'Dismiss'
-    );
+  const selection = await vscode.window.showWarningMessage(
+    message,
+    { modal: false },
+    "View Details",
+    "Dismiss"
+  );
 
-    if (selection === 'View Details') {
-        showContradictionDetails(result.id, contradictions);
-    }
+  if (selection === "View Details") {
+    showContradictionDetails(result.id, contradictions);
+  }
 }
 
 /**
  * Show detailed contradiction information in a webview
  */
-function showContradictionDetails(recordId: string, contradictions: StoreResult['contradictions']): void {
-    if (!contradictions || contradictions.length === 0) return;
+function showContradictionDetails(
+  recordId: string,
+  contradictions: StoreResult["contradictions"]
+): void {
+  if (!contradictions || contradictions.length === 0) return;
 
-    const panel = vscode.window.createWebviewPanel(
-        'mindPalaceContradictions',
-        `Contradictions: ${recordId.substring(0, 12)}...`,
-        vscode.ViewColumn.Two,
-        { enableScripts: false }
-    );
+  const panel = vscode.window.createWebviewPanel(
+    "mindPalaceContradictions",
+    `Contradictions: ${recordId.substring(0, 12)}...`,
+    vscode.ViewColumn.Two,
+    { enableScripts: false }
+  );
 
-    const contradictionItems = contradictions.map((c, i) => `
+  const contradictionItems = contradictions
+    .map(
+      (c, i) => `
         <div class="contradiction">
             <div class="contradiction-header">
                 <span class="contradiction-number">#${i + 1}</span>
                 <span class="contradiction-type">${c.type}</span>
-                <span class="contradiction-confidence">${Math.round(c.confidence * 100)}% confidence</span>
+                <span class="contradiction-confidence">${Math.round(
+                  c.confidence * 100
+                )}% confidence</span>
             </div>
             <div class="conflicting-record">
                 <div class="record-kind">${c.conflictingKind}</div>
-                <div class="record-content">${escapeHtml(c.conflictingContent)}</div>
+                <div class="record-content">${escapeHtml(
+                  c.conflictingContent
+                )}</div>
                 <div class="record-id">ID: ${c.conflictingId}</div>
             </div>
-            ${c.explanation ? `<div class="explanation">${escapeHtml(c.explanation)}</div>` : ''}
-            ${c.autoLinked ? '<div class="auto-linked">Auto-linked as contradiction</div>' : ''}
+            ${
+              c.explanation
+                ? `<div class="explanation">${escapeHtml(c.explanation)}</div>`
+                : ""
+            }
+            ${
+              c.autoLinked
+                ? '<div class="auto-linked">Auto-linked as contradiction</div>'
+                : ""
+            }
         </div>
-    `).join('\n');
+    `
+    )
+    .join("\n");
 
-    panel.webview.html = `<!DOCTYPE html>
+  panel.webview.html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -259,136 +286,151 @@ function showContradictionDetails(recordId: string, contradictions: StoreResult[
  * Escape HTML special characters
  */
 function escapeHtml(text: string): string {
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 /**
  * Store content as a specific type
  */
 export async function storeAs(
-    bridge: PalaceBridge,
-    type: StoreType,
-    content?: string
+  bridge: PalaceBridge,
+  type: StoreType,
+  content?: string
 ): Promise<void> {
-    try {
-        // Get content from selection or prompt
-        const editor = vscode.window.activeTextEditor;
-        const selectedText = editor?.document.getText(editor.selection);
+  try {
+    // Get content from selection or prompt
+    const editor = vscode.window.activeTextEditor;
+    const selectedText = editor?.document.getText(editor.selection);
 
-        const finalContent = await getContent(content || selectedText);
-        if (!finalContent) {
-            return; // User cancelled
-        }
-
-        // Determine scope from current file
-        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const filePath = editor?.document.uri.fsPath;
-        const { scope, scopePath } = determineScope(filePath, workspaceRoot);
-
-        // Store via bridge
-        const result = await bridge.store(finalContent, {
-            as: type,
-            scope,
-            scopePath,
-        });
-
-        // Show success
-        showSuccessNotification(type, result);
-
-        // Refresh knowledge panel
-        vscode.commands.executeCommand('mindPalace.refreshKnowledge');
-
-    } catch (error: any) {
-        vscode.window.showErrorMessage(`Failed to store: ${error.message}`);
+    const finalContent = await getContent(content || selectedText);
+    if (!finalContent) {
+      return; // User cancelled
     }
+
+    // Determine scope from current file
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const filePath = editor?.document.uri.fsPath;
+    const { scope, scopePath } = determineScope(filePath, workspaceRoot);
+
+    // Store via bridge
+    const result = await bridge.store(finalContent, {
+      as: type,
+      scope,
+      scopePath,
+    });
+
+    // Show success
+    showSuccessNotification(type, result);
+
+    // Refresh knowledge panel
+    vscode.commands.executeCommand("mindPalace.refreshKnowledge");
+  } catch (error: any) {
+    vscode.window.showErrorMessage(`Failed to store: ${error.message}`);
+  }
 }
 
 /**
  * Quick store with type picker
  */
 export async function quickStore(bridge: PalaceBridge): Promise<void> {
-    // Get selected text first
-    const editor = vscode.window.activeTextEditor;
-    const selectedText = editor?.document.getText(editor.selection);
+  // Get selected text first
+  const editor = vscode.window.activeTextEditor;
+  const selectedText = editor?.document.getText(editor.selection);
 
-    // Show type picker
-    const items: vscode.QuickPickItem[] = [
-        {
-            label: '$(lightbulb) Idea',
-            description: 'A potential improvement or feature to explore',
-            detail: selectedText ? `"${selectedText.substring(0, 50)}${selectedText.length > 50 ? '...' : ''}"` : undefined,
-        },
-        {
-            label: '$(law) Decision',
-            description: 'An architectural or design choice made',
-            detail: selectedText ? `"${selectedText.substring(0, 50)}${selectedText.length > 50 ? '...' : ''}"` : undefined,
-        },
-        {
-            label: '$(book) Learning',
-            description: 'Something learned about the codebase',
-            detail: selectedText ? `"${selectedText.substring(0, 50)}${selectedText.length > 50 ? '...' : ''}"` : undefined,
-        },
-    ];
+  // Show type picker
+  const items: vscode.QuickPickItem[] = [
+    {
+      label: "$(lightbulb) Idea",
+      description: "A potential improvement or feature to explore",
+      detail: selectedText
+        ? `"${selectedText.substring(0, 50)}${
+            selectedText.length > 50 ? "..." : ""
+          }"`
+        : undefined,
+    },
+    {
+      label: "$(law) Decision",
+      description: "An architectural or design choice made",
+      detail: selectedText
+        ? `"${selectedText.substring(0, 50)}${
+            selectedText.length > 50 ? "..." : ""
+          }"`
+        : undefined,
+    },
+    {
+      label: "$(book) Learning",
+      description: "Something learned about the codebase",
+      detail: selectedText
+        ? `"${selectedText.substring(0, 50)}${
+            selectedText.length > 50 ? "..." : ""
+          }"`
+        : undefined,
+    },
+  ];
 
-    const selection = await vscode.window.showQuickPick(items, {
-        placeHolder: 'What type of knowledge is this?',
-        title: 'Mind Palace: Quick Store',
-    });
+  const selection = await vscode.window.showQuickPick(items, {
+    placeHolder: "What type of knowledge is this?",
+    title: "Mind Palace: Quick Store",
+  });
 
-    if (!selection) {
-        return; // User cancelled
-    }
+  if (!selection) {
+    return; // User cancelled
+  }
 
-    // Map selection to type
-    let type: StoreType;
-    if (selection.label.includes('Idea')) {
-        type = 'idea';
-    } else if (selection.label.includes('Decision')) {
-        type = 'decision';
-    } else {
-        type = 'learning';
-    }
+  // Map selection to type
+  let type: StoreType;
+  if (selection.label.includes("Idea")) {
+    type = "idea";
+  } else if (selection.label.includes("Decision")) {
+    type = "decision";
+  } else {
+    type = "learning";
+  }
 
-    await storeAs(bridge, type, selectedText);
+  await storeAs(bridge, type, selectedText);
 }
 
 /**
  * Register all store commands
  */
 export function registerStoreCommands(
-    context: vscode.ExtensionContext,
-    bridge: PalaceBridge
-): void {
-    // Store as Idea
-    context.subscriptions.push(
-        vscode.commands.registerCommand('mindPalace.storeIdea', () => {
-            storeAs(bridge, 'idea');
-        })
-    );
+  context: vscode.ExtensionContext,
+  bridge: PalaceBridge
+): vscode.Disposable[] {
+  const disposables: vscode.Disposable[] = [];
 
-    // Store as Decision
-    context.subscriptions.push(
-        vscode.commands.registerCommand('mindPalace.storeDecision', () => {
-            storeAs(bridge, 'decision');
-        })
-    );
+  // Store as Idea
+  disposables.push(
+    vscode.commands.registerCommand("mindPalace.storeIdea", () => {
+      storeAs(bridge, "idea");
+    })
+  );
 
-    // Store as Learning
-    context.subscriptions.push(
-        vscode.commands.registerCommand('mindPalace.storeLearning', () => {
-            storeAs(bridge, 'learning');
-        })
-    );
+  // Store as Decision
+  disposables.push(
+    vscode.commands.registerCommand("mindPalace.storeDecision", () => {
+      storeAs(bridge, "decision");
+    })
+  );
 
-    // Quick Store (with type picker)
-    context.subscriptions.push(
-        vscode.commands.registerCommand('mindPalace.quickStore', () => {
-            quickStore(bridge);
-        })
-    );
+  // Store as Learning
+  disposables.push(
+    vscode.commands.registerCommand("mindPalace.storeLearning", () => {
+      storeAs(bridge, "learning");
+    })
+  );
+
+  // Quick Store (with type picker)
+  disposables.push(
+    vscode.commands.registerCommand("mindPalace.quickStore", () => {
+      quickStore(bridge);
+    })
+  );
+
+  return disposables;
 }

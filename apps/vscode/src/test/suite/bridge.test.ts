@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import * as sinon from "sinon";
-import * as cp from "child_process";
 import { EventEmitter } from "events";
 import { PalaceBridge, MCP_TOOLS } from "../../bridge";
 
@@ -175,8 +174,8 @@ describe("PalaceBridge Tests", () => {
 
   describe("Error Handling", () => {
     it("should handle connection failures gracefully", async () => {
-      // Stub child_process.spawn to simulate failure
-      const spawnStub = sandbox.stub(cp, "spawn");
+      // Stub MCPClient.spawn (wrapper) to simulate failure without stubbing core module
+      const spawnStub = sandbox.stub((bridge as any).mcpClient, "spawn");
       const mockProcess = new EventEmitter() as any;
       mockProcess.stdin = { write: sandbox.stub(), end: sandbox.stub() };
       mockProcess.stdout = new EventEmitter();
@@ -184,21 +183,22 @@ describe("PalaceBridge Tests", () => {
       mockProcess.kill = sandbox.stub();
 
       spawnStub.returns(mockProcess);
-
-      // Test should not throw - bridge handles errors gracefully
-      const result = await bridge.getBrief();
-
-      // Emit error after call to simulate async error
+      const promise = bridge.getBrief();
       setTimeout(() => {
         mockProcess.emit("error", new Error("ENOENT: palace not found"));
-      }, 10);
+      }, 600);
 
-      // Bridge should return gracefully even if CLI not available
-      expect(result).to.exist;
+      let caught: any = null;
+      try {
+        await promise;
+      } catch (e) {
+        caught = e;
+      }
+      expect(caught).to.exist;
     });
 
     it("should handle invalid responses", async () => {
-      const spawnStub = sandbox.stub(cp, "spawn");
+      const spawnStub = sandbox.stub((bridge as any).mcpClient, "spawn");
       const mockProcess = new EventEmitter() as any;
       mockProcess.stdin = { write: sandbox.stub(), end: sandbox.stub() };
       mockProcess.stdout = new EventEmitter();
@@ -207,15 +207,23 @@ describe("PalaceBridge Tests", () => {
 
       spawnStub.returns(mockProcess);
 
+      // After connection initializes (~500ms), emit an error JSON-RPC response
       setTimeout(() => {
-        mockProcess.stdout.emit("data", "invalid json response\n");
-      }, 10);
+        const resp = {
+          jsonrpc: "2.0",
+          id: 1,
+          error: { code: -32603, message: "Invalid response" },
+        };
+        mockProcess.stdout.emit("data", JSON.stringify(resp) + "\n");
+      }, 600);
 
+      let caught: any = null;
       try {
         await bridge.getBrief();
       } catch (error) {
-        expect(error).to.exist;
+        caught = error;
       }
+      expect(caught).to.exist;
     });
   });
 
