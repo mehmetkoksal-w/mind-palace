@@ -1,6 +1,6 @@
 module github.com/koksalmehmet/mind-palace
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.9.1
