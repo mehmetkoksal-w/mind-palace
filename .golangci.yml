@@ -1,9 +1,7 @@
-
 version: "2"
 run:
   timeout: 5m
   tests: true
-
 
 linters:
   enable:
@@ -38,107 +36,107 @@ linters:
     - testifylint
     - tparallel
 
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: false
-    exclude-functions:
-      - (io.Closer).Close
-      - (*os.File).Close
-      - (io.ReadCloser).Close
-      - io.Copy
-      - (*database/sql.DB).Close
-      - (*database/sql.Rows).Close
-      - (*database/sql.Stmt).Close
-      - (*database/sql.Tx).Rollback
-      - (*os.Process).Kill
-      - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.GoLSPClient).sendNotification
-      - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.DartLSPClient).sendNotification
-      - filepath.Glob
-      - filepath.Match
-  govet:
-    enable-all: true
-    disable:
-      - shadow
-      - fieldalignment
-  staticcheck:
-    checks:
-      - "all"
-      - "-SA1019"
-      - "-ST1000"
-      - "-ST1003"
-  gocognit:
-    min-complexity: 25
-  gocyclo:
-    min-complexity: 25
-  nestif:
-    min-complexity: 5
-  revive:
-    confidence: 0.8
-    rules:
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: exported
-        arguments:
-          - "checkPrivateReceivers"
-          - "sayRepetitiveInsteadOfStutters"
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: package-comments
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: redefines-builtin-id
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - whyNoLint
-      - unnamedResult
-      - hugeParam
-  gosec:
-    severity: medium
-    confidence: medium
-    excludes:
-      - G104
-      - G307
-      - G306
-      - G110
-      - G201
-      - G301
-      - G304
-  misspell:
-    locale: US
-    ignore-words:
-      - "colour"
-  unparam:
-    check-exported: false
-  testifylint:
-    enable-all: true
-    disable:
-      - float-compare
-  prealloc:
-    simple: true
-    range-loops: true
-    for-loops: true
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (io.ReadCloser).Close
+        - io.Copy
+        - (*database/sql.DB).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.Stmt).Close
+        - (*database/sql.Tx).Rollback
+        - (*os.Process).Kill
+        - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.GoLSPClient).sendNotification
+        - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.DartLSPClient).sendNotification
+        - filepath.Glob
+        - filepath.Match
+    govet:
+      enable-all: true
+      disable:
+        - shadow
+        - fieldalignment
+    staticcheck:
+      checks:
+        - "all"
+        - "-SA1019"
+        - "-ST1000"
+        - "-ST1003"
+    gocognit:
+      min-complexity: 25
+    gocyclo:
+      min-complexity: 25
+    nestif:
+      min-complexity: 5
+    revive:
+      confidence: 0.8
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          arguments:
+            - "checkPrivateReceivers"
+            - "sayRepetitiveInsteadOfStutters"
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - whyNoLint
+        - unnamedResult
+        - hugeParam
+    gosec:
+      severity: medium
+      confidence: medium
+      excludes:
+        - G104
+        - G307
+        - G306
+        - G110
+        - G201
+        - G301
+        - G304
+    misspell:
+      locale: US
+      ignore-words:
+        - "colour"
+    unparam:
+      check-exported: false
+    testifylint:
+      enable-all: true
+      disable:
+        - float-compare
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: true
 
 issues:
   exclude-dirs:
