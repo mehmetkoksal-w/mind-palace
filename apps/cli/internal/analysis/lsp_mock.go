@@ -8,9 +8,7 @@ import (
 
 // MockLSPClient is a mock implementation of LSP client for testing
 type MockLSPClient struct {
-	requestID int64
 	responses map[int64]chan json.RawMessage
-	mu        sync.Mutex
 	ready     bool
 	closed    bool
 

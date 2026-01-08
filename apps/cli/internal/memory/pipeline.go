@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"sync"
-	"time"
 )
 
 // EmbeddingPipeline handles background embedding generation for records.
@@ -314,21 +313,4 @@ func (m *Memory) GetEmbeddingStats(pipeline *EmbeddingPipeline) (*EmbeddingStats
 	}
 
 	return stats, nil
-}
-
-// startEmbeddingRetryLoop periodically retries failed embeddings.
-// This runs in a separate goroutine and processes pending embeddings every interval.
-func (p *EmbeddingPipeline) startEmbeddingRetryLoop(interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-p.ctx.Done():
-			return
-		case <-ticker.C:
-			// Process up to 10 pending embeddings
-			_, _ = p.ProcessPending(nil, 10)
-		}
-	}
 }

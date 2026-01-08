@@ -250,36 +250,36 @@ func (s *MCPServer) toolExploreContext(id any, args map[string]interface{}) json
 
 	if len(result.ContextResult.Imports) > 0 {
 		output.WriteString("## Import Relationships\n\n")
-		for _, imp := range result.ContextResult.Imports {
+		for _, imp := range result.Imports {
 			fmt.Fprintf(&output, "- `%s` imports `%s`\n", imp.SourceFile, imp.TargetFile)
 		}
 		output.WriteString("\n")
 	}
 
-	if len(result.ContextResult.Decisions) > 0 {
+	if len(result.Decisions) > 0 {
 		output.WriteString("## Related Decisions\n\n")
-		for _, d := range result.ContextResult.Decisions {
+		for _, d := range result.Decisions {
 			fmt.Fprintf(&output, "### %s\n", d.Title)
 			fmt.Fprintf(&output, "%s\n\n", d.Summary)
 		}
 	}
 
-	if len(result.ContextResult.Warnings) > 0 {
+	if len(result.Warnings) > 0 {
 		output.WriteString("## Warnings\n\n")
-		for _, w := range result.ContextResult.Warnings {
+		for _, w := range result.Warnings {
 			fmt.Fprintf(&output, "- ⚠️ %s\n", w)
 		}
 	}
 
-	if result.ContextResult.TokenStats != nil {
+	if result.TokenStats != nil {
 		output.WriteString("\n## Token Usage\n\n")
-		fmt.Fprintf(&output, "- **Total tokens:** %d\n", result.ContextResult.TokenStats.TotalTokens)
-		fmt.Fprintf(&output, "- **Symbol tokens:** %d\n", result.ContextResult.TokenStats.SymbolTokens)
-		fmt.Fprintf(&output, "- **File tokens:** %d\n", result.ContextResult.TokenStats.FileTokens)
-		fmt.Fprintf(&output, "- **Import tokens:** %d\n", result.ContextResult.TokenStats.ImportTokens)
-		if result.ContextResult.TokenStats.Budget > 0 {
-			fmt.Fprintf(&output, "- **Budget:** %d\n", result.ContextResult.TokenStats.Budget)
-			if result.ContextResult.TokenStats.Truncated {
+		fmt.Fprintf(&output, "- **Total tokens:** %d\n", result.TokenStats.TotalTokens)
+		fmt.Fprintf(&output, "- **Symbol tokens:** %d\n", result.TokenStats.SymbolTokens)
+		fmt.Fprintf(&output, "- **File tokens:** %d\n", result.TokenStats.FileTokens)
+		fmt.Fprintf(&output, "- **Import tokens:** %d\n", result.TokenStats.ImportTokens)
+		if result.TokenStats.Budget > 0 {
+			fmt.Fprintf(&output, "- **Budget:** %d\n", result.TokenStats.Budget)
+			if result.TokenStats.Truncated {
 				output.WriteString("- ⚠️ Results truncated to fit budget\n")
 			}
 		}
