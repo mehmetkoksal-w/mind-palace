@@ -2,9 +2,9 @@ name: Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: ["*"]
   pull_request:
-    branches: ["main"]
+    branches: ["*"]
   workflow_dispatch:
 
 permissions:
@@ -88,10 +88,10 @@ jobs:
           echo "Docs: $DOCS_VER"
           
           if [ "$ROOT_VER" != "$DASH_VER" ] || [ "$ROOT_VER" != "$VSCODE_VER" ] || [ "$ROOT_VER" != "$DOCS_VER" ]; then
-            echo "❌ Version mismatch detected!"
+            echo "[ERROR] Version mismatch detected!"
             exit 1
           fi
-          echo "✅ All versions synchronized"
+          echo "[OK] All versions synchronized"
 
       - name: Build
         run: go build -v ./apps/cli

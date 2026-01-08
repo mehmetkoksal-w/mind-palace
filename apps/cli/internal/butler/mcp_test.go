@@ -282,7 +282,7 @@ func TestMCPToolHandlersMemory(t *testing.T) {
 		"scope":   "palace",
 		"as":      "learning",
 	})
-	if text := toolText(t, resp); !strings.Contains(text, "Stored") {
+	if text := toolText(t, resp); !strings.Contains(text, "Remembered") {
 		t.Fatalf("store learning output unexpected: %s", text)
 	}
 
@@ -323,8 +323,9 @@ func TestSanitizePath(t *testing.T) {
 	if sanitizePath("/abs/path") != "" {
 		t.Fatal("sanitizePath should reject absolute paths")
 	}
-	if got := sanitizePath("safe/file.txt"); got != "safe/file.txt" {
-		t.Fatalf("sanitizePath() = %q, want safe/file.txt", got)
+	want := filepath.FromSlash("safe/file.txt")
+	if got := sanitizePath("safe/file.txt"); got != want {
+		t.Fatalf("sanitizePath() = %q, want %q", got, want)
 	}
 }
 

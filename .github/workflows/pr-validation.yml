@@ -2,7 +2,9 @@ name: PR Validation
 
 on:
   pull_request:
-    branches: [main]
+    branches: ["*"]
+  push:
+    branches: ["*"]
 
 permissions:
   contents: read

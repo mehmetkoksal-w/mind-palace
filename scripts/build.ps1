@@ -44,7 +44,7 @@ function Build-Dashboard {
     $dashboardBuild = "apps\dashboard\dist\dashboard\browser"
     if (Test-Path $dashboardBuild) {
         Copy-Item -Recurse "$dashboardBuild\*" $embedDir
-        Write-Host "✓ Dashboard built and embedded" -ForegroundColor Green
+        Write-Host "[OK] Dashboard built and embedded" -ForegroundColor Green
     }
     else {
         Write-Error "Dashboard build not found at $dashboardBuild"
@@ -65,7 +65,7 @@ function Build-VSCode {
     npm run compile
     Pop-Location
     
-    Write-Host "✓ VS Code extension built" -ForegroundColor Green
+    Write-Host "[OK] VS Code extension built" -ForegroundColor Green
 }
 
 function Build-CLI {
@@ -89,7 +89,7 @@ function Build-CLI {
     
     if ($LASTEXITCODE -eq 0) {
         $size = (Get-Item palace.exe).Length / 1MB
-        Write-Host "✓ Palace CLI built: palace.exe ($([math]::Round($size, 2)) MB)" -ForegroundColor Green
+        Write-Host "[OK] Palace CLI built: palace.exe ($([math]::Round($size, 2)) MB)" -ForegroundColor Green
     }
     else {
         Write-Error "CLI build failed"
@@ -132,7 +132,7 @@ function Clean-Build {
         Remove-Item -Recurse -Force "apps\vscode\out" 
     }
     
-    Write-Host "✓ Clean complete" -ForegroundColor Green
+    Write-Host "[OK] Clean complete" -ForegroundColor Green
 }
 
 # Main execution
@@ -151,6 +151,6 @@ switch ($Target) {
         Build-Dashboard
         Build-VSCode
         Build-CLI
-        Write-Host "`n✓ Build complete!" -ForegroundColor Green
+        Write-Host "`n[OK] Build complete!" -ForegroundColor Green
     }
 }
