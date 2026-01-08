@@ -1,8 +1,4 @@
-# golangci-lint configuration for Mind Palace CLI
-# Go version: 1.24 (aligned with go.mod)
-# Project type: CLI tool with parsers, MCP server, SQLite database, memory management
-# Updated: January 2026
-# Compatible with: golangci-lint v1.64+
+version: "2"
 
 run:
   timeout: 5m
@@ -11,210 +7,161 @@ run:
 
 linters:
   enable:
-    # ============================================================================
-    # PHASE 1: Critical linters (enable immediately)
-    # ============================================================================
-    
-    # Error handling & bugs
-    - errcheck        # Unchecked errors
-    - govet           # Go vet (standard tool)
-    - staticcheck     # Comprehensive static analysis (includes gosimple, stylecheck)
-    - ineffassign     # Detect ineffectual assignments
-    - unused          # Detect unused constants, variables, functions
-    
-    # SQL-specific (critical for SQLite usage)
-    - sqlclosecheck   # SQL rows/stmt Close() calls
-    - rowserrcheck    # SQL rows.Err() checks
-    
-    # Common mistakes
-    - bodyclose       # HTTP response body close
-    - contextcheck    # Context cancellation
-    - errname         # Error naming conventions
-    - errorlint       # Error wrapping with %w
-    - nilerr          # Return nil error
-    
-    # ============================================================================
-    # PHASE 2: Important code quality linters
-    # ============================================================================
-    
-    # Code complexity
-    - gocognit        # Cognitive complexity (better than gocyclo)
-    - gocyclo         # Cyclomatic complexity
-    - nestif          # Deeply nested if statements
-    
-    # Performance
-    - prealloc        # Slice preallocation
-    - unconvert       # Unnecessary type conversions
-    
-    # Style & best practices
-    - gofmt           # Go formatting
-    - goimports       # Go imports formatting
-    - misspell        # Spelling mistakes
-    - revive          # Fast, configurable, extensible linter (replaces golint)
-    
-    # ============================================================================
-    # PHASE 3: Enhanced safety & maintainability
-    # ============================================================================
-    
-    # Potential bugs
-    - copyloopvar     # Loop variable copying (Go 1.22+ loop semantics)
-    - durationcheck   # Duration multiplication/division
-    - noctx           # HTTP requests without context
-    - nolintlint      # Nolint directive validation
-    - predeclared     # Shadowing of predeclared identifiers
-    - reassign        # Reassigning to function parameters
-    - unparam         # Unused function parameters
-    - wastedassign    # Wasted assignments
-    
-    # Security
-    - gosec           # Security issues
-    
-    # Concurrency (important for goroutines in butler, LSP, embedding pipeline)
-    - gocritic        # Comprehensive Go critique (includes concurrency checks)
-    
-    # Testing
-    - testifylint     # Testify assertions (project uses testify)
-    - tparallel       # Incorrect usage of t.Parallel()
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - sqlclosecheck
+    - rowserrcheck
+    - bodyclose
+    - contextcheck
+    - errname
+    - errorlint
+    - nilerr
+    - gocognit
+    - gocyclo
+    - nestif
+    - prealloc
+    - unconvert
+    - gofmt
+    - goimports
+    - misspell
+    - revive
+    - copyloopvar
+    - durationcheck
+    - noctx
+    - nolintlint
+    - predeclared
+    - reassign
+    - unparam
+    - wastedassign
+    - gosec
+    - gocritic
+    - testifylint
+    - tparallel
 
 linters-settings:
-    # Error checking
-    errcheck:
-      check-type-assertions: true
-      check-blank: false  # Don't check blank identifiers (common pattern in Go)
-      exclude-functions:
-        # Standard io/file operations
-        - (io.Closer).Close
-        - (*os.File).Close
-        - (io.ReadCloser).Close
-        - io.Copy
-        # Database operations
-        - (*database/sql.DB).Close
-        - (*database/sql.Rows).Close
-        - (*database/sql.Stmt).Close
-        - (*database/sql.Tx).Rollback
-        # Process management
-        - (*os.Process).Kill
-        # Notifications (fire and forget)
-        - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.GoLSPClient).sendNotification
-        - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.DartLSPClient).sendNotification
-        # Path operations (errors are not critical in pattern matching)
-        - filepath.Glob
-        - filepath.Match
-    
-    # Go vet
-    govet:
-      enable-all: true
-      disable:
-        - shadow          # Too noisy, enable later if needed
-        - fieldalignment  # Micro-optimization, not critical
-    
-    # Staticcheck (now includes gosimple and stylecheck)
-    staticcheck:
-      checks:
-        - "all"
-        - "-SA1019"  # Allow deprecated usage (for graceful migration)
-        - "-ST1000"  # Package comment can be relaxed
-        - "-ST1003"  # Underscores in names (some MCP/JSON field names need them)
-    
-    # Cognitive complexity
-    gocognit:
-      min-complexity: 25  # Reasonable for parser/butler logic
-    
-    # Cyclomatic complexity
-    gocyclo:
-      min-complexity: 20  # Balanced threshold
-    
-    # Nested if depth
-    nestif:
-      min-complexity: 5
-    
-    # Revive (golint replacement)
-    revive:
-      confidence: 0.8
-      rules:
-        - name: blank-imports
-        - name: context-as-argument
-        - name: context-keys-type
-        - name: dot-imports
-        - name: error-return
-        - name: error-strings
-        - name: error-naming
-        - name: exported
-          arguments:
-            - "checkPrivateReceivers"
-            - "sayRepetitiveInsteadOfStutters"
-        - name: if-return
-        - name: increment-decrement
-        - name: var-naming
-        - name: var-declaration
-        - name: package-comments
-        - name: range
-        - name: receiver-naming
-        - name: time-naming
-        - name: unexported-return
-        - name: indent-error-flow
-        - name: errorf
-        - name: empty-block
-        - name: superfluous-else
-        - name: unused-parameter
-        - name: unreachable-code
-        - name: redefines-builtin-id
-    
-    # Gocritic - comprehensive critique
-    gocritic:
-      enabled-tags:
-        - diagnostic
-        - experimental
-        - opinionated
-        - performance
-        - style
-      disabled-checks:
-        - whyNoLint         # Too strict
-        - unnamedResult     # Named returns are sometimes useful
-        - hugeParam         # Can be noisy for parsers
-    
-    # Security
-    gosec:
-      severity: medium
-      confidence: medium
-      excludes:
-        - G104  # Duplicates errcheck
-        - G307  # File Close() in defer (covered by errcheck)
-        - G306  # Expect WriteFile permissions 0600 or less (not applicable across OSes)
-        - G110  # Potential DoS via decompression bomb (handled in code paths)
-        - G201  # SQL string formatting (false positive for our usage)
-      config:
-        global:
-          nosec: true  # Allow nosec comments
-          audit: true
-    
-    # Misspell
-    misspell:
-      locale: US
-      ignore-rules:
-        - "colour"  # In case of UK spelling in docs
-    
-    # Unused parameters
-    unparam:
-      check-exported: false  # Don't check exported functions
-    
-    # Testify
-    testifylint:
-      enable-all: true
-      disable:
-        - float-compare  # Sometimes needed for exact comparisons
-    
-    # Prealloc
-    prealloc:
-      simple: true
-      range-loops: true
-      for-loops: true
+  errcheck:
+    check-type-assertions: true
+    check-blank: false
+    exclude-functions:
+      - (io.Closer).Close
+      - (*os.File).Close
+      - (io.ReadCloser).Close
+      - io.Copy
+      - (*database/sql.DB).Close
+      - (*database/sql.Rows).Close
+      - (*database/sql.Stmt).Close
+      - (*database/sql.Tx).Rollback
+      - (*os.Process).Kill
+      - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.GoLSPClient).sendNotification
+      - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.DartLSPClient).sendNotification
+      - filepath.Glob
+      - filepath.Match
+
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+      - fieldalignment
+
+  staticcheck:
+    checks:
+      - "all"
+      - "-SA1019"
+      - "-ST1000"
+      - "-ST1003"
+
+  gocognit:
+    min-complexity: 25
+
+  gocyclo:
+    min-complexity: 20
+
+  nestif:
+    min-complexity: 5
+
+  revive:
+    confidence: 0.8
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+        arguments:
+          - "checkPrivateReceivers"
+          - "sayRepetitiveInsteadOfStutters"
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - whyNoLint
+      - unnamedResult
+      - hugeParam
+
+  gosec:
+    severity: medium
+    confidence: medium
+    excludes:
+      - G104
+      - G307
+      - G306
+      - G110
+      - G201
+    config:
+      global:
+        nosec: true
+        audit: true
+
+  misspell:
+    locale: US
+    ignore-rules:
+      - "colour"
+
+  unparam:
+    check-exported: false
+
+  testifylint:
+    enable-all: true
+    disable:
+      - float-compare
+
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: true
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   new: false
-  
+
   exclude-dirs:
     - vendor
     - node_modules
@@ -223,228 +170,194 @@ issues:
     - apps/vscode
     - scripts
     - packaging
-  
+
   exclude-rules:
-      # Test files - relax certain checks
-      - path: _test\.go
-        linters:
-          - gocognit
-          - gocyclo
-          - errcheck
-          - gocritic
-          - gosec
-          - funlen
-          - dupl
-          - revive
-          - wastedassign
-          - staticcheck
-      
-      # Generated schemas
-      - path: apps/cli/schemas/
-        linters:
-          - errcheck
-          - govet
-          - staticcheck
-          - revive
-          - gocritic
-          - gosec
-      
-      # Starter templates (example code)
-      - path: apps/cli/starter/
-        linters:
-          - errcheck
-          - gosec
-      
-      # Allow errors package wrapping patterns
-      - text: "do not define dynamic errors, use wrapped static errors instead"
-        linters:
-          - err113
-      
-      # Allow some complexity in parsers
-      - path: apps/cli/internal/analysis/parser_.*\.go
-        linters:
-          - gocognit
-          - gocyclo
-          - revive
-          - nestif
-      
-      # Allow some complexity in index/scan
-      - path: apps/cli/internal/(index|scan)/
-        linters:
-          - gocognit
-          - gocyclo
-      
-      # Allow some complexity in butler (orchestration layer)
-      - path: apps/cli/internal/butler/
-        linters:
-          - gocognit
-          - gocyclo
-          - nestif
-          - prealloc
-      
-      # Allow context.Background() in main/init
-      - path: apps/cli/main.go
-        text: "context.Background"
-        linters:
-          - contextcheck
-      
-      # SQL close checks are handled by sqlclosecheck
-      - text: "Close` is not checked"
-        source: ".*\\.Close\\(\\)"
-        linters:
-          - errcheck
+    - path: _test\.go
+      linters:
+        - gocognit
+        - gocyclo
+        - errcheck
+        - gocritic
+        - gosec
+        - funlen
+        - dupl
+        - revive
+        - wastedassign
+        - staticcheck
 
-      # LSP client operations (fire-and-forget)
-      - path: apps/cli/internal/analysis/(lsp_client|dart_lsp|dart_analyzer)\.go
-        linters:
-          - errcheck
-          - revive
+    - path: apps/cli/schemas/
+      linters:
+        - errcheck
+        - govet
+        - staticcheck
+        - revive
+        - gocritic
+        - gosec
 
-      # Update package (error handling in recovery paths)
-      - path: apps/cli/internal/update/
-        text: "os.Rename|os.WriteFile|fmt.Sscanf"
-        linters:
-          - errcheck
+    - path: apps/cli/starter/
+      linters:
+        - errcheck
+        - gosec
 
-      # Update package - noctx exclusion
-      - path: apps/cli/internal/update/update\.go
-        linters:
-          - noctx
+    - text: "do not define dynamic errors, use wrapped static errors instead"
+      linters:
+        - err113
 
-      # Index package (LastInsertId errors are acceptable)
-      - path: apps/cli/internal/index/
-        text: "LastInsertId"
-        linters:
-          - errcheck
+    - path: apps/cli/internal/analysis/parser_.*\.go
+      linters:
+        - gocognit
+        - gocyclo
+        - revive
+        - nestif
 
-      # Index package - prealloc exclusion
-      - path: apps/cli/internal/index/
-        linters:
-          - prealloc
+    - path: apps/cli/internal/(index|scan)/
+      linters:
+        - gocognit
+        - gocyclo
 
-      # Lint package (glob errors are acceptable)
-      - path: apps/cli/internal/lint/
-        text: "filepath.Glob"
-        linters:
-          - errcheck
+    - path: apps/cli/internal/butler/
+      linters:
+        - gocognit
+        - gocyclo
+        - nestif
+        - prealloc
 
-      # Memory package (complex DB operations, error handling done at higher level)
-      - path: apps/cli/internal/memory/
-        linters:
-          - rowserrcheck
-          - prealloc
-          - errcheck
-          - nestif
-          - gocognit
-          - noctx
+    - path: apps/cli/main.go
+      text: "context.Background"
+      linters:
+        - contextcheck
 
-      # Butler/corridor/index (rows.Err checked at scan level, errcheck for type assertions)
-      - path: apps/cli/internal/(butler|corridor|index)/
-        linters:
-          - rowserrcheck
-          - errcheck
+    - text: "Close` is not checked"
+      source: ".*\\.Close\\(\\)"
+      linters:
+        - errcheck
 
-      # Signal package (prealloc not critical)
-      - path: apps/cli/internal/signal/
-        linters:
-          - prealloc
+    - path: apps/cli/internal/analysis/(lsp_client|dart_lsp|dart_analyzer)\.go
+      linters:
+        - errcheck
+        - revive
 
-      # Signal package - nilerr exclusion
-      - path: apps/cli/internal/signal/paths\.go
-        text: "error is not nil.*but it returns nil"
-        linters:
-          - nilerr
+    - path: apps/cli/internal/update/
+      text: "os.Rename|os.WriteFile|fmt.Sscanf"
+      linters:
+        - errcheck
 
-      # Unused parameters in parsers/index (intentional for interface compatibility)
-      - path: apps/cli/internal/(analysis|index)/
-        linters:
-          - unparam
-          - prealloc
+    - path: apps/cli/internal/update/update\.go
+      linters:
+        - noctx
 
-      # FSUtil - variable declared for readability
-      - path: apps/cli/internal/fsutil/
-        linters:
-          - wastedassign
-          - prealloc
+    - path: apps/cli/internal/index/
+      text: "LastInsertId"
+      linters:
+        - errcheck
 
-      # FSUtil - nilerr exclusion
-      - path: apps/cli/internal/fsutil/fsutil\.go
-        text: "error is not nil.*but it returns nil"
-        linters:
-          - nilerr
+    - path: apps/cli/internal/index/
+      linters:
+        - prealloc
 
-      # Parser JSON - nilerr exclusion
-      - path: apps/cli/internal/analysis/parser_json\.go
-        text: "error is not nil.*but it returns nil"
-        linters:
-          - nilerr
+    - path: apps/cli/internal/lint/
+      text: "filepath.Glob"
+      linters:
+        - errcheck
 
-      # Memory contradiction - nilerr exclusion
-      - path: apps/cli/internal/memory/contradiction\.go
-        text: "error is not nil.*but it returns nil"
-        linters:
-          - nilerr
+    - path: apps/cli/internal/memory/
+      linters:
+        - rowserrcheck
+        - prealloc
+        - errcheck
+        - nestif
+        - gocognit
+        - noctx
 
-      # Allow some magic numbers in tests
-      - path: _test\.go
-        text: "mnd: Magic number"
-        linters:
-          - mnd
+    - path: apps/cli/internal/(butler|corridor|index)/
+      linters:
+        - rowserrcheck
+        - errcheck
 
-      # CLI commands - complexity exclusions
-      - path: apps/cli/internal/cli/commands/
-        linters:
-          - nestif
-          - gocognit
-          - gocyclo
-          - prealloc
+    - path: apps/cli/internal/signal/
+      linters:
+        - prealloc
 
-      # Collect package - complexity exclusions
-      - path: apps/cli/internal/collect/
-        linters:
-          - nestif
-          - gocognit
-          - prealloc
+    - path: apps/cli/internal/signal/paths\.go
+      text: "error is not nil.*but it returns nil"
+      linters:
+        - nilerr
 
-      # Dashboard package - complexity exclusions
-      - path: apps/cli/internal/dashboard/
-        linters:
-          - nestif
-          - gocognit
-          - gocyclo
-          - errcheck
-          - prealloc
+    - path: apps/cli/internal/(analysis|index)/
+      linters:
+        - unparam
+        - prealloc
 
-      # Project package: allow higher cyclomatic complexity in detector
-      - path: apps/cli/internal/project/
-        linters:
-          - gocyclo
+    - path: apps/cli/internal/fsutil/
+      linters:
+        - wastedassign
+        - prealloc
 
-      # Signal and stale packages: allow some cognitive complexity
-      - path: apps/cli/internal/(signal|stale)/
-        linters:
-          - gocognit
+    - path: apps/cli/internal/fsutil/fsutil\.go
+      text: "error is not nil.*but it returns nil"
+      linters:
+        - nilerr
 
-      # Analysis LSP client files: relax revive stylistic rules
-      - path: apps/cli/internal/analysis/lsp_.*\.go
-        linters:
-          - revive
+    - path: apps/cli/internal/analysis/parser_json\.go
+      text: "error is not nil.*but it returns nil"
+      linters:
+        - nilerr
 
-      # Allow revive blank-imports warning for sqlite driver
-      - path: apps/cli/internal/index/index\.go
-        text: "blank-imports"
-        linters:
-          - revive
+    - path: apps/cli/internal/memory/contradiction\.go
+      text: "error is not nil.*but it returns nil"
+      linters:
+        - nilerr
 
-      # LLM package - prealloc exclusion
-      - path: apps/cli/internal/llm/
-        linters:
-          - prealloc
+    - path: _test\.go
+      text: "mnd: Magic number"
+      linters:
+        - mnd
 
-      # Corridor package - prealloc exclusion
-      - path: apps/cli/internal/corridor/
-        linters:
-          - prealloc
+    - path: apps/cli/internal/cli/commands/
+      linters:
+        - nestif
+        - gocognit
+        - gocyclo
+        - prealloc
+
+    - path: apps/cli/internal/collect/
+      linters:
+        - nestif
+        - gocognit
+        - prealloc
+
+    - path: apps/cli/internal/dashboard/
+      linters:
+        - nestif
+        - gocognit
+        - gocyclo
+        - errcheck
+        - prealloc
+
+    - path: apps/cli/internal/project/
+      linters:
+        - gocyclo
+
+    - path: apps/cli/internal/(signal|stale)/
+      linters:
+        - gocognit
+
+    - path: apps/cli/internal/analysis/lsp_.*\.go
+      linters:
+        - revive
+
+    - path: apps/cli/internal/index/index\.go
+      text: "blank-imports"
+      linters:
+        - revive
+
+    - path: apps/cli/internal/llm/
+      linters:
+        - prealloc
+
+    - path: apps/cli/internal/corridor/
+      linters:
+        - prealloc
 
 severity:
   default-severity: error
