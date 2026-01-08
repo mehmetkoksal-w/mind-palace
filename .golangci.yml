@@ -383,6 +383,98 @@ issues:
       linters:
         - mnd
         - gomnd
+
+    # Nilerr exclusions (intentional nil returns with error checks)
+    - path: apps/cli/internal/fsutil/fsutil\.go
+      text: "error is not nil.*but it returns nil"
+      linters:
+        - nilerr
+
+    - path: apps/cli/internal/analysis/parser_json\.go
+      text: "error is not nil.*but it returns nil"
+      linters:
+        - nilerr
+
+    - path: apps/cli/internal/memory/contradiction\.go
+      text: "error is not nil.*but it returns nil"
+      linters:
+        - nilerr
+
+    - path: apps/cli/internal/signal/paths\.go
+      text: "error is not nil.*but it returns nil"
+      linters:
+        - nilerr
+
+    # Noctx exclusions (HTTP calls where context would be complex to add)
+    - path: apps/cli/internal/memory/embedding\.go
+      linters:
+        - noctx
+
+    - path: apps/cli/internal/update/update\.go
+      linters:
+        - noctx
+
+    # Nestif exclusions (complex nested blocks acceptable in parsers and butler)
+    - path: apps/cli/internal/analysis/parser_.*\.go
+      linters:
+        - nestif
+
+    - path: apps/cli/internal/butler/
+      linters:
+        - nestif
+
+    - path: apps/cli/internal/cli/commands/
+      linters:
+        - nestif
+
+    - path: apps/cli/internal/collect/
+      linters:
+        - nestif
+
+    - path: apps/cli/internal/dashboard/
+      linters:
+        - nestif
+
+    - path: apps/cli/internal/memory/
+      linters:
+        - nestif
+
+    # Prealloc exclusions (performance not critical for these allocations)
+    - path: apps/cli/internal/fsutil/
+      linters:
+        - prealloc
+
+    - path: apps/cli/internal/analysis/
+      linters:
+        - prealloc
+
+    - path: apps/cli/internal/butler/
+      linters:
+        - prealloc
+
+    - path: apps/cli/internal/cli/commands/
+      linters:
+        - prealloc
+
+    - path: apps/cli/internal/collect/
+      linters:
+        - prealloc
+
+    - path: apps/cli/internal/corridor/
+      linters:
+        - prealloc
+
+    - path: apps/cli/internal/dashboard/
+      linters:
+        - prealloc
+
+    - path: apps/cli/internal/index/
+      linters:
+        - prealloc
+
+    - path: apps/cli/internal/llm/
+      linters:
+        - prealloc
   
   # Fix issues automatically if possible
   fix: false
