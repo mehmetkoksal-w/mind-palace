@@ -196,6 +196,9 @@ func (m *Memory) GetPostmortems(status, severity string, limit int) ([]Postmorte
 
 		postmortems = append(postmortems, pm)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate postmortems: %w", err)
+	}
 
 	return postmortems, nil
 }
@@ -361,6 +364,9 @@ func (m *Memory) GetPostmortemStats() (*PostmortemStats, error) {
 			if rows.Scan(&severity, &count) == nil {
 				stats.BySeverity[severity] = count
 			}
+		}
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("iterate severity counts: %w", err)
 		}
 	}
 

@@ -82,6 +82,9 @@ func (m *Memory) ListSessions(activeOnly bool, limit int) ([]Session, error) {
 		s.LastActivity = parseTimeOrZero(lastActivity)
 		sessions = append(sessions, s)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate sessions: %w", err)
+	}
 	return sessions, nil
 }
 
@@ -165,6 +168,9 @@ func (m *Memory) GetActivities(sessionID, filePath string, limit int) ([]Activit
 		}
 		a.Timestamp = parseTimeOrZero(ts)
 		activities = append(activities, a)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate activities: %w", err)
 	}
 	return activities, nil
 }

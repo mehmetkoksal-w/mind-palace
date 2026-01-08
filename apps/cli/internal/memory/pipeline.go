@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 )
@@ -245,6 +246,10 @@ func (m *Memory) GetRecordsWithoutEmbeddings(kind string, limit int) ([]RecordWi
 			continue
 		}
 		records = append(records, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate records: %w", err)
 	}
 
 	return records, nil

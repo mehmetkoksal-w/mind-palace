@@ -106,6 +106,9 @@ func (m *Memory) GetLearnings(scope, scopePath string, limit int) ([]Learning, e
 		l.LastUsed = parseTimeOrZero(lastUsed)
 		learnings = append(learnings, l)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
+	}
 	return learnings, nil
 }
 
@@ -139,6 +142,9 @@ func (m *Memory) SearchLearnings(query string, limit int) ([]Learning, error) {
 		l.CreatedAt = parseTimeOrZero(createdAt)
 		l.LastUsed = parseTimeOrZero(lastUsed)
 		learnings = append(learnings, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
 	}
 	return learnings, nil
 }
@@ -258,6 +264,9 @@ func (m *Memory) GetHighConfidenceLearnings(minConfidence float64, minUseCount i
 		l.LastUsed = parseTimeOrZero(lastUsed)
 		learnings = append(learnings, l)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
+	}
 	return learnings, nil
 }
 
@@ -359,6 +368,9 @@ func (m *Memory) GetLearningsByStatus(status string, limit int) ([]Learning, err
 		l.LastUsed = parseTimeOrZero(lastUsed)
 		learnings = append(learnings, l)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
+	}
 	return learnings, nil
 }
 
@@ -413,6 +425,9 @@ func (m *Memory) GetLearningsForDecision(decisionID string) ([]Learning, error) 
 		l.LastUsed = parseTimeOrZero(lastUsed)
 		learnings = append(learnings, l)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
+	}
 	return learnings, nil
 }
 
@@ -441,6 +456,9 @@ func (m *Memory) GetDecisionsForLearning(learningID string) ([]Decision, error) 
 		d.UpdatedAt = parseTimeOrZero(updatedAt)
 		d.OutcomeAt = parseTimeOrZero(outcomeAt)
 		decisions = append(decisions, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate decisions: %w", err)
 	}
 	return decisions, nil
 }

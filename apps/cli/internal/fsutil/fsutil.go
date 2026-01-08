@@ -346,7 +346,7 @@ func splitLargeChunk(lines []string, start, end int, symbols []SymbolBoundary, m
 		symLines := sym.EndLine - sym.StartLine + 1
 
 		// Check if adding this symbol would exceed limits
-		groupLines := 0
+		var groupLines int
 		if len(currentSymbols) > 0 {
 			groupLines = sym.EndLine - currentStart + 1
 		} else {

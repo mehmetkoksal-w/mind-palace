@@ -77,6 +77,9 @@ func (m *Memory) GetTags(recordID, recordKind string) ([]string, error) {
 		}
 		tags = append(tags, tag)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tags: %w", err)
+	}
 	return tags, nil
 }
 
@@ -106,6 +109,9 @@ func (m *Memory) GetRecordsByTag(tag, recordKind string) ([]string, error) {
 		}
 		ids = append(ids, id)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate record ids: %w", err)
+	}
 	return ids, nil
 }
 
@@ -133,6 +139,9 @@ func (m *Memory) GetAllTags(recordKind string) ([]string, error) {
 			return nil, fmt.Errorf("scan tag: %w", err)
 		}
 		tags = append(tags, tag)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tags: %w", err)
 	}
 	return tags, nil
 }
@@ -166,6 +175,9 @@ func (m *Memory) GetTagCounts(recordKind string, limit int) (map[string]int, err
 			return nil, fmt.Errorf("scan tag count: %w", err)
 		}
 		counts[tag] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tag counts: %w", err)
 	}
 	return counts, nil
 }
@@ -230,6 +242,9 @@ func (m *Memory) SearchByTags(tags []string, recordKind string, limit int) ([]st
 			return nil, fmt.Errorf("scan record id: %w", err)
 		}
 		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate record ids: %w", err)
 	}
 	return ids, nil
 }

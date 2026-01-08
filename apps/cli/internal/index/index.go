@@ -278,7 +278,7 @@ func BuildFileRecords(root string, guardrails config.Guardrails) ([]FileRecord, 
 		if err != nil {
 			return nil, fmt.Errorf("stat %s: %w", rel, err)
 		}
-		data, err := os.ReadFile(abs) //nolint:gosec // file inclusion from indexed files
+		data, err := os.ReadFile(abs)
 		if err != nil {
 			return nil, fmt.Errorf("read %s: %w", rel, err)
 		}
@@ -388,7 +388,7 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 
 		// Insert symbols and relationships from analysis
 		if r.Analysis != nil {
-			symCount, err := insertSymbols(tx, symbolStmt, symbolFtsStmt, r.Path, r.Analysis.Symbols, nil)
+			symCount, err := insertSymbols(symbolStmt, symbolFtsStmt, r.Path, r.Analysis.Symbols, nil)
 			if err != nil {
 				return ScanSummary{}, fmt.Errorf("insert symbols %s: %w", r.Path, err)
 			}
@@ -427,7 +427,7 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 	}, nil
 }
 
-func insertSymbols(tx *sql.Tx, symbolStmt, symbolFtsStmt *sql.Stmt, filePath string, symbols []analysis.Symbol, parentID *int64) (int, error) {
+func insertSymbols(symbolStmt, symbolFtsStmt *sql.Stmt, filePath string, symbols []analysis.Symbol, parentID *int64) (int, error) {
 	count := 0
 	for _, sym := range symbols {
 		exported := 0
@@ -448,7 +448,7 @@ func insertSymbols(tx *sql.Tx, symbolStmt, symbolFtsStmt *sql.Stmt, filePath str
 		// Insert children recursively
 		if len(sym.Children) > 0 {
 			symID, _ := res.LastInsertId()
-			childCount, err := insertSymbols(tx, symbolStmt, symbolFtsStmt, filePath, sym.Children, &symID)
+			childCount, err := insertSymbols(symbolStmt, symbolFtsStmt, filePath, sym.Children, &symID)
 			if err != nil {
 				return count, err
 			}

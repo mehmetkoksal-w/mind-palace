@@ -126,6 +126,9 @@ func (m *Memory) GetIdeas(status, scope, scopePath string, limit int) ([]Idea, e
 		idea.UpdatedAt = parseTimeOrZero(updatedAt)
 		ideas = append(ideas, idea)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ideas: %w", err)
+	}
 	return ideas, nil
 }
 
@@ -163,6 +166,9 @@ func (m *Memory) SearchIdeas(query string, limit int) ([]Idea, error) {
 		idea.UpdatedAt = parseTimeOrZero(updatedAt)
 		ideas = append(ideas, idea)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ideas: %w", err)
+	}
 	return ideas, nil
 }
 
@@ -198,6 +204,9 @@ func (m *Memory) searchIdeasLike(query string, limit int) ([]Idea, error) {
 		idea.CreatedAt = parseTimeOrZero(createdAt)
 		idea.UpdatedAt = parseTimeOrZero(updatedAt)
 		ideas = append(ideas, idea)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ideas: %w", err)
 	}
 	return ideas, nil
 }

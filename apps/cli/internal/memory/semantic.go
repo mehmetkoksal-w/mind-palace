@@ -288,6 +288,9 @@ func (m *Memory) ftsSearch(query, kind string, limit int) []ftsResult {
 				r.CreatedAt = parseTimeOrZero(createdAt)
 				results = append(results, r)
 			}
+			if err := rows.Err(); err != nil {
+				_ = rows.Err()
+			}
 		}
 	case "decision":
 		rows, err := m.db.QueryContext(context.Background(), `
