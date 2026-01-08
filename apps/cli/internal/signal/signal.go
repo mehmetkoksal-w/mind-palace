@@ -2,6 +2,7 @@ package signal
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -17,7 +18,7 @@ import (
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/validate"
 )
 
-func Generate(root string, diffRange string) (model.ChangeSignal, error) {
+func Generate(root, diffRange string) (model.ChangeSignal, error) {
 	if strings.TrimSpace(diffRange) == "" {
 		return model.ChangeSignal{}, errors.New("signal requires --diff range")
 	}
@@ -61,7 +62,7 @@ func Generate(root string, diffRange string) (model.ChangeSignal, error) {
 }
 
 func gitChanges(rootPath, diffRange string, guardrails config.Guardrails) ([]model.Change, error) {
-	cmd := exec.Command("git", "diff", "--name-status", diffRange)
+	cmd := exec.CommandContext(context.Background(), "git", "diff", "--name-status", diffRange)
 	cmd.Dir = rootPath
 	out, err := cmd.Output()
 	if err != nil {

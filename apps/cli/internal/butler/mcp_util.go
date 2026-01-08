@@ -18,10 +18,15 @@ func truncateSnippet(s string, maxLen int) string {
 // sanitizePath cleans a file path and prevents path traversal attacks.
 // Returns empty string if the path is invalid or attempts to escape workspace.
 func sanitizePath(path string) string {
+	// Reject Unix-style absolute paths before cleaning (Windows converts / to \)
+	if strings.HasPrefix(path, "/") {
+		return ""
+	}
+
 	// Clean the path to normalize . and .. elements
 	clean := filepath.Clean(path)
 
-	// Reject absolute paths
+	// Reject Windows-style absolute paths
 	if filepath.IsAbs(clean) {
 		return ""
 	}

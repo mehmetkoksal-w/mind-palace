@@ -9,7 +9,7 @@ import (
 func TestBuildProfile(t *testing.T) {
 	t.Run("builds profile for Go project", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -31,7 +31,7 @@ func TestBuildProfile(t *testing.T) {
 
 	t.Run("builds profile for JavaScript project", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -47,7 +47,7 @@ func TestBuildProfile(t *testing.T) {
 
 	t.Run("builds profile for Python project", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte(""), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte(""), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -73,10 +73,10 @@ func TestBuildProfile(t *testing.T) {
 
 	t.Run("detects multiple languages", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -174,7 +174,7 @@ func TestDetectLanguages(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 			for filename, content := range tt.files {
-				if err := os.WriteFile(filepath.Join(dir, filename), []byte(content), 0644); err != nil {
+				if err := os.WriteFile(filepath.Join(dir, filename), []byte(content), 0o644); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -191,7 +191,7 @@ func TestDetectLanguages(t *testing.T) {
 func TestDetectLanguagesCSharp(t *testing.T) {
 	t.Run("detects C# with .csproj", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "project.csproj"), []byte(""), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "project.csproj"), []byte(""), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -210,7 +210,7 @@ func TestDetectLanguagesCSharp(t *testing.T) {
 
 	t.Run("detects C# with .sln", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "solution.sln"), []byte(""), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "solution.sln"), []byte(""), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -231,7 +231,7 @@ func TestDetectLanguagesCSharp(t *testing.T) {
 func TestHasFileWithExtension(t *testing.T) {
 	t.Run("returns true when file with extension exists", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "test.csproj"), []byte(""), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "test.csproj"), []byte(""), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -257,7 +257,7 @@ func TestHasFileWithExtension(t *testing.T) {
 	t.Run("ignores directories", func(t *testing.T) {
 		dir := t.TempDir()
 		// Create a directory with .csproj extension (unusual but possible)
-		if err := os.Mkdir(filepath.Join(dir, "folder.csproj"), 0755); err != nil {
+		if err := os.Mkdir(filepath.Join(dir, "folder.csproj"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 
@@ -339,7 +339,7 @@ func TestDefaultLintCommand(t *testing.T) {
 		{[]string{"java"}, "gradle check || mvn verify"},
 		{[]string{"csharp"}, "dotnet format --verify-no-changes"},
 		{[]string{"swift"}, "swiftlint"},
-		{[]string{"php"}, "composer lint || ./vendor/bin/phpstan analyse"},
+		{[]string{"php"}, "composer lint || ./vendor/bin/phpstan analyze"},
 		{[]string{"unknown"}, "echo lint not configured"},
 		{[]string{}, "echo lint not configured"},
 	}
@@ -358,7 +358,7 @@ func TestFileExists(t *testing.T) {
 	t.Run("returns true for existing file", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "test.txt")
-		if err := os.WriteFile(path, []byte("test"), 0644); err != nil {
+		if err := os.WriteFile(path, []byte("test"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -386,11 +386,11 @@ func TestPriorityLanguageSelection(t *testing.T) {
 	// When multiple languages are detected, first detected gets priority for commands
 	dir := t.TempDir()
 	// Add Go first (alphabetically earlier in detection order)
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	// Add JavaScript
-	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -406,10 +406,10 @@ func TestHasMonorepoSubproject(t *testing.T) {
 	t.Run("detects Flutter monorepo with apps/*/pubspec.yaml", func(t *testing.T) {
 		dir := t.TempDir()
 		appsDir := filepath.Join(dir, "apps", "my_app")
-		if err := os.MkdirAll(appsDir, 0755); err != nil {
+		if err := os.MkdirAll(appsDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(appsDir, "pubspec.yaml"), []byte("name: my_app"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(appsDir, "pubspec.yaml"), []byte("name: my_app"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -421,10 +421,10 @@ func TestHasMonorepoSubproject(t *testing.T) {
 	t.Run("detects Flutter monorepo with packages/*/pubspec.yaml", func(t *testing.T) {
 		dir := t.TempDir()
 		pkgDir := filepath.Join(dir, "packages", "shared_utils")
-		if err := os.MkdirAll(pkgDir, 0755); err != nil {
+		if err := os.MkdirAll(pkgDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(pkgDir, "pubspec.yaml"), []byte("name: shared_utils"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(pkgDir, "pubspec.yaml"), []byte("name: shared_utils"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -442,7 +442,7 @@ func TestHasMonorepoSubproject(t *testing.T) {
 
 	t.Run("returns false when apps dir exists but no subprojects", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.MkdirAll(filepath.Join(dir, "apps", "empty_dir"), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(dir, "apps", "empty_dir"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 
@@ -454,10 +454,10 @@ func TestHasMonorepoSubproject(t *testing.T) {
 	t.Run("detects Java monorepo with modules/*/build.gradle", func(t *testing.T) {
 		dir := t.TempDir()
 		moduleDir := filepath.Join(dir, "modules", "api")
-		if err := os.MkdirAll(moduleDir, 0755); err != nil {
+		if err := os.MkdirAll(moduleDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(moduleDir, "build.gradle"), []byte(""), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(moduleDir, "build.gradle"), []byte(""), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -470,7 +470,7 @@ func TestHasMonorepoSubproject(t *testing.T) {
 func TestDetectLanguagesWithMelos(t *testing.T) {
 	t.Run("detects Dart with melos.yaml at root", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "melos.yaml"), []byte("name: my_project"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "melos.yaml"), []byte("name: my_project"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -494,10 +494,10 @@ func TestDetectLanguagesWithMonorepoPattern(t *testing.T) {
 		dir := t.TempDir()
 		// Create a Flutter monorepo structure without root pubspec.yaml
 		appsDir := filepath.Join(dir, "apps", "driver_app")
-		if err := os.MkdirAll(appsDir, 0755); err != nil {
+		if err := os.MkdirAll(appsDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(appsDir, "pubspec.yaml"), []byte("name: driver_app"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(appsDir, "pubspec.yaml"), []byte("name: driver_app"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -518,10 +518,10 @@ func TestDetectLanguagesWithMonorepoPattern(t *testing.T) {
 	t.Run("detects Java in monorepo with modules pattern", func(t *testing.T) {
 		dir := t.TempDir()
 		moduleDir := filepath.Join(dir, "modules", "core")
-		if err := os.MkdirAll(moduleDir, 0755); err != nil {
+		if err := os.MkdirAll(moduleDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(moduleDir, "build.gradle"), []byte(""), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(moduleDir, "build.gradle"), []byte(""), 0o644); err != nil {
 			t.Fatal(err)
 		}
 

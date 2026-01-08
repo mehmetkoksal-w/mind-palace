@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -41,12 +42,12 @@ type PostmortemInput struct {
 
 // PostmortemStats contains aggregated postmortem statistics.
 type PostmortemStats struct {
-	Total            int            `json:"total"`
-	Open             int            `json:"open"`
-	Resolved         int            `json:"resolved"`
-	Recurring        int            `json:"recurring"`
-	BySeverity       map[string]int `json:"bySeverity"`
-	RecentPostmortems []Postmortem  `json:"recentPostmortems,omitempty"`
+	Total             int            `json:"total"`
+	Open              int            `json:"open"`
+	Resolved          int            `json:"resolved"`
+	Recurring         int            `json:"recurring"`
+	BySeverity        map[string]int `json:"bySeverity"`
+	RecentPostmortems []Postmortem   `json:"recentPostmortems,omitempty"`
 }
 
 // StorePostmortem creates a new postmortem record.
@@ -74,7 +75,7 @@ func (m *Memory) StorePostmortem(input PostmortemInput) (*Postmortem, error) {
 		filesJSON = []byte("[]")
 	}
 
-	_, err = m.db.Exec(`
+	_, err = m.db.ExecContext(context.Background(), `
 		INSERT INTO postmortems (
 			id, title, what_happened, root_cause, lessons_learned,
 			prevention_steps, severity, status, affected_files,
@@ -106,7 +107,7 @@ func (m *Memory) StorePostmortem(input PostmortemInput) (*Postmortem, error) {
 
 // GetPostmortem retrieves a postmortem by ID.
 func (m *Memory) GetPostmortem(id string) (*Postmortem, error) {
-	row := m.db.QueryRow(`
+	row := m.db.QueryRowContext(context.Background(), `
 		SELECT id, title, what_happened, root_cause, lessons_learned,
 			   prevention_steps, severity, status, affected_files,
 			   related_decision, related_session, created_at, resolved_at
@@ -162,7 +163,7 @@ func (m *Memory) GetPostmortems(status, severity string, limit int) ([]Postmorte
 	query += " ORDER BY created_at DESC LIMIT ?"
 	args = append(args, limit)
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("get postmortems: %w", err)
 	}
@@ -195,6 +196,9 @@ func (m *Memory) GetPostmortems(status, severity string, limit int) ([]Postmorte
 
 		postmortems = append(postmortems, pm)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate postmortems: %w", err)
+	}
 
 	return postmortems, nil
 }
@@ -213,7 +217,7 @@ func (m *Memory) GetPostmortemsForFile(filePath string, limit int) ([]Postmortem
 	// Pattern to match file in JSON array
 	pattern := fmt.Sprintf("%%%q%%", filePath)
 
-	rows, err := m.db.Query(query, pattern, limit)
+	rows, err := m.db.QueryContext(context.Background(), query, pattern, limit)
 	if err != nil {
 		return nil, fmt.Errorf("get postmortems for file: %w", err)
 	}
@@ -253,7 +257,7 @@ func (m *Memory) GetPostmortemsForFile(filePath string, limit int) ([]Postmortem
 // ResolvePostmortem marks a postmortem as resolved.
 func (m *Memory) ResolvePostmortem(id string) error {
 	now := time.Now()
-	result, err := m.db.Exec(`
+	result, err := m.db.ExecContext(context.Background(), `
 		UPDATE postmortems
 		SET status = 'resolved', resolved_at = ?
 		WHERE id = ?`,
@@ -272,7 +276,7 @@ func (m *Memory) ResolvePostmortem(id string) error {
 
 // MarkPostmortemRecurring marks a postmortem as recurring.
 func (m *Memory) MarkPostmortemRecurring(id string) error {
-	result, err := m.db.Exec(`
+	result, err := m.db.ExecContext(context.Background(), `
 		UPDATE postmortems
 		SET status = 'recurring', resolved_at = NULL
 		WHERE id = ?`, id,
@@ -294,7 +298,7 @@ func (m *Memory) UpdatePostmortem(id string, input PostmortemInput) error {
 	preventionJSON, _ := json.Marshal(input.PreventionSteps)
 	filesJSON, _ := json.Marshal(input.AffectedFiles)
 
-	result, err := m.db.Exec(`
+	result, err := m.db.ExecContext(context.Background(), `
 		UPDATE postmortems
 		SET title = ?, what_happened = ?, root_cause = ?,
 		    lessons_learned = ?, prevention_steps = ?,
@@ -319,7 +323,7 @@ func (m *Memory) UpdatePostmortem(id string, input PostmortemInput) error {
 
 // DeletePostmortem deletes a postmortem.
 func (m *Memory) DeletePostmortem(id string) error {
-	result, err := m.db.Exec(`DELETE FROM postmortems WHERE id = ?`, id)
+	result, err := m.db.ExecContext(context.Background(), `DELETE FROM postmortems WHERE id = ?`, id)
 	if err != nil {
 		return fmt.Errorf("delete postmortem: %w", err)
 	}
@@ -338,20 +342,20 @@ func (m *Memory) GetPostmortemStats() (*PostmortemStats, error) {
 	}
 
 	// Get total counts
-	row := m.db.QueryRow(`SELECT COUNT(*) FROM postmortems`)
+	row := m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM postmortems`)
 	row.Scan(&stats.Total)
 
-	row = m.db.QueryRow(`SELECT COUNT(*) FROM postmortems WHERE status = 'open'`)
+	row = m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM postmortems WHERE status = 'open'`)
 	row.Scan(&stats.Open)
 
-	row = m.db.QueryRow(`SELECT COUNT(*) FROM postmortems WHERE status = 'resolved'`)
+	row = m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM postmortems WHERE status = 'resolved'`)
 	row.Scan(&stats.Resolved)
 
-	row = m.db.QueryRow(`SELECT COUNT(*) FROM postmortems WHERE status = 'recurring'`)
+	row = m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM postmortems WHERE status = 'recurring'`)
 	row.Scan(&stats.Recurring)
 
 	// Get counts by severity
-	rows, err := m.db.Query(`SELECT severity, COUNT(*) FROM postmortems GROUP BY severity`)
+	rows, err := m.db.QueryContext(context.Background(), `SELECT severity, COUNT(*) FROM postmortems GROUP BY severity`)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -360,6 +364,9 @@ func (m *Memory) GetPostmortemStats() (*PostmortemStats, error) {
 			if rows.Scan(&severity, &count) == nil {
 				stats.BySeverity[severity] = count
 			}
+		}
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("iterate severity counts: %w", err)
 		}
 	}
 

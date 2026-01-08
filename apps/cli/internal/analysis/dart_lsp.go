@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,29 +29,7 @@ type DartLSPClient struct {
 	cancel    context.CancelFunc
 }
 
-// LSP message types
-type lspRequest struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      int64       `json:"id"`
-	Method  string      `json:"method"`
-	Params  interface{} `json:"params,omitempty"`
-}
-
-type lspResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      int64           `json:"id,omitempty"`
-	Method  string          `json:"method,omitempty"`
-	Result  json.RawMessage `json:"result,omitempty"`
-	Error   *lspError       `json:"error,omitempty"`
-	Params  json.RawMessage `json:"params,omitempty"`
-}
-
-type lspError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-// LSP types for call hierarchy
+// Position represents a position in a text document (LSP types for call hierarchy).
 type Position struct {
 	Line      int `json:"line"`
 	Character int `json:"character"`
@@ -112,7 +89,7 @@ func NewDartLSPClient(rootPath string) (*DartLSPClient, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	cmd := exec.CommandContext(ctx, dartPath, "language-server", "--client-id=mind-palace", "--client-version=1.0.0")
+	cmd := exec.CommandContext(ctx, dartPath, "language-server", "--client-id=mind-palace", "--client-version=1.0.0") //nolint:gosec // G204: dartPath comes from exec.LookPath which is trusted
 	cmd.Dir = rootPath
 
 	stdin, err := cmd.StdinPipe()
@@ -338,7 +315,7 @@ func (c *DartLSPClient) sendNotification(method string, params interface{}) erro
 }
 
 // OpenFile notifies the server about an open file
-func (c *DartLSPClient) OpenFile(filePath string, content string) error {
+func (c *DartLSPClient) OpenFile(filePath, content string) error {
 	uri := pathToURI(filePath)
 
 	params := map[string]interface{}{
@@ -464,7 +441,8 @@ func (c *DartLSPClient) ExtractCallsForSymbol(filePath string, line, character i
 	// Get incoming calls (who calls this)
 	incoming, err := c.GetIncomingCalls(item)
 	if err == nil {
-		for _, call := range incoming {
+		for i := range incoming {
+			call := &incoming[i]
 			for _, r := range call.FromRanges {
 				calls = append(calls, CallInfo{
 					CallerFile:   uriToPath(call.From.URI),
@@ -481,7 +459,8 @@ func (c *DartLSPClient) ExtractCallsForSymbol(filePath string, line, character i
 	// Get outgoing calls (what this calls)
 	outgoing, err := c.GetOutgoingCalls(item)
 	if err == nil {
-		for _, call := range outgoing {
+		for i := range outgoing {
+			call := &outgoing[i]
 			for _, r := range call.FromRanges {
 				calls = append(calls, CallInfo{
 					CallerFile:   uriToPath(item.URI),
@@ -496,19 +475,4 @@ func (c *DartLSPClient) ExtractCallsForSymbol(filePath string, line, character i
 	}
 
 	return calls, nil
-}
-
-func pathToURI(path string) string {
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		absPath = path
-	}
-	return "file://" + absPath
-}
-
-func uriToPath(uri string) string {
-	if strings.HasPrefix(uri, "file://") {
-		return strings.TrimPrefix(uri, "file://")
-	}
-	return uri
 }

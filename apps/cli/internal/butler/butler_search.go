@@ -1,6 +1,7 @@
 package butler
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -24,7 +25,7 @@ func (b *Butler) Search(query string, opts SearchOptions) ([]GroupedResults, err
 		ftsQuery = preprocessQuery(query)
 	}
 
-	rows, err := b.db.Query(`
+	rows, err := b.db.QueryContext(context.Background(), `
 		SELECT
 			c.path,
 			c.chunk_index,
@@ -119,8 +120,14 @@ func (b *Butler) calculateScore(baseScore float64, path, query string) float64 {
 
 // inferRoom determines which room a file belongs to based on its path.
 func (b *Butler) inferRoom(path string) string {
+	// First check direct entry point mapping
+	if roomName, ok := b.entryPoints[path]; ok {
+		return roomName
+	}
+
 	// Check if path prefix matches any room's entry points' directories
-	for name, room := range b.rooms {
+	for name := range b.rooms {
+		room := b.rooms[name]
 		for _, ep := range room.EntryPoints {
 			epDir := filepath.Dir(ep)
 			if epDir != "." && strings.HasPrefix(path, epDir) {

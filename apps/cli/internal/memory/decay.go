@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -27,11 +28,11 @@ func DefaultDecayConfig() DecayConfig {
 
 // DecayResult contains the results of applying decay.
 type DecayResult struct {
-	TotalAffected   int                   `json:"totalAffected"`
-	TotalDecayed    int                   `json:"totalDecayed"`
-	AverageDecay    float64               `json:"averageDecay"`
-	DecayedRecords  []DecayedRecordInfo   `json:"decayedRecords,omitempty"`
-	AtRiskRecords   []AtRiskRecordInfo    `json:"atRiskRecords,omitempty"`
+	TotalAffected  int                 `json:"totalAffected"`
+	TotalDecayed   int                 `json:"totalDecayed"`
+	AverageDecay   float64             `json:"averageDecay"`
+	DecayedRecords []DecayedRecordInfo `json:"decayedRecords,omitempty"`
+	AtRiskRecords  []AtRiskRecordInfo  `json:"atRiskRecords,omitempty"`
 }
 
 // DecayedRecordInfo contains info about a decayed record.
@@ -54,12 +55,12 @@ type AtRiskRecordInfo struct {
 
 // DecayStats contains statistics about decay state.
 type DecayStats struct {
-	TotalLearnings      int     `json:"totalLearnings"`
-	AtRiskCount         int     `json:"atRiskCount"`
-	DecayedCount        int     `json:"decayedCount"`
-	AverageConfidence   float64 `json:"averageConfidence"`
-	OldestInactivedays  int     `json:"oldestInactiveDays"`
-	NextDecayEligible   int     `json:"nextDecayEligible"`
+	TotalLearnings     int     `json:"totalLearnings"`
+	AtRiskCount        int     `json:"atRiskCount"`
+	DecayedCount       int     `json:"decayedCount"`
+	AverageConfidence  float64 `json:"averageConfidence"`
+	OldestInactivedays int     `json:"oldestInactiveDays"`
+	NextDecayEligible  int     `json:"nextDecayEligible"`
 }
 
 // GetDecayStats returns statistics about decay state for learnings.
@@ -67,7 +68,7 @@ func (m *Memory) GetDecayStats(cfg DecayConfig) (*DecayStats, error) {
 	stats := &DecayStats{}
 
 	// Count total learnings
-	err := m.db.QueryRow(`SELECT COUNT(*) FROM learnings WHERE status = 'active'`).Scan(&stats.TotalLearnings)
+	err := m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM learnings WHERE status = 'active'`).Scan(&stats.TotalLearnings)
 	if err != nil {
 		return nil, fmt.Errorf("count learnings: %w", err)
 	}
@@ -77,7 +78,7 @@ func (m *Memory) GetDecayStats(cfg DecayConfig) (*DecayStats, error) {
 	}
 
 	// Average confidence
-	err = m.db.QueryRow(`SELECT COALESCE(AVG(confidence), 0) FROM learnings WHERE status = 'active'`).Scan(&stats.AverageConfidence)
+	err = m.db.QueryRowContext(context.Background(), `SELECT COALESCE(AVG(confidence), 0) FROM learnings WHERE status = 'active'`).Scan(&stats.AverageConfidence)
 	if err != nil {
 		return nil, fmt.Errorf("avg confidence: %w", err)
 	}
@@ -87,7 +88,7 @@ func (m *Memory) GetDecayStats(cfg DecayConfig) (*DecayStats, error) {
 	cutoffDate := now.AddDate(0, 0, -cfg.DecayDays)
 
 	var oldestAccess time.Time
-	err = m.db.QueryRow(`
+	err = m.db.QueryRowContext(context.Background(), `
 		SELECT COALESCE(MIN(last_used), created_at)
 		FROM learnings
 		WHERE status = 'active'
@@ -97,7 +98,7 @@ func (m *Memory) GetDecayStats(cfg DecayConfig) (*DecayStats, error) {
 	}
 
 	// Count at-risk (not yet decayed but past threshold)
-	err = m.db.QueryRow(`
+	err = m.db.QueryRowContext(context.Background(), `
 		SELECT COUNT(*) FROM learnings
 		WHERE status = 'active'
 		AND COALESCE(last_used, created_at) < ?
@@ -108,7 +109,7 @@ func (m *Memory) GetDecayStats(cfg DecayConfig) (*DecayStats, error) {
 	}
 
 	// Count already decayed (below initial confidence)
-	err = m.db.QueryRow(`
+	err = m.db.QueryRowContext(context.Background(), `
 		SELECT COUNT(*) FROM learnings
 		WHERE status = 'active'
 		AND confidence <= ?
@@ -118,7 +119,7 @@ func (m *Memory) GetDecayStats(cfg DecayConfig) (*DecayStats, error) {
 	}
 
 	// Count eligible for next decay
-	err = m.db.QueryRow(`
+	err = m.db.QueryRowContext(context.Background(), `
 		SELECT COUNT(*) FROM learnings
 		WHERE status = 'active'
 		AND COALESCE(last_used, created_at) < ?
@@ -143,7 +144,7 @@ func (m *Memory) PreviewDecay(cfg DecayConfig, limit int) (*DecayResult, error) 
 	cutoffDate := now.AddDate(0, 0, -cfg.DecayDays)
 
 	// Find learnings that would be decayed
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT id, content, confidence, COALESCE(last_used, created_at) as last_access
 		FROM learnings
 		WHERE status = 'active'
@@ -198,7 +199,7 @@ func (m *Memory) PreviewDecay(cfg DecayConfig, limit int) (*DecayResult, error) 
 
 	// Find at-risk records (approaching decay threshold)
 	approachingCutoff := now.AddDate(0, 0, -(cfg.DecayDays - 7)) // Within 7 days of decay
-	atRiskRows, err := m.db.Query(`
+	atRiskRows, err := m.db.QueryContext(context.Background(), `
 		SELECT id, content, confidence, COALESCE(last_used, created_at) as last_access
 		FROM learnings
 		WHERE status = 'active'
@@ -250,7 +251,7 @@ func (m *Memory) ApplyDecay(cfg DecayConfig) (*DecayResult, error) {
 	cutoffDate := now.AddDate(0, 0, -cfg.DecayDays)
 
 	// Find learnings to decay
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT id, content, confidence, COALESCE(last_used, created_at) as last_access
 		FROM learnings
 		WHERE status = 'active'
@@ -316,12 +317,12 @@ func (m *Memory) ApplyDecay(cfg DecayConfig) (*DecayResult, error) {
 
 	// Apply updates in a transaction
 	if len(toUpdate) > 0 {
-		tx, err := m.db.Begin()
+		tx, err := m.db.BeginTx(context.Background(), nil)
 		if err != nil {
 			return nil, fmt.Errorf("begin transaction: %w", err)
 		}
 
-		stmt, err := tx.Prepare(`UPDATE learnings SET confidence = ?, updated_at = ? WHERE id = ?`)
+		stmt, err := tx.PrepareContext(context.Background(), `UPDATE learnings SET confidence = ?, updated_at = ? WHERE id = ?`)
 		if err != nil {
 			tx.Rollback()
 			return nil, fmt.Errorf("prepare statement: %w", err)
@@ -329,7 +330,7 @@ func (m *Memory) ApplyDecay(cfg DecayConfig) (*DecayResult, error) {
 		defer stmt.Close()
 
 		for _, u := range toUpdate {
-			_, err := stmt.Exec(u.newConfidence, now, u.id)
+			_, err := stmt.ExecContext(context.Background(), u.newConfidence, now, u.id)
 			if err != nil {
 				tx.Rollback()
 				return nil, fmt.Errorf("update learning %s: %w", u.id, err)
@@ -350,13 +351,13 @@ func (m *Memory) ApplyDecay(cfg DecayConfig) (*DecayResult, error) {
 }
 
 // BoostConfidence increases confidence for a learning (opposite of decay).
-func (m *Memory) BoostConfidence(id string, boost float64, maxConfidence float64) error {
+func (m *Memory) BoostConfidence(id string, boost, maxConfidence float64) error {
 	if maxConfidence <= 0 {
 		maxConfidence = 1.0
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		UPDATE learnings
 		SET confidence = MIN(confidence + ?, ?),
 		    last_used = ?,

@@ -1,3 +1,4 @@
+// Package starter provides embedded templates for palace init.
 package starter
 
 import (

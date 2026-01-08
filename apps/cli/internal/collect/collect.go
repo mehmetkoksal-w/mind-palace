@@ -1,3 +1,4 @@
+// Package collect implements context collection from the palace index.
 package collect
 
 import (
@@ -18,16 +19,19 @@ import (
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/validate"
 )
 
+// Options configures the context collection behavior.
 type Options struct {
 	AllowStale bool
 }
 
+// Result contains the output of context collection.
 type Result struct {
 	ContextPack      model.ContextPack
 	CorridorWarnings []string
 }
 
-func Run(root string, diffRange string, opts Options) (Result, error) {
+// Run collects context from the palace index for the given root and diff range.
+func Run(root, diffRange string, opts Options) (Result, error) {
 	rootPath, err := filepath.Abs(root)
 	if err != nil {
 		return Result{}, err
@@ -166,53 +170,68 @@ func Run(root string, diffRange string, opts Options) (Result, error) {
 	result := Result{ContextPack: cp}
 
 	// Fetch corridor context from neighbors (if configured)
-	if len(palaceCfg.Neighbors) > 0 {
-		cp.Corridors = nil
-		corridorResult, err := corridor.FetchNeighbors(rootPath, palaceCfg.Neighbors)
-		if err != nil {
-			result.CorridorWarnings = append(result.CorridorWarnings,
-				fmt.Sprintf("corridor fetch failed: %v", err))
-		} else {
-			for _, ctx := range corridorResult.Corridors {
-				info := model.CorridorInfo{
-					Name:      ctx.Name,
-					FromCache: ctx.FromCache,
-					FetchedAt: ctx.FetchedAt.Format(time.RFC3339),
-					Error:     ctx.Error,
-				}
-
-				// Collect warnings for CI visibility
-				if ctx.Error != "" {
-					result.CorridorWarnings = append(result.CorridorWarnings,
-						fmt.Sprintf("corridor %q: %s", ctx.Name, ctx.Error))
-				}
-
-				if ctx.ContextPack != nil {
-					info.Goal = ctx.ContextPack.Goal
-					info.Source = ctx.ContextPack.Provenance.CreatedBy
-
-					for _, f := range ctx.ContextPack.FilesReferenced {
-						namespacedPath := corridor.NamespacePath(ctx.Name, f)
-						info.Files = append(info.Files, namespacedPath)
-					}
-				}
-
-				for _, room := range ctx.Rooms {
-					info.Rooms = append(info.Rooms, room.Name)
-				}
-
-				cp.Corridors = append(cp.Corridors, info)
-			}
-		}
-
-		// Re-write context pack with corridors
-		if err := model.WriteContextPack(cpPath, cp); err != nil {
-			return Result{}, err
-		}
+	corridorWarnings, err := processCorridors(palaceCfg.Neighbors, rootPath, &cp, cpPath)
+	if err != nil {
+		// Log error but don't fail, corridors are optional
+		result.CorridorWarnings = append(result.CorridorWarnings, fmt.Sprintf("failed to process corridors: %v", err))
+	} else {
+		result.CorridorWarnings = append(result.CorridorWarnings, corridorWarnings...)
 		result.ContextPack = cp
 	}
 
 	return result, nil
+}
+
+func processCorridors(neighbors map[string]config.NeighborConfig, rootPath string, cp *model.ContextPack, cpPath string) ([]string, error) {
+	if len(neighbors) == 0 {
+		return nil, nil
+	}
+
+	var warnings []string
+	cp.Corridors = nil
+	corridorResult, err := corridor.FetchNeighbors(rootPath, neighbors)
+	if err != nil {
+		warnings = append(warnings, fmt.Sprintf("corridor fetch failed: %v", err))
+		return warnings, nil
+	}
+
+	for i := range corridorResult.Corridors {
+		ctx := &corridorResult.Corridors[i]
+		info := model.CorridorInfo{
+			Name:      ctx.Name,
+			FromCache: ctx.FromCache,
+			FetchedAt: ctx.FetchedAt.Format(time.RFC3339),
+			Error:     ctx.Error,
+		}
+
+		// Collect warnings for CI visibility
+		if ctx.Error != "" {
+			warnings = append(warnings, fmt.Sprintf("corridor %q: %s", ctx.Name, ctx.Error))
+		}
+
+		if ctx.ContextPack != nil {
+			info.Goal = ctx.ContextPack.Goal
+			info.Source = ctx.ContextPack.Provenance.CreatedBy
+
+			for _, f := range ctx.ContextPack.FilesReferenced {
+				namespacedPath := corridor.NamespacePath(ctx.Name, f)
+				info.Files = append(info.Files, namespacedPath)
+			}
+		}
+
+		for j := range ctx.Rooms {
+			info.Rooms = append(info.Rooms, ctx.Rooms[j].Name)
+		}
+
+		cp.Corridors = append(cp.Corridors, info)
+	}
+
+	// Re-write context pack with corridors
+	if err := model.WriteContextPack(cpPath, *cp); err != nil {
+		return warnings, err
+	}
+
+	return warnings, nil
 }
 
 func collectEntryPoints(rootPath, roomName string) []string {

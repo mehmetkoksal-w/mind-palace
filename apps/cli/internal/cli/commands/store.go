@@ -168,7 +168,7 @@ func ExecuteStore(opts StoreOptions) error {
 
 	// Extract additional tags from content
 	extractedTags := memory.ExtractTags(opts.Content)
-	tags := append(opts.Tags, extractedTags...)
+	opts.Tags = append(opts.Tags, extractedTags...)
 
 	// Store based on kind
 	var id string
@@ -205,8 +205,8 @@ func ExecuteStore(opts StoreOptions) error {
 	}
 
 	// Set tags if any
-	if len(tags) > 0 {
-		if err := mem.SetTags(id, string(kind), tags); err != nil {
+	if len(opts.Tags) > 0 {
+		if err := mem.SetTags(id, string(kind), opts.Tags); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to set tags: %v\n", err)
 		}
 	}
@@ -229,8 +229,8 @@ func ExecuteStore(opts StoreOptions) error {
 		fmt.Printf(" (%s)", opts.ScopePath)
 	}
 	fmt.Println()
-	if len(tags) > 0 {
-		fmt.Printf("  Tags: %s\n", strings.Join(tags, ", "))
+	if len(opts.Tags) > 0 {
+		fmt.Printf("  Tags: %s\n", strings.Join(opts.Tags, ", "))
 	}
 	fmt.Printf("  Content: %s\n", util.TruncateLine(opts.Content, 60))
 	return nil

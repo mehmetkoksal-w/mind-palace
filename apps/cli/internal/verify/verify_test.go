@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -49,7 +50,7 @@ func TestDetectStaleIgnoresUnchangedFiles(t *testing.T) {
 func TestVerifyEmptyDiffDoesNotFallback(t *testing.T) {
 	dir := t.TempDir()
 	run := func(args ...string) {
-		cmd := exec.Command("git", args...)
+		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = dir
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v failed: %v output: %s", args, err, string(out))

@@ -48,7 +48,7 @@ func TestHashFile(t *testing.T) {
 	path := filepath.Join(tmpDir, "test.txt")
 
 	content := "Hello, World!"
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
@@ -63,7 +63,7 @@ func TestHashFile(t *testing.T) {
 
 	// Same content should produce same hash
 	path2 := filepath.Join(tmpDir, "test2.txt")
-	if err := os.WriteFile(path2, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path2, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
@@ -78,7 +78,7 @@ func TestHashFile(t *testing.T) {
 
 	// Different content should produce different hash
 	path3 := filepath.Join(tmpDir, "test3.txt")
-	if err := os.WriteFile(path3, []byte("Different content"), 0644); err != nil {
+	if err := os.WriteFile(path3, []byte("Different content"), 0o644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
@@ -157,7 +157,7 @@ func TestListFiles(t *testing.T) {
 		"src/lib",
 	}
 	for _, d := range dirs {
-		if err := os.MkdirAll(filepath.Join(tmpDir, d), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(tmpDir, d), 0o755); err != nil {
 			t.Fatalf("failed to create dir: %v", err)
 		}
 	}
@@ -169,7 +169,7 @@ func TestListFiles(t *testing.T) {
 	}
 	for _, f := range files {
 		path := filepath.Join(tmpDir, f)
-		if err := os.WriteFile(path, []byte("content"), 0644); err != nil {
+		if err := os.WriteFile(path, []byte("content"), 0o644); err != nil {
 			t.Fatalf("failed to create file: %v", err)
 		}
 	}
@@ -276,7 +276,7 @@ func TestStatFile(t *testing.T) {
 	path := filepath.Join(tmpDir, "test.txt")
 
 	content := "Test content here"
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
@@ -342,7 +342,7 @@ func TestListFilesWithSymlinks(t *testing.T) {
 	tmpDir, _ := filepath.EvalSymlinks(t.TempDir())
 
 	realFile := filepath.Join(tmpDir, "real.txt")
-	os.WriteFile(realFile, []byte("data"), 0644)
+	os.WriteFile(realFile, []byte("data"), 0o644)
 
 	linkFile := filepath.Join(tmpDir, "link.txt")
 	if err := os.Symlink(realFile, linkFile); err != nil {
@@ -350,7 +350,7 @@ func TestListFilesWithSymlinks(t *testing.T) {
 	}
 
 	subDir := filepath.Join(tmpDir, "sub")
-	os.Mkdir(subDir, 0755)
+	os.Mkdir(subDir, 0o755)
 	os.Symlink(subDir, filepath.Join(tmpDir, "linkdir"))
 
 	files, err := fsutil.ListFiles(tmpDir, config.Guardrails{})

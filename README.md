@@ -2,8 +2,10 @@
 
 A deterministic context system for codebases, inspired by the [Method of Loci](https://en.wikipedia.org/wiki/Method_of_loci).
 
-[![CI](https://github.com/koksalmehmet/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/koksalmehmet/mind-palace/actions/workflows/ci.yml)
-[![Release](https://github.com/koksalmehmet/mind-palace/actions/workflows/release.yml/badge.svg)](https://github.com/koksalmehmet/mind-palace/actions/workflows/release.yml)
+[![Pipeline](https://github.com/koksalmehmet/mind-palace/actions/workflows/pipeline.yml/badge.svg)](https://github.com/koksalmehmet/mind-palace/actions/workflows/pipeline.yml)
+[![PR Validation](https://github.com/koksalmehmet/mind-palace/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/koksalmehmet/mind-palace/actions/workflows/pr-validation.yml)
+[![codecov](https://codecov.io/gh/koksalmehmet/mind-palace/branch/main/graph/badge.svg)](https://codecov.io/gh/koksalmehmet/mind-palace)
+[![Go Report Card](https://goreportcard.com/badge/github.com/koksalmehmet/mind-palace)](https://goreportcard.com/report/github.com/koksalmehmet/mind-palace)
 
 ## Overview
 
@@ -32,11 +34,12 @@ Mind Palace provides a **deterministic, schema-validated index** for codebases t
 curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
 chmod +x palace && sudo mv palace /usr/local/bin/
 
-# Initialize
-palace init && palace detect && palace scan
+# Initialize and scan
+palace init
+palace scan
 
-# Query
-palace ask "where is authentication handled"
+# Search
+palace explore "where is authentication handled"
 
 # Start dashboard
 palace dashboard
@@ -118,15 +121,89 @@ make build-dashboard # Build Angular dashboard
 make build-vscode   # Build VS Code extension
 
 make test           # Run all tests
+make test-all       # Run comprehensive test suite
 make test-go        # Run Go tests only
 make test-dashboard # Run Angular tests
+make test-vscode    # Run VS Code extension tests
+make e2e            # Run end-to-end tests
 
 make lint           # Run all linters
 make clean          # Clean build artifacts
 make deps           # Install all dependencies
 ```
 
+### Scripts (Cross-Platform)
+
+**Linux/macOS (Bash):**
+```sh
+./scripts/dev.sh        # Interactive development menu
+./scripts/build.sh      # Build (all, cli, dashboard, vscode, release)
+./scripts/test-all.sh   # Run all tests
+```
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\dev.ps1       # Interactive development menu
+.\scripts\build.ps1     # Build (all, cli, dashboard, vscode, release)
+.\scripts\test-all.ps1  # Run all tests
+```
+
 See `make help` for all available targets.
+
+## Testing
+
+### Running Tests
+
+```sh
+# Run all tests across all components
+make test
+
+# Run tests for specific components
+make test-go        # Go CLI tests (with race detection)
+make test-dashboard # Angular/Vitest tests
+make test-vscode    # VS Code extension tests
+make e2e            # End-to-end integration tests
+```
+
+### Test Coverage
+
+```sh
+# Go CLI coverage
+cd apps/cli
+go test -v -race -coverprofile=coverage.out ./internal/...
+go tool cover -html=coverage.out
+
+# Dashboard coverage
+cd apps/dashboard
+npm run test:coverage
+open coverage/index.html
+
+# VS Code extension coverage
+cd apps/vscode
+npm run test:coverage
+```
+
+### Test Status
+
+| Component     | Framework | Tests        | Coverage | Status     |
+| ------------- | --------- | ------------ | -------- | ---------- |
+| **Go CLI**    | Go test   | 77 files     | ~50%     | Passing |
+| **Dashboard** | Vitest    | 211 tests    | 70%+     | Passing |
+| **VS Code**   | Mocha     | 49 tests     | TBD      | Passing |
+| **E2E**       | Bash      | 10 scenarios | N/A      | Passing |
+
+### CI/CD
+
+All tests run automatically on every push and pull request via GitHub Actions:
+
+- Go tests with race detection
+- Dashboard tests with coverage
+- VS Code extension tests (headless)
+- Build validation
+- Security scanning (Trivy, CodeQL, Gosec)
+- Dependency audits
+
+See [.github/workflows/](.github/workflows/) for workflow configurations.
 
 ## Installation
 
@@ -234,4 +311,4 @@ We welcome contributions! Please see [Contributing Guide](./docs/contributing.md
 
 ## License
 
-PolyForm Shield 1.0.0 — see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE) for details.

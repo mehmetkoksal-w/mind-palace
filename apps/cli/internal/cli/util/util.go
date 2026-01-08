@@ -35,7 +35,7 @@ func TruncateLine(s string, maxLen int) string {
 }
 
 // PrintScope prints scope information for a command.
-func PrintScope(cmd string, fullScope bool, source string, diffRange string, fileCount int, rootPath string) {
+func PrintScope(cmd string, fullScope bool, source, diffRange string, fileCount int, rootPath string) {
 	mode := "diff"
 	if fullScope {
 		mode = "full"

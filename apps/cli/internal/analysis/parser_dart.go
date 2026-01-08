@@ -18,22 +18,22 @@ func (p *DartParser) Language() Language {
 }
 
 var (
-	dartClassRegex      = regexp.MustCompile(`(?m)^(\s*)(abstract\s+)?class\s+(\w+)(?:\s+extends\s+(\w+))?(?:\s+(?:with|implements)\s+[\w\s,]+)?\s*\{`)
-	dartMixinRegex      = regexp.MustCompile(`(?m)^(\s*)mixin\s+(\w+)(?:\s+on\s+[\w\s,]+)?\s*\{`)
-	dartEnumRegex       = regexp.MustCompile(`(?m)^(\s*)enum\s+(\w+)\s*\{`)
-	dartFunctionRegex   = regexp.MustCompile(`(?m)^(\s*)([\w<>\[\]?,\s]+)\s+(\w+)\s*\(([^)]*)\)\s*(async\s*)?\{`)
-	dartMethodRegex     = regexp.MustCompile(`(?m)^(\s+)(static\s+)?([\w<>\[\]?,\s]+)\s+(\w+)\s*\(([^)]*)\)\s*(async\s*)?\{`)
-	dartGetterRegex     = regexp.MustCompile(`(?m)^(\s+)(static\s+)?([\w<>\[\]?,\s]+)\s+get\s+(\w+)\s*[{=>]`)
-	dartSetterRegex     = regexp.MustCompile(`(?m)^(\s+)set\s+(\w+)\s*\(`)
-	dartFieldRegex      = regexp.MustCompile(`(?m)^(\s+)(static\s+)?(final\s+)?(late\s+)?(const\s+)?([\w<>\[\]?,]+)\s+(\w+)\s*[;=]`)
-	dartConstRegex      = regexp.MustCompile(`(?m)^(\s*)(const|final)\s+([\w<>\[\]?,]+)\s+(\w+)\s*=`)
-	dartImportRegex     = regexp.MustCompile(`(?m)^import\s+['"]([^'"]+)['"]`)
-	dartExportRegex     = regexp.MustCompile(`(?m)^export\s+['"]([^'"]+)['"]`)
-	dartPartRegex       = regexp.MustCompile(`(?m)^part\s+['"]([^'"]+)['"]`)
-	dartPartOfRegex     = regexp.MustCompile(`(?m)^part\s+of\s+['"]([^'"]+)['"]`)
-	dartExtensionRegex  = regexp.MustCompile(`(?m)^(\s*)extension\s+(\w+)?\s+on\s+(\w+)`)
-	dartTypedefRegex    = regexp.MustCompile(`(?m)^(\s*)typedef\s+(\w+)`)
-	dartDocCommentRegex = regexp.MustCompile(`(?m)^(\s*)///\s*(.*)$`)
+	dartClassRegex     = regexp.MustCompile(`(?m)^(\s*)(abstract\s+)?class\s+(\w+)(?:\s+extends\s+(\w+))?(?:\s+(?:with|implements)\s+[\w\s,]+)?\s*\{`)
+	dartMixinRegex     = regexp.MustCompile(`(?m)^(\s*)mixin\s+(\w+)(?:\s+on\s+[\w\s,]+)?\s*\{`)
+	dartEnumRegex      = regexp.MustCompile(`(?m)^(\s*)enum\s+(\w+)\s*\{`)
+	dartFunctionRegex  = regexp.MustCompile(`(?m)^(\s*)([\w<>\[\]?,\s]+)\s+(\w+)\s*\(([^)]*)\)\s*(async\s*)?\{`)
+	dartMethodRegex    = regexp.MustCompile(`(?m)^(\s+)(static\s+)?([\w<>\[\]?,\s]+)\s+(\w+)\s*\(([^)]*)\)\s*(async\s*)?\{`)
+	dartGetterRegex    = regexp.MustCompile(`(?m)^(\s+)(static\s+)?([\w<>\[\]?,\s]+)\s+get\s+(\w+)\s*[{=>]`)
+	dartSetterRegex    = regexp.MustCompile(`(?m)^(\s+)set\s+(\w+)\s*\(`)
+	dartFieldRegex     = regexp.MustCompile(`(?m)^(\s+)(static\s+)?(final\s+)?(late\s+)?(const\s+)?([\w<>\[\]?,]+)\s+(\w+)\s*[;=]`)
+	dartConstRegex     = regexp.MustCompile(`(?m)^(\s*)(const|final)\s+([\w<>\[\]?,]+)\s+(\w+)\s*=`)
+	dartImportRegex    = regexp.MustCompile(`(?m)^import\s+['"]([^'"]+)['"]`)
+	dartExportRegex    = regexp.MustCompile(`(?m)^export\s+['"]([^'"]+)['"]`)
+	dartPartRegex      = regexp.MustCompile(`(?m)^part\s+['"]([^'"]+)['"]`)
+	dartPartOfRegex    = regexp.MustCompile(`(?m)^part\s+of\s+['"]([^'"]+)['"]`)
+	dartExtensionRegex = regexp.MustCompile(`(?m)^(\s*)extension\s+(\w+)?\s+on\s+(\w+)`)
+	dartTypedefRegex   = regexp.MustCompile(`(?m)^(\s*)typedef\s+(\w+)`)
+	_                  = regexp.MustCompile(`(?m)^(\s*)///\s*(.*)$`)
 )
 
 func (p *DartParser) Parse(content []byte, filePath string) (*FileAnalysis, error) {
@@ -59,7 +59,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 		startLine int
 		endLine   int
 	}
-	var blocks []blockInfo
+	blocks := make([]blockInfo, 0, 10) // preallocate for typical file
 
 	// Extract classes
 	for _, match := range dartClassRegex.FindAllStringSubmatchIndex(fullContent, -1) {
@@ -179,7 +179,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 		}
 
 		indent := fullContent[match[2]:match[3]]
-		if len(strings.TrimSpace(indent)) > 0 {
+		if strings.TrimSpace(indent) != "" {
 			continue // Skip indented functions (methods)
 		}
 
@@ -221,7 +221,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 		}
 
 		indent := fullContent[match[2]:match[3]]
-		if len(strings.TrimSpace(indent)) > 0 {
+		if strings.TrimSpace(indent) != "" {
 			continue
 		}
 
@@ -434,10 +434,11 @@ func (p *DartParser) findBlockEnd(lines []string, startIdx int) int {
 	for i := startIdx; i < len(lines); i++ {
 		line := lines[i]
 		for _, ch := range line {
-			if ch == '{' {
+			switch ch {
+			case '{':
 				braceCount++
 				started = true
-			} else if ch == '}' {
+			case '}':
 				braceCount--
 				if started && braceCount == 0 {
 					return i + 1
@@ -456,16 +457,18 @@ func (p *DartParser) extractDocComment(lines []string, lineIdx int) string {
 
 	var docLines []string
 
+outer:
 	for i := lineIdx - 1; i >= 0; i-- {
 		line := strings.TrimSpace(lines[i])
-		if strings.HasPrefix(line, "///") {
+		switch {
+		case strings.HasPrefix(line, "///"):
 			doc := strings.TrimPrefix(line, "///")
 			doc = strings.TrimSpace(doc)
 			docLines = append([]string{doc}, docLines...)
-		} else if line == "" {
+		case line == "":
 			continue
-		} else {
-			break
+		default:
+			break outer
 		}
 	}
 

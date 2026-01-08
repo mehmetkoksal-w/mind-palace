@@ -4,12 +4,7 @@
   "title": "PalaceConfig",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schemaVersion",
-    "kind",
-    "project",
-    "provenance"
-  ],
+  "required": ["schemaVersion", "kind", "project", "provenance"],
   "properties": {
     "schemaVersion": {
       "type": "string",
@@ -22,9 +17,7 @@
     "project": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "name"
-      ],
+      "required": ["name"],
       "properties": {
         "name": {
           "type": "string",
@@ -81,12 +74,7 @@
             "properties": {
               "type": {
                 "type": "string",
-                "enum": [
-                  "none",
-                  "bearer",
-                  "basic",
-                  "header"
-                ]
+                "enum": ["none", "bearer", "basic", "header"]
               },
               "token": {
                 "type": "string",
@@ -119,6 +107,27 @@
     },
     "provenance": {
       "$ref": "#/$defs/provenance"
+    },
+    "dashboard": {
+      "type": "object",
+      "description": "Dashboard server configuration",
+      "additionalProperties": false,
+      "properties": {
+        "cors": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowedOrigins": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of allowed origins for CORS. Defaults to localhost in development.",
+              "default": []
+            }
+          }
+        }
+      }
     },
     "vscode": {
       "type": "object",
@@ -201,10 +210,7 @@
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "createdBy",
-        "createdAt"
-      ],
+      "required": ["createdBy", "createdAt"],
       "properties": {
         "createdBy": {
           "type": "string",

@@ -301,7 +301,7 @@ func TestDetectChanges(t *testing.T) {
 		dbPath := filepath.Join(dir, ".palace", "index", "palace.db")
 
 		// Create palace structure
-		os.MkdirAll(filepath.Dir(dbPath), 0755)
+		os.MkdirAll(filepath.Dir(dbPath), 0o755)
 
 		db, err := Open(dbPath)
 		if err != nil {
@@ -311,7 +311,7 @@ func TestDetectChanges(t *testing.T) {
 
 		// Create a file on disk that's not in the database
 		testFile := filepath.Join(dir, "new.go")
-		if err := os.WriteFile(testFile, []byte("package main\n"), 0644); err != nil {
+		if err := os.WriteFile(testFile, []byte("package main\n"), 0o644); err != nil {
 			t.Fatalf("failed to write test file: %v", err)
 		}
 
@@ -337,7 +337,7 @@ func TestDetectChanges(t *testing.T) {
 	t.Run("detects deleted files", func(t *testing.T) {
 		dir := t.TempDir()
 		dbPath := filepath.Join(dir, ".palace", "index", "palace.db")
-		os.MkdirAll(filepath.Dir(dbPath), 0755)
+		os.MkdirAll(filepath.Dir(dbPath), 0o755)
 
 		db, err := Open(dbPath)
 		if err != nil {
@@ -348,7 +348,7 @@ func TestDetectChanges(t *testing.T) {
 		// Create and index a file
 		testFile := filepath.Join(dir, "todelete.go")
 		content := "package main\n"
-		if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 			t.Fatalf("failed to write test file: %v", err)
 		}
 
@@ -392,7 +392,7 @@ func TestDetectChanges(t *testing.T) {
 	t.Run("detects modified files", func(t *testing.T) {
 		dir := t.TempDir()
 		dbPath := filepath.Join(dir, ".palace", "index", "palace.db")
-		os.MkdirAll(filepath.Dir(dbPath), 0755)
+		os.MkdirAll(filepath.Dir(dbPath), 0o755)
 
 		db, err := Open(dbPath)
 		if err != nil {
@@ -403,7 +403,7 @@ func TestDetectChanges(t *testing.T) {
 		// Create and index a file
 		testFile := filepath.Join(dir, "modify.go")
 		content := "package main\n"
-		if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 			t.Fatalf("failed to write test file: %v", err)
 		}
 
@@ -425,7 +425,7 @@ func TestDetectChanges(t *testing.T) {
 
 		// Modify the file
 		newContent := "package main\n\nfunc main() {}\n"
-		if err := os.WriteFile(testFile, []byte(newContent), 0644); err != nil {
+		if err := os.WriteFile(testFile, []byte(newContent), 0o644); err != nil {
 			t.Fatalf("failed to modify file: %v", err)
 		}
 
@@ -450,7 +450,7 @@ func TestDetectChanges(t *testing.T) {
 	t.Run("no changes when unchanged", func(t *testing.T) {
 		dir := t.TempDir()
 		dbPath := filepath.Join(dir, ".palace", "index", "palace.db")
-		os.MkdirAll(filepath.Dir(dbPath), 0755)
+		os.MkdirAll(filepath.Dir(dbPath), 0o755)
 
 		db, err := Open(dbPath)
 		if err != nil {
@@ -461,7 +461,7 @@ func TestDetectChanges(t *testing.T) {
 		// Create and index a file
 		testFile := filepath.Join(dir, "unchanged.go")
 		content := "package main\n"
-		if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 			t.Fatalf("failed to write test file: %v", err)
 		}
 
@@ -530,7 +530,7 @@ func TestIncrementalScan(t *testing.T) {
 		// Create a test file
 		testFile := filepath.Join(dir, "added.go")
 		content := "package main\n"
-		if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 			t.Fatalf("failed to write test file: %v", err)
 		}
 
@@ -565,7 +565,7 @@ func TestIncrementalScan(t *testing.T) {
 		// First add a file
 		testFile := filepath.Join(dir, "todelete.go")
 		content := "package main\n"
-		if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 			t.Fatalf("failed to write test file: %v", err)
 		}
 
@@ -678,8 +678,14 @@ func TestFileChange(t *testing.T) {
 		if change.Action != "added" {
 			t.Errorf("expected action 'added', got %q", change.Action)
 		}
+		if change.Path != "new.go" {
+			t.Errorf("expected path 'new.go', got %q", change.Path)
+		}
 		if change.OldHash != "" {
 			t.Errorf("expected empty OldHash for added file")
+		}
+		if change.NewHash != "abc123" {
+			t.Errorf("expected NewHash 'abc123', got %q", change.NewHash)
 		}
 	})
 
@@ -694,8 +700,14 @@ func TestFileChange(t *testing.T) {
 		if change.Action != "deleted" {
 			t.Errorf("expected action 'deleted', got %q", change.Action)
 		}
+		if change.Path != "old.go" {
+			t.Errorf("expected path 'old.go', got %q", change.Path)
+		}
 		if change.NewHash != "" {
 			t.Errorf("expected empty NewHash for deleted file")
+		}
+		if change.OldHash != "abc123" {
+			t.Errorf("expected OldHash 'abc123', got %q", change.OldHash)
 		}
 	})
 
@@ -709,6 +721,9 @@ func TestFileChange(t *testing.T) {
 
 		if change.Action != "modified" {
 			t.Errorf("expected action 'modified', got %q", change.Action)
+		}
+		if change.Path != "changed.go" {
+			t.Errorf("expected path 'changed.go', got %q", change.Path)
 		}
 		if change.OldHash == change.NewHash {
 			t.Errorf("expected different hashes for modified file")
@@ -737,6 +752,9 @@ func TestIncrementalScanSummary(t *testing.T) {
 	}
 	if summary.FilesUnchanged != 100 {
 		t.Errorf("expected FilesUnchanged=100, got %d", summary.FilesUnchanged)
+	}
+	if summary.Duration != time.Second {
+		t.Errorf("expected Duration=1s, got %v", summary.Duration)
 	}
 }
 
@@ -846,6 +864,9 @@ func TestFileMetadata(t *testing.T) {
 	}
 	if meta.Size != 1024 {
 		t.Errorf("expected size 1024, got %d", meta.Size)
+	}
+	if meta.ModTime.IsZero() {
+		t.Error("expected non-zero ModTime")
 	}
 }
 

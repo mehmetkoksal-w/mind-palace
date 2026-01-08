@@ -62,7 +62,7 @@ func TestFuzzyMatchScore(t *testing.T) {
 		minScore      float64
 		maxScore      float64
 	}{
-		{"test", "test", 0.99, 1.01},     // identical = 1.0
+		{"test", "test", 0.99, 1.01},     // identical is 1.0
 		{"", "", 0.99, 1.01},             // both empty = 1.0
 		{"test", "tost", 0.7, 0.8},       // 1 diff out of 4
 		{"kitten", "sitting", 0.5, 0.65}, // 3 diffs out of 7

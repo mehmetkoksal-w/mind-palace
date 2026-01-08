@@ -22,6 +22,7 @@ help:
 	@echo ""
 	@echo "Test Commands:"
 	@echo "  make test           - Run all tests"
+	@echo "  make test-all       - Run all tests (comprehensive script)"
 	@echo "  make test-go        - Run Go tests"
 	@echo "  make test-dashboard - Run Angular tests"
 	@echo "  make test-vscode    - Run VS Code extension tests"
@@ -31,6 +32,7 @@ help:
 	@echo "  make dev            - Run palace in dev mode"
 	@echo "  make dev-dashboard  - Run Angular dev server"
 	@echo "  make dev-vscode     - Watch VS Code extension"
+	@echo "  make menu           - Interactive development menu (Windows: scripts/dev.ps1)"
 	@echo ""
 	@echo "Other Commands:"
 	@echo "  make deps           - Install all dependencies"
@@ -47,8 +49,8 @@ help:
 build: build-dashboard build-vscode build-palace
 	@echo "Build complete!"
 
-# Build palace CLI
-build-palace:
+# Build palace CLI (depends on dashboard being built)
+build-palace: build-dashboard
 	@echo "Building palace CLI..."
 	go build $(LDFLAGS) -o palace ./apps/cli
 
@@ -120,6 +122,11 @@ e2e: build-palace
 	@echo "Running end-to-end tests..."
 	./scripts/e2e-test.sh
 
+# Run all tests (comprehensive)
+test-all:
+	@echo "Running all tests..."
+	@./scripts/test-all.sh
+
 # =============================================================================
 # Development Commands
 # =============================================================================
@@ -145,6 +152,10 @@ dev-all:
 	@echo "  Terminal 1: make dev          (Go backend)"
 	@echo "  Terminal 2: make dev-dashboard (Angular frontend)"
 	@echo "  Terminal 3: make dev-vscode   (VS Code extension)"
+
+# Interactive development menu
+menu:
+	@./scripts/dev.sh
 
 # =============================================================================
 # Dependency Management

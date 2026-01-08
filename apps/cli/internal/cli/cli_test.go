@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -466,10 +467,10 @@ func TestCmdCleanInvalidFlag(t *testing.T) {
 
 func TestCmdHelpKnownCommands(t *testing.T) {
 	// Only test commands that have help topics defined in cmdHelp
-	commands := []string{"init", "scan", "check", "explore", "store", "recall",
+	commandNames := []string{"init", "scan", "check", "explore", "store", "recall",
 		"brief", "serve", "session", "corridor", "dashboard", "clean"}
 
-	for _, cmd := range commands {
+	for _, cmd := range commandNames {
 		t.Run(cmd, func(t *testing.T) {
 			err := cmdHelp([]string{cmd})
 			if err != nil {
@@ -732,32 +733,32 @@ func seedIndexForCLI(t *testing.T, root string) *index.DBHandle {
 	now := time.Now().UTC().Format(time.RFC3339)
 	files := []string{"main.go", "caller.go"}
 	for _, path := range files {
-		if _, err := db.Exec(`INSERT INTO files (path, hash, size, mod_time, indexed_at, language) VALUES (?, ?, ?, ?, ?, ?)`,
+		if _, err := db.ExecContext(context.Background(), `INSERT INTO files (path, hash, size, mod_time, indexed_at, language) VALUES (?, ?, ?, ?, ?, ?)`,
 			path, "hash", 1, now, now, "go"); err != nil {
 			t.Fatalf("insert file error = %v", err)
 		}
 	}
 
 	content := "package main\nfunc DoWork() {}\n"
-	if _, err := db.Exec(`INSERT INTO chunks (path, chunk_index, start_line, end_line, content) VALUES (?, ?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO chunks (path, chunk_index, start_line, end_line, content) VALUES (?, ?, ?, ?, ?)`,
 		"main.go", 0, 1, 2, content); err != nil {
 		t.Fatalf("insert chunk error = %v", err)
 	}
-	if _, err := db.Exec(`INSERT INTO chunks_fts (path, content, chunk_index) VALUES (?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO chunks_fts (path, content, chunk_index) VALUES (?, ?, ?)`,
 		"main.go", content, 0); err != nil {
 		t.Fatalf("insert chunk fts error = %v", err)
 	}
 
-	if _, err := db.Exec(`INSERT INTO symbols (file_path, name, kind, line_start, line_end, signature, doc_comment, exported) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO symbols (file_path, name, kind, line_start, line_end, signature, doc_comment, exported) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		"main.go", "DoWork", "function", 1, 20, "func DoWork()", "", 1); err != nil {
 		t.Fatalf("insert symbol error = %v", err)
 	}
 
-	if _, err := db.Exec(`INSERT INTO relationships (source_file, target_file, target_symbol, kind, line) VALUES (?, ?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO relationships (source_file, target_file, target_symbol, kind, line) VALUES (?, ?, ?, ?, ?)`,
 		"caller.go", "", "DoWork", "call", 10); err != nil {
 		t.Fatalf("insert relationship error = %v", err)
 	}
-	if _, err := db.Exec(`INSERT INTO relationships (source_file, target_file, target_symbol, kind, line) VALUES (?, ?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO relationships (source_file, target_file, target_symbol, kind, line) VALUES (?, ?, ?, ?, ?)`,
 		"main.go", "", "Helper", "call", 2); err != nil {
 		t.Fatalf("insert relationship error = %v", err)
 	}

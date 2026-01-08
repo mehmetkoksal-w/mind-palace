@@ -2,9 +2,9 @@ package memory
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
-	"time"
 )
 
 // EmbeddingPipeline handles background embedding generation for records.
@@ -105,7 +105,7 @@ func (p *EmbeddingPipeline) Enqueue(recordID, kind, content string) {
 }
 
 // worker processes embedding jobs from the queue.
-func (p *EmbeddingPipeline) worker(id int) {
+func (p *EmbeddingPipeline) worker(_ int) {
 	defer p.wg.Done()
 
 	for {
@@ -233,7 +233,7 @@ func (m *Memory) GetRecordsWithoutEmbeddings(kind string, limit int) ([]RecordWi
 		return nil, nil
 	}
 
-	rows, err := m.db.Query(query, limit)
+	rows, err := m.db.QueryContext(context.Background(), query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -246,6 +246,10 @@ func (m *Memory) GetRecordsWithoutEmbeddings(kind string, limit int) ([]RecordWi
 			continue
 		}
 		records = append(records, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate records: %w", err)
 	}
 
 	return records, nil
@@ -266,7 +270,7 @@ func (m *Memory) CountRecordsWithoutEmbeddings(kind string) (int, error) {
 	}
 
 	var count int
-	err := m.db.QueryRow(query).Scan(&count)
+	err := m.db.QueryRowContext(context.Background(), query).Scan(&count)
 	return count, err
 }
 
@@ -296,7 +300,7 @@ func (m *Memory) GetEmbeddingStats(pipeline *EmbeddingPipeline) (*EmbeddingStats
 	// By kind
 	for _, kind := range []string{"idea", "decision", "learning"} {
 		var count int
-		err := m.db.QueryRow(`SELECT COUNT(*) FROM embeddings WHERE record_kind = ?`, kind).Scan(&count)
+		err := m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM embeddings WHERE record_kind = ?`, kind).Scan(&count)
 		if err == nil {
 			stats.ByKind[kind] = count
 		}
@@ -314,21 +318,4 @@ func (m *Memory) GetEmbeddingStats(pipeline *EmbeddingPipeline) (*EmbeddingStats
 	}
 
 	return stats, nil
-}
-
-// startEmbeddingRetryLoop periodically retries failed embeddings.
-// This runs in a separate goroutine and processes pending embeddings every interval.
-func (p *EmbeddingPipeline) startEmbeddingRetryLoop(interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-p.ctx.Done():
-			return
-		case <-ticker.C:
-			// Process up to 10 pending embeddings
-			_, _ = p.ProcessPending(nil, 10)
-		}
-	}
 }

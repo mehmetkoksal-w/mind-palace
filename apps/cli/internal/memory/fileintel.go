@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -8,7 +9,7 @@ import (
 
 // GetFileIntel retrieves intelligence about a specific file.
 func (m *Memory) GetFileIntel(path string) (*FileIntel, error) {
-	row := m.db.QueryRow(`
+	row := m.db.QueryRowContext(context.Background(), `
 		SELECT path, edit_count, last_edited, last_editor, failure_count
 		FROM file_intel WHERE path = ?
 	`, path)
@@ -29,7 +30,7 @@ func (m *Memory) GetFileIntel(path string) (*FileIntel, error) {
 	}
 
 	// Get associated learnings
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT learning_id FROM file_learnings WHERE file_path = ?
 	`, path)
 	if err != nil {
@@ -53,7 +54,7 @@ func (m *Memory) RecordFileEdit(path, agentType string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	// Upsert file_intel
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT INTO file_intel (path, edit_count, last_edited, last_editor, failure_count)
 		VALUES (?, 1, ?, ?, 0)
 		ON CONFLICT(path) DO UPDATE SET
@@ -66,7 +67,7 @@ func (m *Memory) RecordFileEdit(path, agentType string) error {
 
 // RecordFileFailure records that an edit to a file led to a failure.
 func (m *Memory) RecordFileFailure(path string) error {
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		UPDATE file_intel SET failure_count = failure_count + 1 WHERE path = ?
 	`, path)
 	return err
@@ -79,7 +80,7 @@ func (m *Memory) AssociateLearningWithFile(filePath, learningID string) error {
 		return err
 	}
 
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT OR IGNORE INTO file_learnings (file_path, learning_id)
 		VALUES (?, ?)
 	`, filePath, learningID)
@@ -88,7 +89,7 @@ func (m *Memory) AssociateLearningWithFile(filePath, learningID string) error {
 
 // ensureFileIntel creates a file_intel entry if it doesn't exist.
 func (m *Memory) ensureFileIntel(path string) error {
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT OR IGNORE INTO file_intel (path, edit_count, failure_count)
 		VALUES (?, 0, 0)
 	`, path)
@@ -106,7 +107,7 @@ func (m *Memory) GetFileHotspots(limit int) ([]FileIntel, error) {
 		query += fmt.Sprintf(" LIMIT %d", limit)
 	}
 
-	rows, err := m.db.Query(query)
+	rows, err := m.db.QueryContext(context.Background(), query)
 	if err != nil {
 		return nil, fmt.Errorf("query file hotspots: %w", err)
 	}
@@ -139,7 +140,7 @@ func (m *Memory) GetFragileFiles(limit int) ([]FileIntel, error) {
 		query += fmt.Sprintf(" LIMIT %d", limit)
 	}
 
-	rows, err := m.db.Query(query)
+	rows, err := m.db.QueryContext(context.Background(), query)
 	if err != nil {
 		return nil, fmt.Errorf("query fragile files: %w", err)
 	}
@@ -162,7 +163,7 @@ func (m *Memory) GetFragileFiles(limit int) ([]FileIntel, error) {
 
 // GetFileLearnings returns all learnings associated with a file.
 func (m *Memory) GetFileLearnings(path string) ([]Learning, error) {
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT l.id, l.session_id, l.scope, l.scope_path, l.content, l.confidence, l.source, l.created_at, l.last_used, l.use_count
 		FROM learnings l
 		JOIN file_learnings fl ON l.id = fl.learning_id

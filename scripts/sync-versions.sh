@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e  # Exit on error
 
 # Get the directory of the script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -8,7 +9,14 @@ ROOT_DIR="$( dirname "$SCRIPT_DIR" )"
 VERSION=$(cat "$ROOT_DIR/VERSION" | tr -d '[:space:]')
 
 if [ -z "$VERSION" ]; then
-    echo "Error: VERSION file is empty"
+    echo "[ERROR] Error: VERSION file is empty"
+    exit 1
+fi
+
+# Validate version format
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+    echo "[ERROR] Error: Invalid VERSION format: $VERSION"
+    echo "Expected format: X.Y.Z or X.Y.Z-suffix"
     exit 1
 fi
 
@@ -42,4 +50,47 @@ if [ -f "$DOCS_PKC" ]; then
     sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" "$DOCS_PKC"
 fi
 
-echo "✅ Ecosystem version sync complete."
+echo ""
+echo "Verifying synchronization..."
+
+# Verify all versions match
+ERRORS=0
+
+if [ -f "$DASHBOARD_PKC" ]; then
+    DASH_VER=$(grep -oP '"version":\s*"\K[^"]+' "$DASHBOARD_PKC" || echo "")
+    if [ "$DASH_VER" != "$VERSION" ]; then
+        echo "[ERROR] Dashboard version mismatch: $DASH_VER (expected: $VERSION)"
+        ERRORS=$((ERRORS + 1))
+    else
+        echo "[OK] Dashboard: $DASH_VER"
+    fi
+fi
+
+if [ -f "$VSCODE_PKC" ]; then
+    VSCODE_VER=$(grep -oP '"version":\s*"\K[^"]+' "$VSCODE_PKC" || echo "")
+    if [ "$VSCODE_VER" != "$VERSION" ]; then
+        echo "[ERROR] VS Code version mismatch: $VSCODE_VER (expected: $VERSION)"
+        ERRORS=$((ERRORS + 1))
+    else
+        echo "[OK] VS Code: $VSCODE_VER"
+    fi
+fi
+
+if [ -f "$DOCS_PKC" ]; then
+    DOCS_VER=$(grep -oP '"version":\s*"\K[^"]+' "$DOCS_PKC" || echo "")
+    if [ "$DOCS_VER" != "$VERSION" ]; then
+        echo "[ERROR] Docs version mismatch: $DOCS_VER (expected: $VERSION)"
+        ERRORS=$((ERRORS + 1))
+    else
+        echo "[OK] Docs: $DOCS_VER"
+    fi
+fi
+
+if [ $ERRORS -gt 0 ]; then
+    echo ""
+    echo "[ERROR] Synchronization failed with $ERRORS error(s)"
+    exit 1
+fi
+
+echo ""
+echo "[OK] Ecosystem version sync complete - all versions synchronized to $VERSION"

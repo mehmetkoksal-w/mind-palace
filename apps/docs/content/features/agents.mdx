@@ -6,10 +6,10 @@ Mind Palace treats AI agents as first-class consumers. Schemas are contracts, no
 
 ## Two Integration Modes
 
-| Mode | Best For | How |
-|------|----------|-----|
-| **MCP** | Interactive agents (Claude, Cursor) | `palace serve` |
-| **Context Pack** | Batch/CLI agents | `palace context "goal"` |
+| Mode             | Best For                            | How                            |
+| ---------------- | ----------------------------------- | ------------------------------ |
+| **MCP**          | Interactive agents (Claude, Cursor) | `palace serve`                 |
+| **Context Pack** | Batch/CLI agents                    | `palace explore --full "goal"` |
 
 ---
 
@@ -47,134 +47,134 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 #### Explore Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `explore` | `query`, `limit?`, `room?` | Search the codebase |
-| `explore_rooms` | - | List all rooms with entry points |
-| `explore_context` | `goal`, `diff?` | Generate context pack for a task |
-| `explore_impact` | `file` | Analyze impact of changes to a file |
-| `explore_symbols` | `query?`, `room?`, `limit?` | Search for symbols |
-| `explore_symbol` | `name`, `file?` | Get symbol details |
-| `explore_file` | `path` | Get file metadata and structure |
-| `explore_deps` | `file` | Get file dependencies |
-| `explore_callers` | `symbol`, `file?`, `depth?` | Find callers of a symbol |
-| `explore_callees` | `symbol`, `file?`, `depth?` | Find callees of a symbol |
-| `explore_graph` | `symbol`, `file?`, `depth?` | Get full call graph |
+| Tool              | Parameters                  | Returns                             |
+| ----------------- | --------------------------- | ----------------------------------- |
+| `explore`         | `query`, `limit?`, `room?`  | Search the codebase                 |
+| `explore_rooms`   | -                           | List all rooms with entry points    |
+| `explore_context` | `goal`, `diff?`             | Generate context pack for a task    |
+| `explore_impact`  | `file`                      | Analyze impact of changes to a file |
+| `explore_symbols` | `query?`, `room?`, `limit?` | Search for symbols                  |
+| `explore_symbol`  | `name`, `file?`             | Get symbol details                  |
+| `explore_file`    | `path`                      | Get file metadata and structure     |
+| `explore_deps`    | `file`                      | Get file dependencies               |
+| `explore_callers` | `symbol`, `file?`, `depth?` | Find callers of a symbol            |
+| `explore_callees` | `symbol`, `file?`, `depth?` | Find callees of a symbol            |
+| `explore_graph`   | `symbol`, `file?`, `depth?` | Get full call graph                 |
 
 #### Store Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
+| Tool    | Parameters                                                              | Returns                           |
+| ------- | ----------------------------------------------------------------------- | --------------------------------- |
 | `store` | `content`, `kind?`, `scope?`, `scopePath?`, `confidence?`, `rationale?` | Store idea, decision, or learning |
 
 #### Recall Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `recall` | `query?`, `scope?`, `scopePath?`, `limit?` | Search learnings |
-| `recall_decisions` | `scope?`, `scopePath?`, `status?`, `limit?` | List decisions |
-| `recall_ideas` | `scope?`, `scopePath?`, `status?`, `limit?` | List ideas |
-| `recall_outcome` | `id`, `status`, `notes?` | Record decision outcome |
-| `recall_link` | `source`, `target`, `relation`, `reason?` | Link two records |
-| `recall_links` | `id` | Get links for a record |
-| `recall_unlink` | `source`, `target` | Remove a link |
-| `recall_learning_link` | `learningId`, `file`, `line?` | Link learning to code |
-| `recall_obsolete` | `id`, `reason?` | Mark learning as obsolete |
-| `recall_archive` | `id` | Archive a record |
-| `recall_learnings_by_status` | `status`, `limit?` | Get learnings by status |
+| Tool                         | Parameters                                  | Returns                   |
+| ---------------------------- | ------------------------------------------- | ------------------------- |
+| `recall`                     | `query?`, `scope?`, `scopePath?`, `limit?`  | Search learnings          |
+| `recall_decisions`           | `scope?`, `scopePath?`, `status?`, `limit?` | List decisions            |
+| `recall_ideas`               | `scope?`, `scopePath?`, `status?`, `limit?` | List ideas                |
+| `recall_outcome`             | `id`, `status`, `notes?`                    | Record decision outcome   |
+| `recall_link`                | `source`, `target`, `relation`, `reason?`   | Link two records          |
+| `recall_links`               | `id`                                        | Get links for a record    |
+| `recall_unlink`              | `source`, `target`                          | Remove a link             |
+| `recall_learning_link`       | `learningId`, `file`, `line?`               | Link learning to code     |
+| `recall_obsolete`            | `id`, `reason?`                             | Mark learning as obsolete |
+| `recall_archive`             | `id`                                        | Archive a record          |
+| `recall_learnings_by_status` | `status`, `limit?`                          | Get learnings by status   |
 
 #### Contradiction Detection Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `recall_contradictions` | `scope?`, `resolved?`, `limit?` | List contradictions |
-| `recall_contradiction_check` | `id` | Check for contradictions |
-| `recall_contradiction_summary` | - | Contradiction statistics |
+| Tool                           | Parameters                      | Returns                  |
+| ------------------------------ | ------------------------------- | ------------------------ |
+| `recall_contradictions`        | `scope?`, `resolved?`, `limit?` | List contradictions      |
+| `recall_contradiction_check`   | `id`                            | Check for contradictions |
+| `recall_contradiction_summary` | -                               | Contradiction statistics |
 
 #### Brief Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `brief` | `path` | Get file briefing |
-| `brief_file` | `path` | Get detailed file intelligence |
-| `briefing_smart` | `context`, `contextPath`, `style?` | LLM-generated smart briefing |
+| Tool             | Parameters                         | Returns                        |
+| ---------------- | ---------------------------------- | ------------------------------ |
+| `brief`          | `path`                             | Get file briefing              |
+| `brief_file`     | `path`                             | Get detailed file intelligence |
+| `briefing_smart` | `context`, `contextPath`, `style?` | LLM-generated smart briefing   |
 
 #### Session Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `session_start` | `agentType`, `goal?` | Start a work session |
-| `session_log` | `sessionId`, `kind`, `target`, `outcome?`, `details?` | Log activity |
-| `session_end` | `sessionId` | End session |
-| `session_conflict` | `path` | Check for file conflicts |
-| `session_list` | `active?`, `limit?` | List sessions |
+| Tool               | Parameters                                            | Returns                  |
+| ------------------ | ----------------------------------------------------- | ------------------------ |
+| `session_start`    | `agentType`, `goal?`                                  | Start a work session     |
+| `session_log`      | `sessionId`, `kind`, `target`, `outcome?`, `details?` | Log activity             |
+| `session_end`      | `sessionId`                                           | End session              |
+| `session_conflict` | `path`                                                | Check for file conflicts |
+| `session_list`     | `active?`, `limit?`                                   | List sessions            |
 
 #### Conversation Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `conversation_store` | `sessionId`, `messages`, `summary?` | Store conversation |
-| `conversation_search` | `query?`, `sessionId?`, `limit?` | Search conversations |
-| `conversation_extract` | `conversationId` | Extract knowledge from conversation |
+| Tool                   | Parameters                          | Returns                             |
+| ---------------------- | ----------------------------------- | ----------------------------------- |
+| `conversation_store`   | `sessionId`, `messages`, `summary?` | Store conversation                  |
+| `conversation_search`  | `query?`, `sessionId?`, `limit?`    | Search conversations                |
+| `conversation_extract` | `conversationId`                    | Extract knowledge from conversation |
 
 #### Corridor Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `corridor_learnings` | `query?`, `limit?` | Get personal learnings |
-| `corridor_links` | - | List linked workspaces |
-| `corridor_stats` | - | Corridor statistics |
-| `corridor_promote` | `learningId` | Promote to personal corridor |
-| `corridor_reinforce` | `learningId` | Reinforce a learning |
+| Tool                 | Parameters         | Returns                      |
+| -------------------- | ------------------ | ---------------------------- |
+| `corridor_learnings` | `query?`, `limit?` | Get personal learnings       |
+| `corridor_links`     | -                  | List linked workspaces       |
+| `corridor_stats`     | -                  | Corridor statistics          |
+| `corridor_promote`   | `learningId`       | Promote to personal corridor |
+| `corridor_reinforce` | `learningId`       | Reinforce a learning         |
 
 #### Semantic Search Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `search_semantic` | `query`, `kinds?`, `limit?` | Semantic similarity search |
-| `search_hybrid` | `query`, `kinds?`, `limit?` | Combined keyword + semantic |
-| `search_similar` | `id`, `limit?` | Find similar records |
+| Tool              | Parameters                  | Returns                     |
+| ----------------- | --------------------------- | --------------------------- |
+| `search_semantic` | `query`, `kinds?`, `limit?` | Semantic similarity search  |
+| `search_hybrid`   | `query`, `kinds?`, `limit?` | Combined keyword + semantic |
+| `search_similar`  | `id`, `limit?`              | Find similar records        |
 
 #### Embedding Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `embedding_sync` | `force?` | Sync embeddings for all records |
-| `embedding_stats` | - | Embedding statistics |
+| Tool              | Parameters | Returns                         |
+| ----------------- | ---------- | ------------------------------- |
+| `embedding_sync`  | `force?`   | Sync embeddings for all records |
+| `embedding_stats` | -          | Embedding statistics            |
 
 #### Decay Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `decay_stats` | - | Decay statistics |
-| `decay_preview` | `days?` | Preview what will decay |
-| `decay_apply` | - | Apply confidence decay |
-| `decay_reinforce` | `id` | Reinforce a learning |
-| `decay_boost` | `id`, `amount?` | Boost learning confidence |
+| Tool              | Parameters      | Returns                   |
+| ----------------- | --------------- | ------------------------- |
+| `decay_stats`     | -               | Decay statistics          |
+| `decay_preview`   | `days?`         | Preview what will decay   |
+| `decay_apply`     | -               | Apply confidence decay    |
+| `decay_reinforce` | `id`            | Reinforce a learning      |
+| `decay_boost`     | `id`, `amount?` | Boost learning confidence |
 
 #### Context & Scope Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `context_auto_inject` | `filePath`, `maxTokens?`, `includeLearnings?`, `includeDecisions?`, `includeFailures?` | Auto-inject context for file |
-| `scope_explain` | `filePath` | Explain scope inheritance for file |
+| Tool                  | Parameters                                                                             | Returns                            |
+| --------------------- | -------------------------------------------------------------------------------------- | ---------------------------------- |
+| `context_auto_inject` | `filePath`, `maxTokens?`, `includeLearnings?`, `includeDecisions?`, `includeFailures?` | Auto-inject context for file       |
+| `scope_explain`       | `filePath`                                                                             | Explain scope inheritance for file |
 
 #### Postmortem Tools
 
-| Tool | Parameters | Returns |
-|------|------------|---------|
-| `store_postmortem` | `title`, `whatHappened`, `rootCause?`, `lessonsLearned?`, `preventionSteps?`, `severity?`, `affectedFiles?`, `relatedDecision?` | Create failure postmortem |
-| `get_postmortems` | `status?`, `severity?`, `limit?` | List postmortems |
-| `get_postmortem` | `id` | Get postmortem details |
-| `resolve_postmortem` | `id` | Mark postmortem resolved |
-| `postmortem_stats` | - | Postmortem statistics |
-| `postmortem_to_learnings` | `id` | Convert lessons to learnings |
+| Tool                      | Parameters                                                                                                                      | Returns                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `store_postmortem`        | `title`, `whatHappened`, `rootCause?`, `lessonsLearned?`, `preventionSteps?`, `severity?`, `affectedFiles?`, `relatedDecision?` | Create failure postmortem    |
+| `get_postmortems`         | `status?`, `severity?`, `limit?`                                                                                                | List postmortems             |
+| `get_postmortem`          | `id`                                                                                                                            | Get postmortem details       |
+| `resolve_postmortem`      | `id`                                                                                                                            | Mark postmortem resolved     |
+| `postmortem_stats`        | -                                                                                                                               | Postmortem statistics        |
+| `postmortem_to_learnings` | `id`                                                                                                                            | Convert lessons to learnings |
 
 ### Available Resources
 
-| URI | Returns |
-|-----|---------|
-| `palace://files/{path}` | File content |
+| URI                     | Returns            |
+| ----------------------- | ------------------ |
+| `palace://files/{path}` | File content       |
 | `palace://rooms/{name}` | Room manifest JSON |
 
 ### Why MCP?
@@ -193,11 +193,12 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 For agents that can't use MCP:
 
 ```sh
-palace context "Fix auth bug"
+palace explore "Fix auth bug" --full
 # Provide .palace/outputs/context-pack.json to agent
 ```
 
 The context pack contains:
+
 - Goal and scope
 - Referenced files with content
 - Room context
@@ -210,19 +211,19 @@ The context pack contains:
 
 ### Must Read
 
-| File | Contains |
-|------|----------|
-| `palace.jsonc` | Project config, guardrails |
-| `rooms/*.jsonc` | Entry points, scope |
-| `context-pack.json` | Current goal, findings |
+| File                | Contains                   |
+| ------------------- | -------------------------- |
+| `palace.jsonc`      | Project config, guardrails |
+| `rooms/*.jsonc`     | Entry points, scope        |
+| `context-pack.json` | Current goal, findings     |
 
 ### Must Not Touch
 
-| Path | Reason |
-|------|--------|
-| `.palace/index/*` | Generated by CLI |
-| `.palace/outputs/*` | Generated by CLI |
-| Files matching guardrails | Protected |
+| Path                      | Reason           |
+| ------------------------- | ---------------- |
+| `.palace/index/*`         | Generated by CLI |
+| `.palace/outputs/*`       | Generated by CLI |
+| Files matching guardrails | Protected        |
 
 ### Scope Discipline
 
@@ -259,7 +260,7 @@ Agent proposes → Human reviews → Save → Observer checks → Fresh ✓ or S
 # After agent changes
 palace check --fast
 # If stale:
-palace scan && palace context "next goal"
+palace scan && palace explore "next goal" --full
 ```
 
 ---
@@ -282,10 +283,11 @@ For diff-scoped work:
 
 ```sh
 palace ci signal --diff HEAD~1..HEAD
-palace context "fix bug" --diff HEAD~1..HEAD
+palace explore "fix bug" --full --diff HEAD~1..HEAD
 ```
 
 Agents should:
+
 1. Check if `change-signal.json` exists
 2. Use its file list to scope work
 3. Treat deleted files as non-editable
@@ -357,7 +359,10 @@ Record failures for learning:
     "title": "Authentication bypass bug",
     "whatHappened": "JWT validation was bypassed due to missing signature check",
     "rootCause": "Signature verification was disabled in test config and deployed to production",
-    "lessonsLearned": ["Always validate JWT signatures", "Separate test and production configs"],
+    "lessonsLearned": [
+      "Always validate JWT signatures",
+      "Separate test and production configs"
+    ],
     "severity": "high",
     "affectedFiles": ["src/auth/jwt.go", "src/middleware/auth.go"]
   }

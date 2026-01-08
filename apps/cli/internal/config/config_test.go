@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +27,8 @@ func TestLoadGuardrailsMergeExtendsDefaults(t *testing.T) {
 	}
 
 	g := LoadGuardrails(dir)
-	expectedDoNot := append(defaultGuardrails().DoNotTouchGlobs, "custom/**", "zzz/**")
+	expectedDoNot := append([]string{}, defaultGuardrails().DoNotTouchGlobs...)
+	expectedDoNot = append(expectedDoNot, "custom/**", "zzz/**")
 	if !equalSlices(g.DoNotTouchGlobs, expectedDoNot) {
 		t.Fatalf("doNotTouchGlobs mismatch: got %v, want %v", g.DoNotTouchGlobs, expectedDoNot)
 	}
@@ -102,7 +104,7 @@ func TestCopySchemasRefreshesDrift(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read dest: %v", err)
 	}
-	if string(got) != string(want) {
+	if !bytes.Equal(got, want) {
 		t.Fatalf("schema not refreshed to embedded copy")
 	}
 }
@@ -130,9 +132,9 @@ func TestWriteTemplate(t *testing.T) {
 func TestLoadPalaceConfigCorrupted(t *testing.T) {
 	dir := t.TempDir()
 	palaceDir := filepath.Join(dir, ".palace")
-	os.MkdirAll(palaceDir, 0755)
+	os.MkdirAll(palaceDir, 0o755)
 
-	os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte("{ broken json"), 0644)
+	os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte("{ broken json"), 0o644)
 
 	_, err := LoadPalaceConfig(dir)
 	if err == nil {
@@ -161,7 +163,7 @@ func TestWriteJSONError(t *testing.T) {
 	// Root IS a file, so WriteJSON should fail to create directory/file if path is invalid
 	dir := t.TempDir()
 	path := filepath.Join(dir, "file")
-	os.WriteFile(path, []byte("test"), 0644)
+	os.WriteFile(path, []byte("test"), 0o644)
 
 	err := WriteJSON(filepath.Join(path, "impossible"), map[string]string{})
 	if err == nil {
@@ -207,7 +209,7 @@ func TestEnsureLayoutErrors(t *testing.T) {
 	// Root is a file, MkdirAll should fail
 	dir := t.TempDir()
 	path := filepath.Join(dir, "file")
-	os.WriteFile(path, []byte("test"), 0644)
+	os.WriteFile(path, []byte("test"), 0o644)
 
 	_, err := EnsureLayout(filepath.Join(path, "subdir"))
 	if err == nil {

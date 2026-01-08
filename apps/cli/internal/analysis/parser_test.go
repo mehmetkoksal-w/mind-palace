@@ -307,7 +307,7 @@ func TestParserRegistry(t *testing.T) {
 
 	t.Run("Parse returns FileAnalysis for language without parser", func(t *testing.T) {
 		// Create empty registry (no default parsers)
-		reg := &ParserRegistry{parsers: make(map[Language]Parser)}
+		reg := &ParserRegistry{parsers: make(map[Language][]parserEntry)}
 
 		// Add mapping but no parser
 		result, err := reg.Parse([]byte("content"), "main.go")

@@ -17,7 +17,7 @@ func (b *Butler) GetContextForTask(query string, limit int) (*index.ContextResul
 }
 
 // GetContextForTaskWithOptions returns context with custom options including token budgeting.
-func (b *Butler) GetContextForTaskWithOptions(query string, limit int, maxTokens int, includeTests bool) (*index.ContextResult, error) {
+func (b *Butler) GetContextForTaskWithOptions(query string, limit, maxTokens int, includeTests bool) (*index.ContextResult, error) {
 	opts := &index.ContextOptions{
 		MaxTokens:    maxTokens,
 		IncludeTests: includeTests,
@@ -91,26 +91,30 @@ func (b *Butler) GetEnhancedContext(opts EnhancedContextOptions) (*EnhancedConte
 		var allLinks []memory.Link
 
 		// Get links for ideas
-		for _, idea := range result.BrainIdeas {
+		for i := range result.BrainIdeas {
+			idea := &result.BrainIdeas[i]
 			links, err := b.memory.GetAllLinksFor(idea.ID)
 			if err == nil {
-				for _, link := range links {
+				for j := range links {
+					link := &links[j]
 					if !linkMap[link.ID] {
 						linkMap[link.ID] = true
-						allLinks = append(allLinks, link)
+						allLinks = append(allLinks, *link)
 					}
 				}
 			}
 		}
 
 		// Get links for decisions
-		for _, decision := range result.BrainDecisions {
+		for i := range result.BrainDecisions {
+			decision := &result.BrainDecisions[i]
 			links, err := b.memory.GetAllLinksFor(decision.ID)
 			if err == nil {
-				for _, link := range links {
+				for j := range links {
+					link := &links[j]
 					if !linkMap[link.ID] {
 						linkMap[link.ID] = true
-						allLinks = append(allLinks, link)
+						allLinks = append(allLinks, *link)
 					}
 				}
 			}
@@ -124,13 +128,15 @@ func (b *Butler) GetEnhancedContext(opts EnhancedContextOptions) (*EnhancedConte
 		conflictMap := make(map[string]bool) // dedupe conflicts
 		var allConflicts []memory.DecisionConflict
 
-		for _, decision := range result.BrainDecisions {
+		for i := range result.BrainDecisions {
+			decision := &result.BrainDecisions[i]
 			conflicts, err := b.memory.CheckDecisionConflicts(decision.ID)
 			if err == nil {
-				for _, conflict := range conflicts {
+				for j := range conflicts {
+					conflict := &conflicts[j]
 					if !conflictMap[conflict.ConflictingID] {
 						conflictMap[conflict.ConflictingID] = true
-						allConflicts = append(allConflicts, conflict)
+						allConflicts = append(allConflicts, *conflict)
 					}
 				}
 			}
@@ -174,7 +180,8 @@ func (b *Butler) GetAutoInjectionContext(filePath string, cfg *config.AutoInject
 		result.Decisions = decisions
 
 		// Add warnings for unreviewed decisions
-		for _, d := range decisions {
+		for i := range decisions {
+			d := &decisions[i]
 			if d.Outcome == memory.DecisionOutcomeUnknown {
 				daysSince := int(time.Since(d.CreatedAt).Hours() / 24)
 				if daysSince > 14 {
@@ -195,7 +202,8 @@ func (b *Butler) GetAutoInjectionContext(filePath string, cfg *config.AutoInject
 		result.Failures = failures
 
 		// Add warnings for high-failure files
-		for _, f := range failures {
+		for i := range failures {
+			f := &failures[i]
 			if f.Severity == "high" {
 				result.Warnings = append(result.Warnings, ContextWarning{
 					Type:    "fragile_file",
@@ -207,7 +215,8 @@ func (b *Butler) GetAutoInjectionContext(filePath string, cfg *config.AutoInject
 	}
 
 	// Check for contradictions involving relevant learnings
-	for _, pl := range result.Learnings {
+	for i := range result.Learnings {
+		pl := &result.Learnings[i]
 		contradictions, err := b.memory.GetContradictingRecords(pl.Learning.ID)
 		if err == nil && len(contradictions) > 0 {
 			result.Warnings = append(result.Warnings, ContextWarning{
@@ -228,7 +237,8 @@ func (b *Butler) GetAutoInjectionContext(filePath string, cfg *config.AutoInject
 // resolveRoom determines which room a file belongs to.
 func (b *Butler) resolveRoom(filePath string) string {
 	// Check if file is in a room's entry points
-	for roomName, room := range b.rooms {
+	for roomName := range b.rooms {
+		room := b.rooms[roomName]
 		for _, entry := range room.EntryPoints {
 			if strings.HasPrefix(filePath, entry) || strings.Contains(filePath, entry) {
 				return roomName
@@ -287,23 +297,21 @@ func (b *Butler) gatherPrioritizedLearnings(filePath, room string, cfg *config.A
 
 	// File-level learnings (highest priority)
 	fileLearnings, _ := b.memory.GetLearnings("file", filePath, 10)
-	for _, l := range fileLearnings {
-		addLearning(l, "file", 1.0)
+	for i := range fileLearnings {
+		addLearning(fileLearnings[i], "file", 1.0)
 	}
-
 	// Room-level learnings
 	if cfg.ScopeInheritance && room != "" {
 		roomLearnings, _ := b.memory.GetLearnings("room", room, 10)
-		for _, l := range roomLearnings {
-			addLearning(l, "room", 0.7)
+		for i := range roomLearnings {
+			addLearning(roomLearnings[i], "room", 0.7)
 		}
 	}
-
 	// Palace-level learnings
 	if cfg.ScopeInheritance {
 		palaceLearnings, _ := b.memory.GetLearnings("palace", "", 10)
-		for _, l := range palaceLearnings {
-			addLearning(l, "palace", 0.5)
+		for i := range palaceLearnings {
+			addLearning(palaceLearnings[i], "palace", 0.5)
 		}
 	}
 
@@ -339,23 +347,21 @@ func (b *Butler) gatherRelevantDecisions(filePath, room string, cfg *config.Auto
 
 	// File-scoped decisions
 	fileDecisions, _ := b.memory.GetDecisions("active", "", "file", filePath, 5)
-	for _, d := range fileDecisions {
-		addDecision(d)
+	for i := range fileDecisions {
+		addDecision(fileDecisions[i])
 	}
-
 	// Room-scoped decisions
 	if cfg.ScopeInheritance && room != "" {
 		roomDecisions, _ := b.memory.GetDecisions("active", "", "room", room, 5)
-		for _, d := range roomDecisions {
-			addDecision(d)
+		for i := range roomDecisions {
+			addDecision(roomDecisions[i])
 		}
 	}
-
 	// Palace-scoped decisions
 	if cfg.ScopeInheritance {
 		palaceDecisions, _ := b.memory.GetDecisions("active", "", "palace", "", 5)
-		for _, d := range palaceDecisions {
-			addDecision(d)
+		for i := range palaceDecisions {
+			addDecision(palaceDecisions[i])
 		}
 	}
 
@@ -385,7 +391,8 @@ func (b *Butler) gatherFailures(filePath, room string) []FileFailure {
 
 	// Get other fragile files in the same room
 	fragileFiles, _ := b.memory.GetFragileFiles(5)
-	for _, f := range fragileFiles {
+	for i := range fragileFiles {
+		f := &fragileFiles[i]
 		if f.Path == filePath {
 			continue // Already added
 		}
@@ -504,7 +511,7 @@ func (b *Butler) ListSymbols(kind string, limit int) ([]index.SymbolInfo, error)
 }
 
 // GetSymbol returns a specific symbol by name.
-func (b *Butler) GetSymbol(name string, filePath string) (*index.SymbolInfo, error) {
+func (b *Butler) GetSymbol(name, filePath string) (*index.SymbolInfo, error) {
 	return index.GetSymbol(b.db, name, filePath)
 }
 
@@ -524,7 +531,7 @@ func (b *Butler) GetIncomingCalls(symbolName string) ([]index.CallSite, error) {
 }
 
 // GetOutgoingCalls returns all functions called by the given symbol.
-func (b *Butler) GetOutgoingCalls(symbolName string, filePath string) ([]index.CallSite, error) {
+func (b *Butler) GetOutgoingCalls(symbolName, filePath string) ([]index.CallSite, error) {
 	return index.GetOutgoingCalls(b.db, symbolName, filePath)
 }
 
@@ -534,6 +541,6 @@ func (b *Butler) GetCallGraph(filePath string) (*index.CallGraph, error) {
 }
 
 // GetCallChain returns the recursive call chain for a symbol.
-func (b *Butler) GetCallChain(symbolName string, filePath string, direction string, maxDepth int) (*index.CallChainResult, error) {
+func (b *Butler) GetCallChain(symbolName, filePath, direction string, maxDepth int) (*index.CallChainResult, error) {
 	return index.GetCallChain(b.db, symbolName, filePath, direction, maxDepth)
 }

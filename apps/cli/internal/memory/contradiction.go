@@ -35,8 +35,8 @@ type ContradictionResult struct {
 	Record1ID       string  `json:"record1Id"`
 	Record2ID       string  `json:"record2Id"`
 	IsContradiction bool    `json:"isContradiction"`
-	Confidence      float64 `json:"confidence"`  // 0.0 to 1.0
-	Explanation     string  `json:"explanation"` // Why they contradict (or don't)
+	Confidence      float64 `json:"confidence"`               // 0.0 to 1.0
+	Explanation     string  `json:"explanation"`              // Why they contradict (or don't)
 	ContradictType  string  `json:"contradictType,omitempty"` // "direct", "implicit", "temporal"
 }
 
@@ -267,12 +267,12 @@ func (m *Memory) getKindForID(id string) string {
 
 // ContradictionCheckOptions configures contradiction checking.
 type ContradictionCheckOptions struct {
-	UseEmbeddings   bool    // Use semantic similarity to find candidates
-	MinSimilarity   float32 // Minimum similarity to consider as candidate
-	MaxCandidates   int     // Maximum candidates to analyze
-	IncludeIdeas    bool    // Check ideas
-	IncludeDecisions bool   // Check decisions
-	IncludeLearnings bool   // Check learnings
+	UseEmbeddings    bool    // Use semantic similarity to find candidates
+	MinSimilarity    float32 // Minimum similarity to consider as candidate
+	MaxCandidates    int     // Maximum candidates to analyze
+	IncludeIdeas     bool    // Check ideas
+	IncludeDecisions bool    // Check decisions
+	IncludeLearnings bool    // Check learnings
 }
 
 // DefaultContradictionOptions returns default options.
@@ -344,7 +344,8 @@ func (m *Memory) findContradictionsByFTS(content string, opts ContradictionCheck
 
 	if opts.IncludeIdeas {
 		ideas, _ := m.SearchIdeas(content, opts.MaxCandidates)
-		for _, idea := range ideas {
+		for i := range ideas {
+			idea := &ideas[i]
 			candidates = append(candidates, RecordForAnalysis{
 				ID:        idea.ID,
 				Kind:      "idea",
@@ -358,7 +359,8 @@ func (m *Memory) findContradictionsByFTS(content string, opts ContradictionCheck
 
 	if opts.IncludeDecisions {
 		decisions, _ := m.SearchDecisions(content, opts.MaxCandidates)
-		for _, dec := range decisions {
+		for i := range decisions {
+			dec := &decisions[i]
 			candidates = append(candidates, RecordForAnalysis{
 				ID:        dec.ID,
 				Kind:      "decision",
@@ -411,7 +413,7 @@ func (m *Memory) getRecordForAnalysis(id, kind string) (*RecordForAnalysis, erro
 
 	case "learning":
 		var content, scopePath, createdAt string
-		err := m.db.QueryRow(`SELECT content, scope_path, created_at FROM learnings WHERE id = ?`, id).
+		err := m.db.QueryRowContext(context.Background(), `SELECT content, scope_path, created_at FROM learnings WHERE id = ?`, id).
 			Scan(&content, &scopePath, &createdAt)
 		if err != nil {
 			return nil, err
@@ -440,7 +442,8 @@ func (m *Memory) GetContradictingRecords(recordID string) ([]RecordForAnalysis, 
 	}
 
 	var contradicting []RecordForAnalysis
-	for _, link := range links {
+	for i := range links {
+		link := &links[i]
 		if link.Relation != RelationContradicts {
 			continue
 		}
@@ -458,7 +461,8 @@ func (m *Memory) GetContradictingRecords(recordID string) ([]RecordForAnalysis, 
 		return contradicting, nil
 	}
 
-	for _, link := range incomingLinks {
+	for i := range incomingLinks {
+		link := &incomingLinks[i]
 		if link.Relation != RelationContradicts {
 			continue
 		}
@@ -475,10 +479,10 @@ func (m *Memory) GetContradictingRecords(recordID string) ([]RecordForAnalysis, 
 
 // ContradictionSummary provides an overview of contradictions in the system.
 type ContradictionSummary struct {
-	TotalContradictionLinks int                  `json:"totalContradictionLinks"`
-	ActiveConflicts         int                  `json:"activeConflicts"`
-	ResolvedConflicts       int                  `json:"resolvedConflicts"`
-	TopContradictions       []ContradictionPair  `json:"topContradictions"`
+	TotalContradictionLinks int                 `json:"totalContradictionLinks"`
+	ActiveConflicts         int                 `json:"activeConflicts"`
+	ResolvedConflicts       int                 `json:"resolvedConflicts"`
+	TopContradictions       []ContradictionPair `json:"topContradictions"`
 }
 
 // ContradictionPair represents a pair of contradicting records.
@@ -498,7 +502,7 @@ func (m *Memory) GetContradictionSummary(limit int) (*ContradictionSummary, erro
 
 	// Count total contradiction links
 	var totalLinks int
-	m.db.QueryRow(`SELECT COUNT(*) FROM links WHERE relation = ?`, RelationContradicts).Scan(&totalLinks)
+	m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM links WHERE relation = ?`, RelationContradicts).Scan(&totalLinks)
 	summary.TotalContradictionLinks = totalLinks
 
 	// Get contradiction pairs
@@ -507,7 +511,8 @@ func (m *Memory) GetContradictionSummary(limit int) (*ContradictionSummary, erro
 		return summary, err
 	}
 
-	for _, link := range links {
+	for i := range links {
+		link := &links[i]
 		source, _ := m.getRecordForAnalysis(link.SourceID, link.SourceKind)
 		target, _ := m.getRecordForAnalysis(link.TargetID, link.TargetKind)
 

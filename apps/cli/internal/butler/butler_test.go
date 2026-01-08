@@ -1,6 +1,7 @@
 package butler
 
 import (
+	"context"
 	"database/sql"
 	"path/filepath"
 	"testing"
@@ -185,8 +186,8 @@ func TestPreprocessQueryWithOptions(t *testing.T) {
 
 // contains checks if s contains substr
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && containsSubstring(s, substr)))
+	return len(s) >= len(substr) && (s == substr || substr == "" ||
+		(s != "" && containsSubstring(s, substr)))
 }
 
 func containsSubstring(s, substr string) bool {
@@ -519,19 +520,19 @@ func TestButlerIntegrated(t *testing.T) {
 		`CREATE TABLE rooms (name TEXT PRIMARY KEY, summary TEXT, entry_points TEXT, file_patterns TEXT, updated_at TEXT);`,
 	}
 	for _, s := range stmts {
-		if _, err := db.Exec(s); err != nil {
+		if _, err := db.ExecContext(context.Background(), s); err != nil {
 			t.Fatalf("Failed to init schema: %v", err)
 		}
 	}
 
 	// Insert test data
 	now := time.Now().UTC().Format(time.RFC3339)
-	db.Exec(`INSERT INTO files VALUES (?, ?, ?, ?, ?, ?);`, "auth.go", "h1", 100, now, now, "go")
-	db.Exec(`INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?);`, 1, "auth.go", 0, 1, 10, "func HandleAuth() {}")
-	db.Exec(`INSERT INTO chunks_fts VALUES (?, ?, ?);`, "auth.go", "func HandleAuth() {}", 0)
-	db.Exec(`INSERT INTO symbols VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, 1, "auth.go", "HandleAuth", "function", 1, 10, "()", "Auth handler", nil, 1)
-	db.Exec(`INSERT INTO symbols_fts VALUES (?, ?, ?, ?);`, "HandleAuth", "auth.go", "function", "Auth handler")
-	db.Exec(`INSERT INTO rooms VALUES (?, ?, ?, ?, ?);`, "auth", "Auth module", `["auth.go"]`, `[]`, now)
+	db.ExecContext(context.Background(), `INSERT INTO files VALUES (?, ?, ?, ?, ?, ?);`, "auth.go", "h1", 100, now, now, "go")
+	db.ExecContext(context.Background(), `INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?);`, 1, "auth.go", 0, 1, 10, "func HandleAuth() {}")
+	db.ExecContext(context.Background(), `INSERT INTO chunks_fts VALUES (?, ?, ?);`, "auth.go", "func HandleAuth() {}", 0)
+	db.ExecContext(context.Background(), `INSERT INTO symbols VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, 1, "auth.go", "HandleAuth", "function", 1, 10, "()", "Auth handler", nil, 1)
+	db.ExecContext(context.Background(), `INSERT INTO symbols_fts VALUES (?, ?, ?, ?);`, "HandleAuth", "auth.go", "function", "Auth handler")
+	db.ExecContext(context.Background(), `INSERT INTO rooms VALUES (?, ?, ?, ?, ?);`, "auth", "Auth module", `["auth.go"]`, `[]`, now)
 
 	b := &Butler{
 		db:          db,
@@ -654,7 +655,7 @@ func TestButlerIntegrated(t *testing.T) {
 
 	t.Run("Agents", func(t *testing.T) {
 		// Advance heartbeat for active agent test
-		db.Exec("UPDATE agents SET last_heartbeat = ?", time.Now().UTC().Format(time.RFC3339))
+		db.ExecContext(context.Background(), "UPDATE agents SET last_heartbeat = ?", time.Now().UTC().Format(time.RFC3339))
 		agents, err := b.GetActiveAgents()
 		if err != nil {
 			t.Errorf("GetActiveAgents failed: %v", err)
@@ -686,14 +687,14 @@ func TestGetIndexInfoStale(t *testing.T) {
 		`CREATE TABLE scans (id INTEGER PRIMARY KEY, root TEXT, scan_hash TEXT, started_at TEXT, completed_at TEXT);`,
 	}
 	for _, s := range stmts {
-		if _, err := db.Exec(s); err != nil {
+		if _, err := db.ExecContext(context.Background(), s); err != nil {
 			t.Fatalf("Failed to init schema: %v", err)
 		}
 	}
 
 	oldTime := time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
-	db.Exec(`INSERT INTO files VALUES (?, ?, ?, ?, ?, ?);`, "stale.go", "h1", 100, oldTime, oldTime, "go")
-	db.Exec(`INSERT INTO scans (root, scan_hash, started_at, completed_at) VALUES (?, ?, ?, ?);`, "/tmp", "hash", oldTime, oldTime)
+	db.ExecContext(context.Background(), `INSERT INTO files VALUES (?, ?, ?, ?, ?, ?);`, "stale.go", "h1", 100, oldTime, oldTime, "go")
+	db.ExecContext(context.Background(), `INSERT INTO scans (root, scan_hash, started_at, completed_at) VALUES (?, ?, ?, ?);`, "/tmp", "hash", oldTime, oldTime)
 
 	b := &Butler{db: db}
 	info := b.GetIndexInfo()
@@ -712,7 +713,7 @@ func TestReadFileNotFound(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	if _, err := db.Exec(`CREATE TABLE chunks (path TEXT, chunk_index INTEGER, content TEXT);`); err != nil {
+	if _, err := db.ExecContext(context.Background(), `CREATE TABLE chunks (path TEXT, chunk_index INTEGER, content TEXT);`); err != nil {
 		t.Fatalf("Failed to create chunks table: %v", err)
 	}
 
@@ -1006,16 +1007,16 @@ func TestGetContextForTask(t *testing.T) {
 		`CREATE VIRTUAL TABLE symbols_fts USING fts5(name, file_path, kind, doc_comment, tokenize="unicode61 tokenchars '_'");`,
 	}
 	for _, s := range stmts {
-		if _, err := db.Exec(s); err != nil {
+		if _, err := db.ExecContext(context.Background(), s); err != nil {
 			t.Fatalf("Failed to init schema: %v", err)
 		}
 	}
 
 	// Insert test data
 	now := time.Now().UTC().Format(time.RFC3339)
-	db.Exec(`INSERT INTO files VALUES (?, ?, ?, ?, ?, ?);`, "auth.go", "h1", 100, now, now, "go")
-	db.Exec(`INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?);`, 1, "auth.go", 0, 1, 10, "func HandleAuth() {}")
-	db.Exec(`INSERT INTO chunks_fts VALUES (?, ?, ?);`, "auth.go", "func HandleAuth() {}", 0)
+	db.ExecContext(context.Background(), `INSERT INTO files VALUES (?, ?, ?, ?, ?, ?);`, "auth.go", "h1", 100, now, now, "go")
+	db.ExecContext(context.Background(), `INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?);`, 1, "auth.go", 0, 1, 10, "func HandleAuth() {}")
+	db.ExecContext(context.Background(), `INSERT INTO chunks_fts VALUES (?, ?, ?);`, "auth.go", "func HandleAuth() {}", 0)
 
 	b := &Butler{
 		db:          db,
@@ -1049,7 +1050,7 @@ func TestGetContextForTaskWithOptions(t *testing.T) {
 		`CREATE VIRTUAL TABLE symbols_fts USING fts5(name, file_path, kind, doc_comment, tokenize="unicode61 tokenchars '_'");`,
 	}
 	for _, s := range stmts {
-		if _, err := db.Exec(s); err != nil {
+		if _, err := db.ExecContext(context.Background(), s); err != nil {
 			t.Fatalf("Failed to init schema: %v", err)
 		}
 	}
@@ -1085,7 +1086,7 @@ func TestGetEnhancedContext(t *testing.T) {
 		`CREATE VIRTUAL TABLE symbols_fts USING fts5(name, file_path, kind, doc_comment, tokenize="unicode61 tokenchars '_'");`,
 	}
 	for _, s := range stmts {
-		if _, err := db.Exec(s); err != nil {
+		if _, err := db.ExecContext(context.Background(), s); err != nil {
 			t.Fatalf("Failed to init schema: %v", err)
 		}
 	}

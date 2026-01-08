@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -30,7 +31,7 @@ func (m *Memory) RegisterAgent(agentType, agentID, sessionID string) error {
 	_, _ = m.CleanupStaleAgents(5 * time.Minute)
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT INTO active_agents (agent_id, agent_type, session_id, last_heartbeat, current_file)
 		VALUES (?, ?, ?, ?, '')
 		ON CONFLICT(agent_id) DO UPDATE SET
@@ -43,14 +44,14 @@ func (m *Memory) RegisterAgent(agentType, agentID, sessionID string) error {
 
 // UnregisterAgent removes an agent from the active registry.
 func (m *Memory) UnregisterAgent(agentID string) error {
-	_, err := m.db.Exec(`DELETE FROM active_agents WHERE agent_id = ?`, agentID)
+	_, err := m.db.ExecContext(context.Background(), `DELETE FROM active_agents WHERE agent_id = ?`, agentID)
 	return err
 }
 
 // Heartbeat updates the last heartbeat time for an agent.
 func (m *Memory) Heartbeat(agentID string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		UPDATE active_agents SET last_heartbeat = ? WHERE agent_id = ?
 	`, now, agentID)
 	return err
@@ -59,7 +60,7 @@ func (m *Memory) Heartbeat(agentID string) error {
 // SetCurrentFile updates the file an agent is currently working on.
 func (m *Memory) SetCurrentFile(agentID, filePath string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		UPDATE active_agents SET current_file = ?, last_heartbeat = ? WHERE agent_id = ?
 	`, filePath, now, agentID)
 	return err
@@ -69,7 +70,7 @@ func (m *Memory) SetCurrentFile(agentID, filePath string) error {
 func (m *Memory) GetActiveAgents(staleThreshold time.Duration) ([]ActiveAgent, error) {
 	cutoff := time.Now().UTC().Add(-staleThreshold).Format(time.RFC3339)
 
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT agent_id, agent_type, session_id, last_heartbeat, current_file
 		FROM active_agents
 		WHERE last_heartbeat > ?
@@ -97,7 +98,7 @@ func (m *Memory) GetAgentForFile(path string) (*ActiveAgent, error) {
 	staleThreshold := 5 * time.Minute
 	cutoff := time.Now().UTC().Add(-staleThreshold).Format(time.RFC3339)
 
-	row := m.db.QueryRow(`
+	row := m.db.QueryRowContext(context.Background(), `
 		SELECT agent_id, agent_type, session_id, last_heartbeat, current_file
 		FROM active_agents
 		WHERE current_file = ? AND last_heartbeat > ?
@@ -134,7 +135,7 @@ func (m *Memory) CheckConflict(sessionID, path string) (*Conflict, error) {
 	}
 
 	// Check recent activity on this file from other sessions
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT session_id, timestamp
 		FROM activities
 		WHERE target = ? AND session_id != ? AND kind IN ('file_edit', 'file_read')
@@ -157,7 +158,7 @@ func (m *Memory) CheckConflict(sessionID, path string) (*Conflict, error) {
 		if time.Since(lastTouched) < 10*time.Minute {
 			// Get agent type for the session (non-critical, ok if fails)
 			var agentType string
-			_ = m.db.QueryRow(`SELECT agent_type FROM sessions WHERE id = ?`, otherSession).Scan(&agentType)
+			_ = m.db.QueryRowContext(context.Background(), `SELECT agent_type FROM sessions WHERE id = ?`, otherSession).Scan(&agentType)
 
 			return &Conflict{
 				Path:         path,
@@ -175,7 +176,7 @@ func (m *Memory) CheckConflict(sessionID, path string) (*Conflict, error) {
 // CleanupStaleAgents removes agents that haven't sent a heartbeat recently.
 func (m *Memory) CleanupStaleAgents(staleThreshold time.Duration) (int64, error) {
 	cutoff := time.Now().UTC().Add(-staleThreshold).Format(time.RFC3339)
-	result, err := m.db.Exec(`DELETE FROM active_agents WHERE last_heartbeat < ?`, cutoff)
+	result, err := m.db.ExecContext(context.Background(), `DELETE FROM active_agents WHERE last_heartbeat < ?`, cutoff)
 	if err != nil {
 		return 0, err
 	}

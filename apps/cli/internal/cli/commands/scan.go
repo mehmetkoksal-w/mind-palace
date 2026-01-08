@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -228,7 +229,7 @@ func executeDeepAnalysis(root string) error {
 
 // getDartFilesFromIndex retrieves all Dart file paths from the index
 func getDartFilesFromIndex(db *sql.DB, rootPath string) ([]string, error) {
-	rows, err := db.Query("SELECT path FROM files WHERE language = 'dart'")
+	rows, err := db.QueryContext(context.Background(), "SELECT path FROM files WHERE language = 'dart'")
 	if err != nil {
 		return nil, err
 	}
@@ -252,19 +253,19 @@ func storeCallRelationships(db *sql.DB, rootPath string, calls []analysis.CallIn
 		return 0, nil
 	}
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return 0, err
 	}
 	defer tx.Rollback()
 
 	// First, delete existing LSP-extracted calls to avoid duplicates
-	_, err = tx.Exec("DELETE FROM relationships WHERE kind = 'call' AND source_file LIKE '%.dart'")
+	_, err = tx.ExecContext(context.Background(), "DELETE FROM relationships WHERE kind = 'call' AND source_file LIKE '%.dart'")
 	if err != nil {
 		return 0, fmt.Errorf("clear old calls: %w", err)
 	}
 
-	stmt, err := tx.Prepare(`
+	stmt, err := tx.PrepareContext(context.Background(), `
 		INSERT INTO relationships(source_file, source_symbol_id, target_file, target_symbol, kind, line, column)
 		VALUES(?, NULL, ?, ?, 'call', ?, 0)
 	`)
@@ -300,7 +301,7 @@ func storeCallRelationships(db *sql.DB, rootPath string, calls []analysis.CallIn
 		}
 		seen[key] = true
 
-		_, err := stmt.Exec(callerPath, calleePath, call.CalleeSymbol, call.CallerLine)
+		_, err := stmt.ExecContext(context.Background(), callerPath, calleePath, call.CalleeSymbol, call.CallerLine)
 		if err != nil {
 			continue // Skip individual errors
 		}

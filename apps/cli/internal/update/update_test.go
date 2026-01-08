@@ -87,8 +87,11 @@ func TestBuildAssetName(t *testing.T) {
 	if !contains(name, runtime.GOARCH) {
 		t.Errorf("buildAssetName() = %q, should contain %q", name, runtime.GOARCH)
 	}
-	if runtime.GOOS == "windows" && !contains(name, ".exe") {
-		t.Errorf("buildAssetName() = %q, should contain .exe on Windows", name)
+	if runtime.GOOS == "windows" && !contains(name, ".zip") {
+		t.Errorf("buildAssetName() = %q, should contain .zip on Windows", name)
+	}
+	if runtime.GOOS != "windows" && !contains(name, ".tar.gz") {
+		t.Errorf("buildAssetName() = %q, should contain .tar.gz on non-Windows", name)
 	}
 	if !contains(name, "palace-") {
 		t.Errorf("buildAssetName() = %q, should start with palace-", name)
@@ -106,7 +109,7 @@ func TestLoadCache(t *testing.T) {
 	t.Run("returns false for invalid JSON", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "cache.json")
-		os.WriteFile(path, []byte("invalid json"), 0644)
+		os.WriteFile(path, []byte("invalid json"), 0o644)
 
 		_, ok := loadCache(path)
 		if ok {
@@ -123,7 +126,7 @@ func TestLoadCache(t *testing.T) {
 			CheckedAt:     time.Now().Add(-48 * time.Hour), // 48 hours ago
 		}
 		data, _ := json.Marshal(entry)
-		os.WriteFile(path, data, 0644)
+		os.WriteFile(path, data, 0o644)
 
 		_, ok := loadCache(path)
 		if ok {
@@ -140,7 +143,7 @@ func TestLoadCache(t *testing.T) {
 			CheckedAt:     time.Now(),
 		}
 		data, _ := json.Marshal(entry)
-		os.WriteFile(path, data, 0644)
+		os.WriteFile(path, data, 0o644)
 
 		result, ok := loadCache(path)
 		if !ok {
@@ -212,6 +215,15 @@ func TestCheckResult(t *testing.T) {
 	if !result.UpdateAvailable {
 		t.Error("UpdateAvailable should be true")
 	}
+	if result.ReleaseURL != "https://github.com/owner/repo/releases/v2.0.0" {
+		t.Errorf("ReleaseURL = %q, want expected URL", result.ReleaseURL)
+	}
+	if result.DownloadURL != "https://github.com/owner/repo/releases/download/v2.0.0/binary" {
+		t.Errorf("DownloadURL = %q, want expected URL", result.DownloadURL)
+	}
+	if result.ChecksumURL != "https://github.com/owner/repo/releases/download/v2.0.0/binary.sha256" {
+		t.Errorf("ChecksumURL = %q, want expected URL", result.ChecksumURL)
+	}
 }
 
 func TestRelease(t *testing.T) {
@@ -231,6 +243,15 @@ func TestRelease(t *testing.T) {
 
 	if release.TagName != "v1.0.0" {
 		t.Errorf("TagName = %q, want %q", release.TagName, "v1.0.0")
+	}
+	if release.Name != "Release 1.0.0" {
+		t.Errorf("Name = %q, want %q", release.Name, "Release 1.0.0")
+	}
+	if release.Body != "Release notes here" {
+		t.Errorf("Body = %q, want %q", release.Body, "Release notes here")
+	}
+	if release.HTMLURL != "https://github.com/owner/repo/releases/v1.0.0" {
+		t.Errorf("HTMLURL = %q, want expected URL", release.HTMLURL)
 	}
 	if len(release.Assets) != 1 {
 		t.Errorf("Assets length = %d, want %d", len(release.Assets), 1)
@@ -285,7 +306,7 @@ func TestConstants(t *testing.T) {
 }
 
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
+	return len(s) >= len(substr) && (s == substr || s != "" && containsHelper(s, substr))
 }
 
 func containsHelper(s, substr string) bool {
@@ -402,7 +423,7 @@ func TestVerifyChecksum(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "file.bin")
 	content := []byte("hello-world")
-	if err := os.WriteFile(path, content, 0644); err != nil {
+	if err := os.WriteFile(path, content, 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -425,7 +446,7 @@ func TestVerifyChecksum(t *testing.T) {
 func TestVerifyChecksumInvalidFormat(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "file.bin")
-	if err := os.WriteFile(path, []byte("content"), 0644); err != nil {
+	if err := os.WriteFile(path, []byte("content"), 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -513,7 +534,7 @@ func TestCheckCachedWithValidCache(t *testing.T) {
 		CheckedAt:     time.Now(),
 	}
 	data, _ := json.Marshal(entry)
-	os.WriteFile(cachePath, data, 0644)
+	os.WriteFile(cachePath, data, 0o644)
 
 	result, err := CheckCached("1.0.0", dir)
 	if err != nil {
@@ -536,7 +557,7 @@ func TestCheckCachedWithExpiredCache(t *testing.T) {
 		CheckedAt:     time.Now().Add(-48 * time.Hour), // Expired
 	}
 	data, _ := json.Marshal(entry)
-	os.WriteFile(cachePath, data, 0644)
+	os.WriteFile(cachePath, data, 0o644)
 
 	release := Release{
 		TagName: "v3.0.0",
@@ -562,13 +583,13 @@ func TestReplaceExecutable(t *testing.T) {
 
 	// Create "current" executable
 	currentPath := filepath.Join(dir, "current")
-	if err := os.WriteFile(currentPath, []byte("old-content"), 0755); err != nil {
+	if err := os.WriteFile(currentPath, []byte("old-content"), 0o755); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
 	// Create "new" executable
 	newPath := filepath.Join(dir, "new")
-	if err := os.WriteFile(newPath, []byte("new-content"), 0644); err != nil {
+	if err := os.WriteFile(newPath, []byte("new-content"), 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -597,7 +618,7 @@ func TestReplaceExecutableFailsIfCurrentMissing(t *testing.T) {
 	currentPath := filepath.Join(dir, "missing")
 	newPath := filepath.Join(dir, "new")
 
-	if err := os.WriteFile(newPath, []byte("new-content"), 0644); err != nil {
+	if err := os.WriteFile(newPath, []byte("new-content"), 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -612,7 +633,7 @@ func TestReplaceExecutableFailsIfNewMissing(t *testing.T) {
 	currentPath := filepath.Join(dir, "current")
 	newPath := filepath.Join(dir, "missing")
 
-	if err := os.WriteFile(currentPath, []byte("old-content"), 0755); err != nil {
+	if err := os.WriteFile(currentPath, []byte("old-content"), 0o755); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 

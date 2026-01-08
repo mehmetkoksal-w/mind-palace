@@ -121,58 +121,6 @@ func (s *MCPServer) toolSessionEnd(id any, args map[string]interface{}) jsonRPCR
 	}
 }
 
-// toolAddLearning stores a learning for future reference (deprecated: use toolStore).
-func (s *MCPServer) toolAddLearning(id any, args map[string]interface{}) jsonRPCResponse {
-	content, _ := args["content"].(string)
-	if content == "" {
-		return s.toolError(id, "content is required")
-	}
-
-	scope, _ := args["scope"].(string)
-	if scope == "" {
-		scope = "palace"
-	}
-
-	scopePath, _ := args["scopePath"].(string)
-
-	confidence := 0.5
-	if c, ok := args["confidence"].(float64); ok {
-		confidence = c
-	}
-
-	learning := memory.Learning{
-		Scope:      scope,
-		ScopePath:  scopePath,
-		Content:    content,
-		Confidence: confidence,
-		Source:     "agent",
-	}
-
-	learningID, err := s.butler.AddLearning(learning)
-	if err != nil {
-		return s.toolError(id, fmt.Sprintf("add learning failed: %v", err))
-	}
-
-	var output strings.Builder
-	output.WriteString("# Learning Stored\n\n")
-	fmt.Fprintf(&output, "**ID:** `%s`\n", learningID)
-	fmt.Fprintf(&output, "**Scope:** %s", scope)
-	if scopePath != "" {
-		fmt.Fprintf(&output, " (%s)", scopePath)
-	}
-	output.WriteString("\n")
-	fmt.Fprintf(&output, "**Confidence:** %.0f%%\n", confidence*100)
-	fmt.Fprintf(&output, "**Content:** %s\n", content)
-
-	return jsonRPCResponse{
-		JSONRPC: "2.0",
-		ID:      id,
-		Result: mcpToolResult{
-			Content: []mcpContent{{Type: "text", Text: output.String()}},
-		},
-	}
-}
-
 // toolRecall retrieves learnings, optionally filtered by scope or search query.
 func (s *MCPServer) toolRecall(id any, args map[string]interface{}) jsonRPCResponse {
 	query, _ := args["query"].(string)
@@ -203,7 +151,8 @@ func (s *MCPServer) toolRecall(id any, args map[string]interface{}) jsonRPCRespo
 	if len(learnings) == 0 {
 		output.WriteString("No learnings found.\n")
 	} else {
-		for _, l := range learnings {
+		for i := range learnings {
+			l := &learnings[i]
 			scopeInfo := l.Scope
 			if l.ScopePath != "" {
 				scopeInfo = fmt.Sprintf("%s:%s", l.Scope, l.ScopePath)
@@ -286,7 +235,8 @@ func (s *MCPServer) toolBrief(id any, args map[string]interface{}) jsonRPCRespon
 	// Active agents
 	if len(brief.ActiveAgents) > 0 {
 		output.WriteString("## Active Agents\n\n")
-		for _, a := range brief.ActiveAgents {
+		for i := range brief.ActiveAgents {
+			a := &brief.ActiveAgents[i]
 			currentFile := ""
 			if a.CurrentFile != "" {
 				currentFile = fmt.Sprintf(" working on `%s`", a.CurrentFile)
@@ -322,7 +272,8 @@ func (s *MCPServer) toolBrief(id any, args map[string]interface{}) jsonRPCRespon
 	// Relevant learnings
 	if len(brief.Learnings) > 0 {
 		output.WriteString("## Relevant Learnings\n\n")
-		for _, l := range brief.Learnings {
+		for i := range brief.Learnings {
+			l := &brief.Learnings[i]
 			scopeInfo := ""
 			if l.Scope != "palace" {
 				scopeInfo = fmt.Sprintf(" [%s]", l.Scope)
@@ -335,7 +286,8 @@ func (s *MCPServer) toolBrief(id any, args map[string]interface{}) jsonRPCRespon
 	// Brain ideas
 	if len(brief.BrainIdeas) > 0 {
 		output.WriteString("## 💭 Active Ideas\n\n")
-		for _, idea := range brief.BrainIdeas {
+		for i := range brief.BrainIdeas {
+			idea := &brief.BrainIdeas[i]
 			fmt.Fprintf(&output, "- `%s` %s\n", idea.ID, idea.Content)
 		}
 		output.WriteString("\n")
@@ -344,7 +296,8 @@ func (s *MCPServer) toolBrief(id any, args map[string]interface{}) jsonRPCRespon
 	// Brain decisions
 	if len(brief.BrainDecisions) > 0 {
 		output.WriteString("## 📋 Active Decisions\n\n")
-		for _, d := range brief.BrainDecisions {
+		for i := range brief.BrainDecisions {
+			d := &brief.BrainDecisions[i]
 			outcomeIcon := ""
 			switch d.Outcome {
 			case "successful":
@@ -362,7 +315,8 @@ func (s *MCPServer) toolBrief(id any, args map[string]interface{}) jsonRPCRespon
 	// Hotspots
 	if len(brief.Hotspots) > 0 {
 		output.WriteString("## Hotspots (Most Edited Files)\n\n")
-		for _, h := range brief.Hotspots {
+		for i := range brief.Hotspots {
+			h := &brief.Hotspots[i]
 			warning := ""
 			if h.FailureCount > 0 {
 				warning = fmt.Sprintf(" (⚠️ %d failures)", h.FailureCount)
@@ -403,11 +357,13 @@ func (s *MCPServer) toolSessionList(id any, args map[string]interface{}) jsonRPC
 	if len(sessions) == 0 {
 		output.WriteString("No sessions found.\n")
 	} else {
-		for _, sess := range sessions {
+		for i := range sessions {
+			sess := &sessions[i]
 			statusIcon := "🟢"
-			if sess.State == "completed" {
+			switch sess.State {
+			case "completed":
 				statusIcon = "✅"
-			} else if sess.State == "abandoned" {
+			case "abandoned":
 				statusIcon = "❌"
 			}
 			fmt.Fprintf(&output, "## %s `%s`\n", statusIcon, sess.ID)

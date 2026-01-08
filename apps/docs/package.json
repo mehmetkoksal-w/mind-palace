@@ -1,6 +1,7 @@
 {
   "name": "mind-palace-docs",
-  "version": "0.0.1-alpha",
+  "version": "0.2.0-alpha",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev",

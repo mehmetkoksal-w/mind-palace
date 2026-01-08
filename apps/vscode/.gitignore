@@ -3,6 +3,9 @@ out/
 dist/
 *.vsix
 
+# VS Code test runner downloads
+.vscode-test/
+
 # Node.js dependencies
 node_modules/
 npm-debug.log*
@@ -43,6 +46,7 @@ pids/
 
 # Coverage directory used by tools like istanbul
 coverage/
+.nyc_output/
 *.lcov
 
 # nyc test coverage

@@ -129,7 +129,7 @@ func TestLoadContextPackInvalidJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "invalid.json")
 
-	if err := os.WriteFile(path, []byte("not valid json {"), 0644); err != nil {
+	if err := os.WriteFile(path, []byte("not valid json {"), 0o644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
@@ -172,7 +172,7 @@ func TestWriteContextPackNormalizesNils(t *testing.T) {
 }
 
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsImpl(s, substr))
+	return len(s) >= len(substr) && (s == substr || s != "" && containsImpl(s, substr))
 }
 
 func containsImpl(s, substr string) bool {
@@ -192,8 +192,8 @@ func TestContextPackTypes(t *testing.T) {
 		Severity: "warning",
 		File:     "test.go",
 	}
-	if finding.Summary != "Test finding" {
-		t.Error("Finding summary not set correctly")
+	if finding.Summary != "Test finding" || finding.Detail != "Detailed description" || finding.Severity != "warning" || finding.File != "test.go" {
+		t.Error("Finding fields not set correctly")
 	}
 
 	// Test PlanStep
@@ -201,8 +201,8 @@ func TestContextPackTypes(t *testing.T) {
 		Step:   "Do something",
 		Status: "pending",
 	}
-	if step.Status != "pending" {
-		t.Error("PlanStep status not set correctly")
+	if step.Status != "pending" || step.Step != "Do something" {
+		t.Error("PlanStep fields not set correctly")
 	}
 
 	// Test VerificationResult
@@ -211,8 +211,8 @@ func TestContextPackTypes(t *testing.T) {
 		Status: "pass",
 		Detail: "All good",
 	}
-	if result.Status != "pass" {
-		t.Error("VerificationResult status not set correctly")
+	if result.Status != "pass" || result.Name != "Test check" || result.Detail != "All good" {
+		t.Error("VerificationResult fields not set correctly")
 	}
 
 	// Test Provenance
@@ -224,8 +224,8 @@ func TestContextPackTypes(t *testing.T) {
 		Generator:        "palace",
 		GeneratorVersion: "1.0.0",
 	}
-	if prov.Generator != "palace" {
-		t.Error("Provenance generator not set correctly")
+	if prov.Generator != "palace" || prov.CreatedBy != "test" || prov.CreatedAt == "" || prov.UpdatedBy != "test2" || prov.UpdatedAt == "" || prov.GeneratorVersion != "1.0.0" {
+		t.Error("Provenance fields not set correctly")
 	}
 
 	// Test ScopeInfo
@@ -235,8 +235,8 @@ func TestContextPackTypes(t *testing.T) {
 		FileCount: 10,
 		DiffRange: "HEAD~1..HEAD",
 	}
-	if scope.Mode != "diff" {
-		t.Error("ScopeInfo mode not set correctly")
+	if scope.Mode != "diff" || scope.Source != "git-diff" || scope.FileCount != 10 || scope.DiffRange != "HEAD~1..HEAD" {
+		t.Error("ScopeInfo fields not set correctly")
 	}
 
 	// Test CorridorInfo
@@ -250,8 +250,8 @@ func TestContextPackTypes(t *testing.T) {
 		FetchedAt: time.Now().Format(time.RFC3339),
 		Error:     "",
 	}
-	if corridor.Name != "neighbor1" {
-		t.Error("CorridorInfo name not set correctly")
+	if corridor.Name != "neighbor1" || corridor.Source != "https://example.com/context.json" || corridor.Goal != "Remote goal" || len(corridor.Files) != 1 || len(corridor.Rooms) != 1 || !corridor.FromCache || corridor.FetchedAt == "" || corridor.Error != "" {
+		t.Error("CorridorInfo fields not set correctly")
 	}
 }
 
@@ -271,8 +271,8 @@ func TestRoomAndPlaybookTypes(t *testing.T) {
 			{Name: "setup", Description: "Setup deps", Capability: "install", Evidence: "package.json"},
 		},
 	}
-	if room.Name != "auth" {
-		t.Error("Room name not set correctly")
+	if room.Name != "auth" || room.SchemaVersion != "1.0.0" || room.Kind != "palace/room" || room.Summary != "Authentication logic" || len(room.Capabilities) != 2 || len(room.Steps) != 1 {
+		t.Error("Room fields not set correctly")
 	}
 	if len(room.EntryPoints) != 2 {
 		t.Error("Room entryPoints not set correctly")
@@ -289,8 +289,8 @@ func TestRoomAndPlaybookTypes(t *testing.T) {
 		Summary:       "Deployment playbook",
 		Rooms:         []string{"auth", "api"},
 	}
-	if playbook.Name != "deploy" {
-		t.Error("Playbook name not set correctly")
+	if playbook.Name != "deploy" || playbook.SchemaVersion != "1.0.0" || playbook.Kind != "palace/playbook" || playbook.Summary != "Deployment playbook" {
+		t.Error("Playbook fields not set correctly")
 	}
 	if len(playbook.Rooms) != 2 {
 		t.Error("Playbook rooms not set correctly")
@@ -298,16 +298,16 @@ func TestRoomAndPlaybookTypes(t *testing.T) {
 }
 
 func TestCapabilityType(t *testing.T) {
-	cap := model.Capability{
+	capability := model.Capability{
 		Command:          "npm test",
 		Description:      "Run tests",
 		WorkingDirectory: "./src",
 		Env:              map[string]string{"NODE_ENV": "test"},
 	}
-	if cap.Command != "npm test" {
-		t.Error("Capability command not set correctly")
+	if capability.Command != "npm test" || capability.Description != "Run tests" || capability.WorkingDirectory != "./src" {
+		t.Error("Capability fields not set correctly")
 	}
-	if cap.Env["NODE_ENV"] != "test" {
+	if capability.Env["NODE_ENV"] != "test" {
 		t.Error("Capability env not set correctly")
 	}
 }

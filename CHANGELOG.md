@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-alpha] - 2026-01-07
+
+### Added
+
+- **Postmortem Feature**: New postmortem commands and webview for capturing lessons learned from tasks, bugs, and incidents
+- **Butler Registry Architecture**: Refactored VS Code extension to use centralized CommandRegistry, ProviderRegistry, ViewRegistry, and EventBus patterns
+- **Knowledge Tree Enhancements**: Added postmortem category and status grouping in knowledge panel
+- **Onboarding Flow**: First-run onboarding experience in dashboard with sample data creation
+- **LLM Hardening**: Comprehensive test suite for LLM clients (Ollama, OpenAI, Anthropic) with 90.6% coverage
+- **Cache Service**: LRU cache implementation with bridge integration for performance optimization
+- **Logger Services**: Unified logging infrastructure across VS Code extension and dashboard
+
+### Changed
+
+- **VS Code Extension Architecture**: Migrated to registry-based component organization for better maintainability
+- **Bridge API**: Added public postmortem methods (getPostmortem, resolvePostmortem, postmortemToLearnings)
+- **Parser Strategy**: Documented LSP-first parsing approach with tree-sitter/regex fallback for future adaptations
+- **Build Configuration**: MinGW configured for CGO support in CI environments
+
+### Fixed
+
+- **TypeScript Compilation**: Resolved all 48 TypeScript errors in VS Code extension
+- **Provider Registration**: Fixed knowledge tree provider syntax and rendering logic
+- **Config Watcher**: Added graceful handling for missing workspace folders
+- **MCP Client**: Improved connection handling and error recovery
+
+### Testing
+
+- **VS Code Extension**: 41/49 tests passing (84% - 8 failures related to workspace/timing in test environment)
+- **Dashboard**: 205/211 tests passing (97% - 6 failures in onboarding feature specs)
+- **Go CLI**: Core packages validated (config, corridor, LLM, signal, project, validate)
+
+### Known Issues
+
+- CGO-dependent packages (analysis, butler, scan) fail on Windows without MinGW; Linux CI provides full coverage
+- Cytoscape import warning in blueprint webview (requires esModuleInterop)
+- Benchmark execution pending due to package structure consolidation needed
+
+---
+
 ## [0.0.2-alpha] - 2026-01-01
 
 ### Fixed

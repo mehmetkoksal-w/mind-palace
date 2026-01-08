@@ -65,6 +65,12 @@ func TestWriteAndLoadScanSummary(t *testing.T) {
 	if loaded.ScanHash != original.ScanHash {
 		t.Errorf("scanHash mismatch: got %q, want %q", loaded.ScanHash, original.ScanHash)
 	}
+	if loaded.RelationshipCount != original.RelationshipCount {
+		t.Errorf("relationshipCount mismatch: got %d, want %d", loaded.RelationshipCount, original.RelationshipCount)
+	}
+	if loaded.Provenance.CreatedBy != original.Provenance.CreatedBy {
+		t.Errorf("provenance.createdBy mismatch: got %q, want %q", loaded.Provenance.CreatedBy, original.Provenance.CreatedBy)
+	}
 }
 
 func TestLoadScanSummaryNotFound(t *testing.T) {
@@ -78,7 +84,7 @@ func TestLoadScanSummaryInvalidJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "invalid.json")
 
-	if err := os.WriteFile(path, []byte("not valid json {"), 0644); err != nil {
+	if err := os.WriteFile(path, []byte("not valid json {"), 0o644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
@@ -103,20 +109,14 @@ func TestScanSummaryType(t *testing.T) {
 		ScanHash:          "hash",
 	}
 
-	if summary.SchemaVersion != "1.0.0" {
-		t.Error("SchemaVersion not set correctly")
+	if summary.SchemaVersion != "1.0.0" || summary.Kind != "palace/scan" || summary.ScanID != "test-id" || summary.DBScanID != 1 {
+		t.Error("ScanSummary basic fields not set correctly")
 	}
-	if summary.Kind != "palace/scan" {
-		t.Error("Kind not set correctly")
+	if summary.StartedAt != "2024-01-01T00:00:00Z" || summary.CompletedAt != "2024-01-01T00:00:01Z" {
+		t.Error("ScanSummary time fields not set correctly")
 	}
-	if summary.ScanID != "test-id" {
-		t.Error("ScanID not set correctly")
-	}
-	if summary.DBScanID != 1 {
-		t.Error("DBScanID not set correctly")
-	}
-	if summary.FileCount != 10 {
-		t.Error("FileCount not set correctly")
+	if summary.FileCount != 10 || summary.ChunkCount != 50 || summary.SymbolCount != 25 || summary.RelationshipCount != 5 || summary.ScanHash != "hash" {
+		t.Error("ScanSummary metric fields not set correctly")
 	}
 }
 

@@ -153,7 +153,8 @@ func (g *GlobalCorridor) Stats() (map[string]any, error) {
 // Conversion helpers
 func convertPersonalLearnings(learnings []corridor.PersonalLearning) []PersonalLearning {
 	result := make([]PersonalLearning, len(learnings))
-	for i, l := range learnings {
+	for i := range learnings {
+		l := &learnings[i]
 		result[i] = PersonalLearning{
 			ID:              l.ID,
 			OriginWorkspace: l.OriginWorkspace,
@@ -171,7 +172,8 @@ func convertPersonalLearnings(learnings []corridor.PersonalLearning) []PersonalL
 
 func convertLinkedWorkspaces(links []corridor.LinkedWorkspace) []LinkedWorkspace {
 	result := make([]LinkedWorkspace, len(links))
-	for i, l := range links {
+	for i := range links {
+		l := &links[i]
 		result[i] = LinkedWorkspace{
 			Name:         l.Name,
 			Path:         l.Path,
@@ -184,7 +186,8 @@ func convertLinkedWorkspaces(links []corridor.LinkedWorkspace) []LinkedWorkspace
 
 func convertInternalLearnings(learnings []memory.Learning) []Learning {
 	result := make([]Learning, len(learnings))
-	for i, l := range learnings {
+	for i := range learnings {
+		l := &learnings[i]
 		result[i] = Learning{
 			ID:         l.ID,
 			SessionID:  l.SessionID,

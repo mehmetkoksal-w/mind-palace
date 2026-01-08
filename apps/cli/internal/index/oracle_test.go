@@ -1,6 +1,7 @@
 package index
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"testing"
@@ -49,14 +50,14 @@ func TestOracleIntegrated(t *testing.T) {
 		`CREATE TABLE decisions (id TEXT PRIMARY KEY, room TEXT, title TEXT, summary TEXT, rationale TEXT, affected_files TEXT, created_at TEXT, created_by TEXT);`,
 	}
 	for _, s := range stmts {
-		db.Exec(s)
+		db.ExecContext(context.Background(), s)
 	}
 
 	// Insert test data
-	db.Exec(`INSERT INTO files VALUES (?, ?, ?, ?, ?, ?);`, "auth.go", "h1", 100, "now", "now", "go")
-	db.Exec(`INSERT INTO symbols VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, 1, "auth.go", "Login", "function", 1, 10, "()", "Login function", nil, 1)
-	db.Exec(`INSERT INTO symbols_fts VALUES (?, ?, ?, ?);`, "Login", "auth.go", "function", "Login function")
-	db.Exec(`INSERT INTO relationships VALUES (?, ?, ?, ?, ?, ?, ?, ?);`, 1, "main.go", nil, "auth.go", nil, "import", 5, 1)
+	db.ExecContext(context.Background(), `INSERT INTO files VALUES (?, ?, ?, ?, ?, ?);`, "auth.go", "h1", 100, "now", "now", "go")
+	db.ExecContext(context.Background(), `INSERT INTO symbols VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, 1, "auth.go", "Login", "function", 1, 10, "()", "Login function", nil, 1)
+	db.ExecContext(context.Background(), `INSERT INTO symbols_fts VALUES (?, ?, ?, ?);`, "Login", "auth.go", "function", "Login function")
+	db.ExecContext(context.Background(), `INSERT INTO relationships VALUES (?, ?, ?, ?, ?, ?, ?, ?);`, 1, "main.go", nil, "auth.go", nil, "import", 5, 1)
 
 	t.Run("GetSymbol", func(t *testing.T) {
 		sym, err := GetSymbol(db, "Login", "auth.go")
@@ -112,8 +113,8 @@ func TestOracleIntegrated(t *testing.T) {
 
 	t.Run("GetContextForTaskWithOptions", func(t *testing.T) {
 		// Insert chunk data
-		db.Exec(`INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?);`, 2, "main.go", 0, 1, 5, "package main\nimport \"auth\"")
-		db.Exec(`INSERT INTO chunks_fts VALUES (?, ?, ?);`, "main.go", "package main import auth", 0)
+		db.ExecContext(context.Background(), `INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?);`, 2, "main.go", 0, 1, 5, "package main\nimport \"auth\"")
+		db.ExecContext(context.Background(), `INSERT INTO chunks_fts VALUES (?, ?, ?);`, "main.go", "package main import auth", 0)
 
 		ctx, err := GetContextForTaskWithOptions(db, "Login", 10, &ContextOptions{
 			IncludeTests: true,

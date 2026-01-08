@@ -31,6 +31,7 @@ func init() {
 	}
 }
 
+// SetBuildInfo sets the build information from ldflags or other sources.
 func SetBuildInfo(version, commit, date string) {
 	if version != "" && version != "dev" {
 		buildVersion = version
@@ -43,6 +44,7 @@ func SetBuildInfo(version, commit, date string) {
 	}
 }
 
+// GetVersion returns the current build version.
 func GetVersion() string {
 	return buildVersion
 }

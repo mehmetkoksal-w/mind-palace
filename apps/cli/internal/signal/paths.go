@@ -1,6 +1,7 @@
 package signal
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -51,7 +52,7 @@ func pathsFromSignal(rootPath, diffRange string, guardrails config.Guardrails) (
 }
 
 func gitDiffPaths(rootPath, diffRange string, guardrails config.Guardrails) ([]string, bool, error) {
-	cmd := exec.Command("git", "diff", "--name-only", diffRange)
+	cmd := exec.CommandContext(context.Background(), "git", "diff", "--name-only", diffRange)
 	cmd.Dir = rootPath
 	out, err := cmd.Output()
 	if err != nil {

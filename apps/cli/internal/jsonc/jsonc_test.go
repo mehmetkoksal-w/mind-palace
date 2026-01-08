@@ -61,7 +61,7 @@ func TestDecodeFile(t *testing.T) {
 			"name": "test",
 			"count": 42
 		}`
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -90,7 +90,7 @@ func TestDecodeFile(t *testing.T) {
 			/* block comment */
 			"enabled": true
 		}`
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -119,7 +119,7 @@ func TestDecodeFile(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "invalid.jsonc")
 
-		if err := os.WriteFile(path, []byte(`{invalid json`), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(`{invalid json`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 

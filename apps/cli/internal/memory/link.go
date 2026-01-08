@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -95,7 +96,7 @@ func (m *Memory) AddLink(link Link) (string, error) {
 		targetMtime = link.TargetMtime.Format(time.RFC3339)
 	}
 
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT INTO links (id, source_id, source_kind, target_id, target_kind, relation, target_mtime, is_stale, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		link.ID, link.SourceID, link.SourceKind, link.TargetID, link.TargetKind,
@@ -109,7 +110,7 @@ func (m *Memory) AddLink(link Link) (string, error) {
 
 // GetLink retrieves a link by ID.
 func (m *Memory) GetLink(id string) (*Link, error) {
-	row := m.db.QueryRow(`
+	row := m.db.QueryRowContext(context.Background(), `
 		SELECT id, source_id, source_kind, target_id, target_kind, relation, target_mtime, is_stale, created_at
 		FROM links WHERE id = ?`, id)
 
@@ -125,7 +126,7 @@ func (m *Memory) GetLink(id string) (*Link, error) {
 
 // GetLinksForSource retrieves all links where the given ID is the source.
 func (m *Memory) GetLinksForSource(sourceID string) ([]Link, error) {
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT id, source_id, source_kind, target_id, target_kind, relation, target_mtime, is_stale, created_at
 		FROM links WHERE source_id = ? ORDER BY created_at DESC`, sourceID)
 	if err != nil {
@@ -138,7 +139,7 @@ func (m *Memory) GetLinksForSource(sourceID string) ([]Link, error) {
 
 // GetLinksForTarget retrieves all links where the given ID is the target.
 func (m *Memory) GetLinksForTarget(targetID string) ([]Link, error) {
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT id, source_id, source_kind, target_id, target_kind, relation, target_mtime, is_stale, created_at
 		FROM links WHERE target_id = ? ORDER BY created_at DESC`, targetID)
 	if err != nil {
@@ -151,7 +152,7 @@ func (m *Memory) GetLinksForTarget(targetID string) ([]Link, error) {
 
 // GetAllLinksFor retrieves all links where the given ID is either source or target.
 func (m *Memory) GetAllLinksFor(id string) ([]Link, error) {
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT id, source_id, source_kind, target_id, target_kind, relation, target_mtime, is_stale, created_at
 		FROM links WHERE source_id = ? OR target_id = ? ORDER BY created_at DESC`, id, id)
 	if err != nil {
@@ -164,7 +165,7 @@ func (m *Memory) GetAllLinksFor(id string) ([]Link, error) {
 
 // GetLinksByRelation retrieves all links with a specific relation type.
 func (m *Memory) GetLinksByRelation(relation string, limit int) ([]Link, error) {
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT id, source_id, source_kind, target_id, target_kind, relation, target_mtime, is_stale, created_at
 		FROM links WHERE relation = ? ORDER BY created_at DESC LIMIT ?`, relation, limit)
 	if err != nil {
@@ -177,7 +178,7 @@ func (m *Memory) GetLinksByRelation(relation string, limit int) ([]Link, error) 
 
 // DeleteLink deletes a link by ID.
 func (m *Memory) DeleteLink(id string) error {
-	result, err := m.db.Exec(`DELETE FROM links WHERE id = ?`, id)
+	result, err := m.db.ExecContext(context.Background(), `DELETE FROM links WHERE id = ?`, id)
 	if err != nil {
 		return fmt.Errorf("delete link: %w", err)
 	}
@@ -192,19 +193,19 @@ func (m *Memory) DeleteLink(id string) error {
 // DeleteLinksForRecord deletes all links where the given ID is source or target.
 // This is called when a record is deleted (ON DELETE CASCADE alternative for app-level).
 func (m *Memory) DeleteLinksForRecord(recordID string) error {
-	_, err := m.db.Exec(`DELETE FROM links WHERE source_id = ? OR target_id = ?`, recordID, recordID)
+	_, err := m.db.ExecContext(context.Background(), `DELETE FROM links WHERE source_id = ? OR target_id = ?`, recordID, recordID)
 	return err
 }
 
 // MarkLinkStale marks a link as stale (code file has changed).
 func (m *Memory) MarkLinkStale(id string, isStale bool) error {
-	_, err := m.db.Exec(`UPDATE links SET is_stale = ? WHERE id = ?`, boolToInt(isStale), id)
+	_, err := m.db.ExecContext(context.Background(), `UPDATE links SET is_stale = ? WHERE id = ?`, boolToInt(isStale), id)
 	return err
 }
 
 // GetStaleLinks retrieves all links marked as stale.
 func (m *Memory) GetStaleLinks() ([]Link, error) {
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT id, source_id, source_kind, target_id, target_kind, relation, target_mtime, is_stale, created_at
 		FROM links WHERE is_stale = 1 ORDER BY created_at DESC`)
 	if err != nil {
@@ -223,7 +224,8 @@ func (m *Memory) CheckAndUpdateStaleness(rootPath string) (int, error) {
 	}
 
 	staleCount := 0
-	for _, link := range links {
+	for i := range links {
+		link := &links[i]
 		if link.TargetKind != TargetKindCode {
 			continue
 		}
@@ -258,7 +260,7 @@ func (m *Memory) CheckAndUpdateStaleness(rootPath string) (int, error) {
 
 // ValidateCodeTarget validates that a code target exists and line range is valid.
 // Returns the file's mtime if valid.
-func ValidateCodeTarget(rootPath string, target string) (*CodeTarget, time.Time, error) {
+func ValidateCodeTarget(rootPath, target string) (*CodeTarget, time.Time, error) {
 	parsed, err := ParseCodeTarget(target)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -321,8 +323,8 @@ func ParseCodeTarget(target string) (*CodeTarget, error) {
 		result.FilePath = target
 	}
 
-	// Normalize path
-	result.FilePath = filepath.Clean(result.FilePath)
+	// Normalize path and convert to forward slashes for consistency across platforms
+	result.FilePath = filepath.ToSlash(filepath.Clean(result.FilePath))
 
 	return result, nil
 }

@@ -1,6 +1,7 @@
 package butler
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -241,7 +242,7 @@ func (b *Butler) GetIndexInfo() *IndexInfo {
 	}
 
 	// Count files in index
-	row := b.db.QueryRow("SELECT COUNT(*) FROM files")
+	row := b.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files")
 	if err := row.Scan(&info.FileCount); err != nil {
 		// If count fails, FileCount remains 0 which is acceptable
 		info.FileCount = 0

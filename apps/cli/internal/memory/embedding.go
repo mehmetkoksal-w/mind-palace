@@ -2,6 +2,7 @@ package memory
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -102,7 +103,13 @@ func (e *OllamaEmbedder) Embed(text string) ([]float32, error) {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	resp, err := e.client.Post(e.url+"/api/embeddings", "application/json", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(context.Background(), "POST", e.url+"/api/embeddings", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := e.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("ollama request failed: %w", err)
 	}
@@ -154,7 +161,7 @@ func (e *OpenAIEmbedder) Embed(text string) ([]float32, error) {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/embeddings", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(context.Background(), "POST", "https://api.openai.com/v1/embeddings", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +207,7 @@ func (e *OpenAIEmbedder) Model() string {
 // StoreEmbedding stores an embedding for a record.
 func (m *Memory) StoreEmbedding(recordID, recordKind string, embedding []float32, model string) error {
 	blob := float32sToBytes(embedding)
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT OR REPLACE INTO embeddings (record_id, record_kind, embedding, model, created_at)
 		VALUES (?, ?, ?, ?, ?)`,
 		recordID, recordKind, blob, model, time.Now().UTC().Format(time.RFC3339))
@@ -210,7 +217,7 @@ func (m *Memory) StoreEmbedding(recordID, recordKind string, embedding []float32
 // GetEmbedding retrieves the embedding for a record.
 func (m *Memory) GetEmbedding(recordID string) ([]float32, error) {
 	var blob []byte
-	err := m.db.QueryRow(`SELECT embedding FROM embeddings WHERE record_id = ?`, recordID).Scan(&blob)
+	err := m.db.QueryRowContext(context.Background(), `SELECT embedding FROM embeddings WHERE record_id = ?`, recordID).Scan(&blob)
 	if err != nil {
 		return nil, err
 	}
@@ -219,13 +226,13 @@ func (m *Memory) GetEmbedding(recordID string) ([]float32, error) {
 
 // DeleteEmbedding removes the embedding for a record.
 func (m *Memory) DeleteEmbedding(recordID string) error {
-	_, err := m.db.Exec(`DELETE FROM embeddings WHERE record_id = ?`, recordID)
+	_, err := m.db.ExecContext(context.Background(), `DELETE FROM embeddings WHERE record_id = ?`, recordID)
 	return err
 }
 
 // GetAllEmbeddings returns all embeddings of a specific kind.
 func (m *Memory) GetAllEmbeddings(recordKind string) (map[string][]float32, error) {
-	rows, err := m.db.Query(`SELECT record_id, embedding FROM embeddings WHERE record_kind = ?`, recordKind)
+	rows, err := m.db.QueryContext(context.Background(), `SELECT record_id, embedding FROM embeddings WHERE record_kind = ?`, recordKind)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +275,7 @@ func CosineSimilarity(a, b []float32) float32 {
 	return dotProduct / float32(math.Sqrt(float64(normA))*math.Sqrt(float64(normB)))
 }
 
-// FindSimilar finds the most similar embeddings to a query embedding.
+// SimilarityResult represents a record with its similarity score to a query.
 type SimilarityResult struct {
 	RecordID   string  `json:"recordId"`
 	RecordKind string  `json:"recordKind"`
@@ -285,7 +292,7 @@ func (m *Memory) FindSimilarEmbeddings(queryEmbedding []float32, recordKind stri
 		args = append(args, recordKind)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +338,7 @@ func (m *Memory) FindSimilarEmbeddings(queryEmbedding []float32, recordKind stri
 // CountEmbeddings returns the total number of embeddings.
 func (m *Memory) CountEmbeddings() (int, error) {
 	var count int
-	err := m.db.QueryRow(`SELECT COUNT(*) FROM embeddings`).Scan(&count)
+	err := m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM embeddings`).Scan(&count)
 	return count, err
 }
 

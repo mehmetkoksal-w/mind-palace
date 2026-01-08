@@ -57,10 +57,10 @@ Source: https://github.com/koksalmehmet/mind-palace
 
 Files: *
 Copyright: 2024 Mind Palace
-License: PolyForm-Shield-1.0.0
- PolyForm Shield License 1.0.0
+License: MIT
+ MIT License
  .
- https://polyformproject.org/licenses/shield/1.0.0
+ Copyright (c) 2026 Mind Palace Contributors
  .
  1.  Rights Granted. Licensor grants you a non-exclusive, royalty-free,
      worldwide, non-sublicensable, non-transferable license to use, modify,

@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -35,7 +36,7 @@ func (m *Memory) AddLearning(l Learning) (string, error) {
 		l.LastUsed = now
 	}
 
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT INTO learnings (id, session_id, scope, scope_path, content, confidence, source, created_at, last_used, use_count)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, l.ID, l.SessionID, l.Scope, l.ScopePath, l.Content, l.Confidence, l.Source,
@@ -52,7 +53,7 @@ func (m *Memory) AddLearning(l Learning) (string, error) {
 
 // GetLearning retrieves a learning by ID.
 func (m *Memory) GetLearning(id string) (*Learning, error) {
-	row := m.db.QueryRow(`
+	row := m.db.QueryRowContext(context.Background(), `
 		SELECT id, session_id, scope, scope_path, content, confidence, source, created_at, last_used, use_count
 		FROM learnings WHERE id = ?
 	`, id)
@@ -88,7 +89,7 @@ func (m *Memory) GetLearnings(scope, scopePath string, limit int) ([]Learning, e
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query learnings: %w", err)
 	}
@@ -104,6 +105,9 @@ func (m *Memory) GetLearnings(scope, scopePath string, limit int) ([]Learning, e
 		l.CreatedAt = parseTimeOrZero(createdAt)
 		l.LastUsed = parseTimeOrZero(lastUsed)
 		learnings = append(learnings, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
 	}
 	return learnings, nil
 }
@@ -122,7 +126,7 @@ func (m *Memory) SearchLearnings(query string, limit int) ([]Learning, error) {
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(sqlQuery, args...)
+	rows, err := m.db.QueryContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		return nil, fmt.Errorf("search learnings: %w", err)
 	}
@@ -139,13 +143,16 @@ func (m *Memory) SearchLearnings(query string, limit int) ([]Learning, error) {
 		l.LastUsed = parseTimeOrZero(lastUsed)
 		learnings = append(learnings, l)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
+	}
 	return learnings, nil
 }
 
 // ReinforceLearning increases confidence and use count of a learning.
 func (m *Memory) ReinforceLearning(id string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		UPDATE learnings
 		SET confidence = MIN(1.0, confidence + 0.1),
 		    use_count = use_count + 1,
@@ -158,7 +165,7 @@ func (m *Memory) ReinforceLearning(id string) error {
 // WeakenLearning decreases confidence of a learning (when it proves unhelpful).
 func (m *Memory) WeakenLearning(id string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		UPDATE learnings
 		SET confidence = MAX(0.0, confidence - 0.1),
 		    last_used = ?
@@ -169,7 +176,7 @@ func (m *Memory) WeakenLearning(id string) error {
 
 // DeleteLearning removes a learning from the database.
 func (m *Memory) DeleteLearning(id string) error {
-	_, err := m.db.Exec(`DELETE FROM learnings WHERE id = ?`, id)
+	_, err := m.db.ExecContext(context.Background(), `DELETE FROM learnings WHERE id = ?`, id)
 	return err
 }
 
@@ -212,12 +219,14 @@ func (m *Memory) GetRelevantLearnings(filePath, query string, limit int) ([]Lear
 		}
 		// Merge results, avoiding duplicates
 		seen := make(map[string]bool)
-		for _, l := range allLearnings {
+		for i := range allLearnings {
+			l := &allLearnings[i]
 			seen[l.ID] = true
 		}
-		for _, l := range searchResults {
+		for i := range searchResults {
+			l := &searchResults[i]
 			if !seen[l.ID] {
-				allLearnings = append(allLearnings, l)
+				allLearnings = append(allLearnings, *l)
 				seen[l.ID] = true
 			}
 		}
@@ -233,7 +242,7 @@ func (m *Memory) GetRelevantLearnings(filePath, query string, limit int) ([]Lear
 
 // GetHighConfidenceLearnings returns learnings ready for promotion to corridor.
 func (m *Memory) GetHighConfidenceLearnings(minConfidence float64, minUseCount int) ([]Learning, error) {
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT id, session_id, scope, scope_path, content, confidence, source, created_at, last_used, use_count
 		FROM learnings
 		WHERE confidence >= ? AND use_count >= ?
@@ -255,13 +264,16 @@ func (m *Memory) GetHighConfidenceLearnings(minConfidence float64, minUseCount i
 		l.LastUsed = parseTimeOrZero(lastUsed)
 		learnings = append(learnings, l)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
+	}
 	return learnings, nil
 }
 
 // DecayUnusedLearnings reduces confidence of learnings not used recently.
 func (m *Memory) DecayUnusedLearnings(unusedDays int, decayAmount float64) (int64, error) {
 	cutoff := time.Now().AddDate(0, 0, -unusedDays).Format(time.RFC3339)
-	result, err := m.db.Exec(`
+	result, err := m.db.ExecContext(context.Background(), `
 		UPDATE learnings
 		SET confidence = MAX(0.1, confidence - ?)
 		WHERE last_used < ? AND confidence > 0.1
@@ -274,7 +286,7 @@ func (m *Memory) DecayUnusedLearnings(unusedDays int, decayAmount float64) (int6
 
 // PruneLowConfidenceLearnings removes learnings below threshold.
 func (m *Memory) PruneLowConfidenceLearnings(minConfidence float64) (int64, error) {
-	result, err := m.db.Exec(`DELETE FROM learnings WHERE confidence < ?`, minConfidence)
+	result, err := m.db.ExecContext(context.Background(), `DELETE FROM learnings WHERE confidence < ?`, minConfidence)
 	if err != nil {
 		return 0, err
 	}
@@ -295,7 +307,7 @@ const (
 // MarkLearningObsolete marks a learning as obsolete with a reason.
 func (m *Memory) MarkLearningObsolete(id, reason string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	result, err := m.db.Exec(`
+	result, err := m.db.ExecContext(context.Background(), `
 		UPDATE learnings
 		SET status = ?, obsolete_reason = ?, last_used = ?
 		WHERE id = ?
@@ -314,7 +326,7 @@ func (m *Memory) MarkLearningObsolete(id, reason string) error {
 func (m *Memory) ArchiveOldLearnings(unusedDays int, maxConfidence float64) (int64, error) {
 	cutoff := time.Now().AddDate(0, 0, -unusedDays).Format(time.RFC3339)
 	now := time.Now().UTC().Format(time.RFC3339)
-	result, err := m.db.Exec(`
+	result, err := m.db.ExecContext(context.Background(), `
 		UPDATE learnings
 		SET status = ?, archived_at = ?
 		WHERE last_used < ? AND confidence <= ? AND status = ?
@@ -339,7 +351,7 @@ func (m *Memory) GetLearningsByStatus(status string, limit int) ([]Learning, err
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query learnings by status: %w", err)
 	}
@@ -356,6 +368,9 @@ func (m *Memory) GetLearningsByStatus(status string, limit int) ([]Learning, err
 		l.LastUsed = parseTimeOrZero(lastUsed)
 		learnings = append(learnings, l)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
+	}
 	return learnings, nil
 }
 
@@ -367,7 +382,7 @@ func (m *Memory) GetLearningsByStatus(status string, limit int) ([]Learning, err
 // When the decision's outcome is recorded, the linked learning's confidence is updated.
 func (m *Memory) LinkLearningToDecision(decisionID, learningID string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT OR IGNORE INTO decision_learnings (decision_id, learning_id, created_at)
 		VALUES (?, ?, ?)
 	`, decisionID, learningID, now)
@@ -379,7 +394,7 @@ func (m *Memory) LinkLearningToDecision(decisionID, learningID string) error {
 
 // UnlinkLearningFromDecision removes the relationship between a learning and decision.
 func (m *Memory) UnlinkLearningFromDecision(decisionID, learningID string) error {
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		DELETE FROM decision_learnings WHERE decision_id = ? AND learning_id = ?
 	`, decisionID, learningID)
 	return err
@@ -387,7 +402,7 @@ func (m *Memory) UnlinkLearningFromDecision(decisionID, learningID string) error
 
 // GetLearningsForDecision returns learnings linked to a decision.
 func (m *Memory) GetLearningsForDecision(decisionID string) ([]Learning, error) {
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT l.id, l.session_id, l.scope, l.scope_path, l.content, l.confidence, l.source, l.created_at, l.last_used, l.use_count
 		FROM learnings l
 		JOIN decision_learnings dl ON l.id = dl.learning_id
@@ -410,12 +425,15 @@ func (m *Memory) GetLearningsForDecision(decisionID string) ([]Learning, error) 
 		l.LastUsed = parseTimeOrZero(lastUsed)
 		learnings = append(learnings, l)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
+	}
 	return learnings, nil
 }
 
 // GetDecisionsForLearning returns decisions linked to a learning.
 func (m *Memory) GetDecisionsForLearning(learningID string) ([]Decision, error) {
-	rows, err := m.db.Query(`
+	rows, err := m.db.QueryContext(context.Background(), `
 		SELECT d.id, d.content, d.rationale, d.context, d.status, d.outcome, d.outcome_note, d.outcome_at, d.scope, d.scope_path, d.session_id, d.source, d.created_at, d.updated_at
 		FROM decisions d
 		JOIN decision_learnings dl ON d.id = dl.decision_id
@@ -438,6 +456,9 @@ func (m *Memory) GetDecisionsForLearning(learningID string) ([]Decision, error) 
 		d.UpdatedAt = parseTimeOrZero(updatedAt)
 		d.OutcomeAt = parseTimeOrZero(outcomeAt)
 		decisions = append(decisions, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate decisions: %w", err)
 	}
 	return decisions, nil
 }

@@ -26,7 +26,7 @@ func decodeJSON(t *testing.T, body *bytes.Buffer) map[string]any {
 func TestHandleHealth(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/health", http.NoBody)
 
 	s.handleHealth(rec, req)
 
@@ -42,7 +42,7 @@ func TestHandleHealth(t *testing.T) {
 func TestHandleRoomsMethodNotAllowed(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/rooms", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/rooms", http.NoBody)
 
 	s.handleRooms(rec, req)
 
@@ -54,7 +54,7 @@ func TestHandleRoomsMethodNotAllowed(t *testing.T) {
 func TestHandleSessionsNoMemory(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/sessions", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/sessions", http.NoBody)
 
 	s.handleSessions(rec, req)
 
@@ -67,7 +67,7 @@ func TestHandleWorkspaces(t *testing.T) {
 	root := t.TempDir()
 	s := New(Config{Root: root})
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/workspaces", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/workspaces", http.NoBody)
 
 	s.handleWorkspaces(rec, req)
 
@@ -90,7 +90,7 @@ func TestHandleWorkspaceSwitch(t *testing.T) {
 
 	t.Run("method not allowed", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/workspace/switch", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/workspace/switch", http.NoBody)
 
 		s.handleWorkspaceSwitch(rec, req)
 
@@ -134,7 +134,8 @@ func TestHandleWorkspaceSwitch(t *testing.T) {
 
 	t.Run("already on workspace", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/api/workspace/switch", bytes.NewBufferString(`{"path":"`+root+`"}`))
+		reqBody, _ := json.Marshal(map[string]string{"path": root})
+		req := httptest.NewRequest(http.MethodPost, "/api/workspace/switch", bytes.NewBuffer(reqBody))
 
 		s.handleWorkspaceSwitch(rec, req)
 
@@ -160,7 +161,7 @@ func TestGetWorkspaceName(t *testing.T) {
 func TestHandleSearchMissingQuery(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/search", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/search", http.NoBody)
 
 	s.handleSearch(rec, req)
 
@@ -172,7 +173,7 @@ func TestHandleSearchMissingQuery(t *testing.T) {
 func TestHandleGraphMissingSymbol(t *testing.T) {
 	s := New(Config{Root: t.TempDir(), Butler: &butler.Butler{}})
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/graph/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/graph/", http.NoBody)
 
 	s.handleGraph(rec, req)
 
@@ -184,7 +185,7 @@ func TestHandleGraphMissingSymbol(t *testing.T) {
 func TestHandleFileIntelMissingPath(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/file-intel", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/file-intel", http.NoBody)
 
 	s.handleFileIntel(rec, req)
 
@@ -196,7 +197,7 @@ func TestHandleFileIntelMissingPath(t *testing.T) {
 func TestHandleStatsNoResources(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/stats", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/stats", http.NoBody)
 
 	s.handleStats(rec, req)
 
@@ -228,21 +229,21 @@ func TestHandleSessionsDetailAndActivity(t *testing.T) {
 	s := New(Config{Root: root, Memory: mem})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/sessions?active=true", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/sessions?active=true", http.NoBody)
 	s.handleSessions(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/api/sessions/"+sess.ID, nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/sessions/"+sess.ID, http.NoBody)
 	s.handleSessionDetail(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/api/activity?sessionId="+sess.ID, nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/activity?sessionId="+sess.ID, http.NoBody)
 	s.handleActivity(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -274,14 +275,14 @@ func TestHandleLearningsAndFileIntel(t *testing.T) {
 	s := New(Config{Root: root, Memory: mem})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/learnings?scope=file&scopePath=src/main.go", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/learnings?scope=file&scopePath=src/main.go", http.NoBody)
 	s.handleLearnings(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/api/file-intel?path=src/main.go", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/file-intel?path=src/main.go", http.NoBody)
 	s.handleFileIntel(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -313,21 +314,21 @@ func TestHandleCorridorEndpoints(t *testing.T) {
 	s := New(Config{Root: t.TempDir(), Corridor: gc})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/corridors", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/corridors", http.NoBody)
 	s.handleCorridors(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/api/corridors/personal", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/corridors/personal", http.NoBody)
 	s.handleCorridorPersonal(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/api/corridors/links", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/corridors/links", http.NoBody)
 	s.handleCorridorLinks(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -362,21 +363,21 @@ func TestHandleHotspotsAgentsAndBrief(t *testing.T) {
 	s := New(Config{Root: root, Memory: mem})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/hotspots?limit=5", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/hotspots?limit=5", http.NoBody)
 	s.handleHotspots(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/api/agents", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/agents", http.NoBody)
 	s.handleAgents(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/api/brief?path=hot.go", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/brief?path=hot.go", http.NoBody)
 	s.handleBrief(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -406,7 +407,7 @@ func TestHandleRoomsWithButler(t *testing.T) {
 	s := New(Config{Root: root, Butler: b})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/rooms", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/rooms", http.NoBody)
 	s.handleRooms(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -422,7 +423,7 @@ func TestHandleRoomsNoButler(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/rooms", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/rooms", http.NoBody)
 	s.handleRooms(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -447,7 +448,7 @@ func TestHandleSearchWithQuery(t *testing.T) {
 	s := New(Config{Root: root, Memory: mem})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/search?q=test&limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/search?q=test&limit=10", http.NoBody)
 	s.handleSearch(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -466,7 +467,7 @@ func TestHandleSearchMethodNotAllowed(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/search?q=test", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/search?q=test", http.NoBody)
 	s.handleSearch(rec, req)
 
 	if rec.Code != http.StatusMethodNotAllowed {
@@ -497,7 +498,7 @@ func TestHandleGraphWithSymbol(t *testing.T) {
 	s := New(Config{Root: root, Butler: b})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/graph/testSymbol?file=test.go", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/graph/testSymbol?file=test.go", http.NoBody)
 	s.handleGraph(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -513,7 +514,7 @@ func TestHandleGraphMethodNotAllowed(t *testing.T) {
 	s := New(Config{Root: t.TempDir(), Butler: &butler.Butler{}})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/graph/symbol", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/graph/symbol", http.NoBody)
 	s.handleGraph(rec, req)
 
 	if rec.Code != http.StatusMethodNotAllowed {
@@ -525,7 +526,7 @@ func TestHandleGraphNoButler(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/graph/symbol", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/graph/symbol", http.NoBody)
 	s.handleGraph(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -562,7 +563,7 @@ func TestHandleStatsComprehensive(t *testing.T) {
 	s := New(Config{Root: root, Memory: mem, Butler: b})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/stats", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/stats", http.NoBody)
 	s.handleStats(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -578,7 +579,7 @@ func TestHandleHotspotsMethodNotAllowed(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/hotspots", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/hotspots", http.NoBody)
 	s.handleHotspots(rec, req)
 
 	if rec.Code != http.StatusMethodNotAllowed {
@@ -590,7 +591,7 @@ func TestHandleHotspotsNoMemory(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/hotspots", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/hotspots", http.NoBody)
 	s.handleHotspots(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -602,7 +603,7 @@ func TestHandleAgentsNoMemory(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/agents", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/agents", http.NoBody)
 	s.handleAgents(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -619,7 +620,7 @@ func TestHandleBriefNoPath(t *testing.T) {
 
 	// Path is optional in handleBrief, so this should succeed
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/brief", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/brief", http.NoBody)
 	s.handleBrief(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -631,7 +632,7 @@ func TestHandleBriefNoMemory(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/brief", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/brief", http.NoBody)
 	s.handleBrief(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -648,7 +649,7 @@ func TestHandleSessionDetailNotFound(t *testing.T) {
 
 	// GetSession returns error for non-existent session, so handler returns 500
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/sessions/nonexistent", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/sessions/nonexistent", http.NoBody)
 	s.handleSessionDetail(rec, req)
 
 	if rec.Code != http.StatusInternalServerError {
@@ -660,7 +661,7 @@ func TestHandleSessionDetailNoMemory(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/sessions/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/sessions/test", http.NoBody)
 	s.handleSessionDetail(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -676,7 +677,7 @@ func TestHandleSessionDetailMissingID(t *testing.T) {
 	s := New(Config{Root: root, Memory: mem})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/sessions/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/sessions/", http.NoBody)
 	s.handleSessionDetail(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
@@ -688,7 +689,7 @@ func TestHandleActivityNoMemory(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/activity", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/activity", http.NoBody)
 	s.handleActivity(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -700,7 +701,7 @@ func TestHandleLearningsNoMemory(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/learnings", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/learnings", http.NoBody)
 	s.handleLearnings(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -712,7 +713,7 @@ func TestHandleCorridorsNoCorr(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/corridors", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/corridors", http.NoBody)
 	s.handleCorridors(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -724,7 +725,7 @@ func TestHandleCorridorPersonalNoCorr(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/corridors/personal", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/corridors/personal", http.NoBody)
 	s.handleCorridorPersonal(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -736,7 +737,7 @@ func TestHandleCorridorLinksNoCorr(t *testing.T) {
 	s := New(Config{Root: t.TempDir()})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/corridors/links", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/corridors/links", http.NoBody)
 	s.handleCorridorLinks(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -757,7 +758,7 @@ func TestHandleIdeas(t *testing.T) {
 	s := New(Config{Root: root, Memory: mem})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/ideas?status=active&limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/ideas?status=active&limit=10", http.NoBody)
 	s.handleIdeas(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -778,7 +779,7 @@ func TestHandleDecisions(t *testing.T) {
 	s := New(Config{Root: root, Memory: mem})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/decisions?status=active&limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/decisions?status=active&limit=10", http.NoBody)
 	s.handleDecisions(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -800,7 +801,7 @@ func TestHandleLinks(t *testing.T) {
 	s := New(Config{Root: root, Memory: mem})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/links?limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/links?limit=10", http.NoBody)
 	s.handleLinks(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -824,7 +825,7 @@ func TestHandleConversations(t *testing.T) {
 	s := New(Config{Root: root, Memory: mem})
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/conversations?limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/conversations?limit=10", http.NoBody)
 	s.handleConversations(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -844,7 +845,7 @@ func TestHandleRemember(t *testing.T) {
 
 	t.Run("method not allowed", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/remember", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/remember", http.NoBody)
 		s.handleRemember(rec, req)
 		if rec.Code != http.StatusMethodNotAllowed {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
@@ -952,7 +953,7 @@ func TestHandleBrainSearch(t *testing.T) {
 
 	t.Run("method not allowed", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/api/brain/search", nil)
+		req := httptest.NewRequest(http.MethodPost, "/api/brain/search", http.NoBody)
 		s.handleBrainSearch(rec, req)
 		if rec.Code != http.StatusMethodNotAllowed {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
@@ -962,7 +963,7 @@ func TestHandleBrainSearch(t *testing.T) {
 	t.Run("no memory", func(t *testing.T) {
 		s2 := New(Config{Root: t.TempDir()})
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?q=test", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?q=test", http.NoBody)
 		s2.handleBrainSearch(rec, req)
 		if rec.Code != http.StatusServiceUnavailable {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
@@ -971,7 +972,7 @@ func TestHandleBrainSearch(t *testing.T) {
 
 	t.Run("search all", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?q=auth", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?q=auth", http.NoBody)
 		s.handleBrainSearch(rec, req)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -980,7 +981,7 @@ func TestHandleBrainSearch(t *testing.T) {
 
 	t.Run("search ideas only", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?q=auth&kind=idea", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?q=auth&kind=idea", http.NoBody)
 		s.handleBrainSearch(rec, req)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -989,7 +990,7 @@ func TestHandleBrainSearch(t *testing.T) {
 
 	t.Run("search decisions only", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?q=auth&kind=decision", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?q=auth&kind=decision", http.NoBody)
 		s.handleBrainSearch(rec, req)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -998,7 +999,7 @@ func TestHandleBrainSearch(t *testing.T) {
 
 	t.Run("search learnings only", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?q=auth&kind=learning", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?q=auth&kind=learning", http.NoBody)
 		s.handleBrainSearch(rec, req)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -1007,7 +1008,7 @@ func TestHandleBrainSearch(t *testing.T) {
 
 	t.Run("list without query", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?status=active", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/brain/search?status=active", http.NoBody)
 		s.handleBrainSearch(rec, req)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -1021,7 +1022,7 @@ func TestHandleBrainContext(t *testing.T) {
 	t.Run("method not allowed", func(t *testing.T) {
 		s := New(Config{Root: root})
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/api/brain/context", nil)
+		req := httptest.NewRequest(http.MethodPost, "/api/brain/context", http.NoBody)
 		s.handleBrainContext(rec, req)
 		if rec.Code != http.StatusMethodNotAllowed {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
@@ -1031,7 +1032,7 @@ func TestHandleBrainContext(t *testing.T) {
 	t.Run("no butler", func(t *testing.T) {
 		s := New(Config{Root: root})
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/brain/context?query=test", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/brain/context?query=test", http.NoBody)
 		s.handleBrainContext(rec, req)
 		if rec.Code != http.StatusServiceUnavailable {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
@@ -1060,7 +1061,7 @@ func TestHandleBrainContext(t *testing.T) {
 
 		s := New(Config{Root: butlerRoot, Butler: b})
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/brain/context", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/brain/context", http.NoBody)
 		s.handleBrainContext(rec, req)
 		if rec.Code != http.StatusBadRequest {
 			t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
@@ -1091,7 +1092,7 @@ func TestHandleBrainContext(t *testing.T) {
 		// This tests the error handling path
 		s := New(Config{Root: butlerRoot, Butler: b, Memory: mem})
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/brain/context?query=test", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/brain/context?query=test", http.NoBody)
 		s.handleBrainContext(rec, req)
 
 		// We expect 500 since the index tables aren't set up
@@ -1124,7 +1125,7 @@ func TestHandleBrainContext(t *testing.T) {
 		// Test with boolean flags - will still error but exercises the flag parsing code
 		s := New(Config{Root: butlerRoot, Butler: b, Memory: mem})
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/brain/context?query=test&includeIdeas=false&includeDecisions=false&includeLearnings=false", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/brain/context?query=test&includeIdeas=false&includeDecisions=false&includeLearnings=false", http.NoBody)
 		s.handleBrainContext(rec, req)
 
 		// We expect 500 since the index tables aren't set up

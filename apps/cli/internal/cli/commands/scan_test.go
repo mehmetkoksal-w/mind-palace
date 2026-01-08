@@ -24,7 +24,7 @@ func TestExecuteScanFullOnEmptyDir(t *testing.T) {
 
 	// Create a simple Go file
 	goFile := filepath.Join(root, "main.go")
-	os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0644)
+	os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0o644)
 
 	err = ExecuteScan(ScanOptions{Root: root, Full: true})
 	if err != nil {
@@ -49,7 +49,7 @@ func TestExecuteScanIncrementalFallsBackToFull(t *testing.T) {
 
 	// Create a simple Go file
 	goFile := filepath.Join(root, "main.go")
-	os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0644)
+	os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0o644)
 
 	// Incremental scan on fresh workspace should fall back to full
 	err = ExecuteScan(ScanOptions{Root: root, Full: false})
@@ -74,7 +74,7 @@ func TestExecuteScanIncrementalNoChanges(t *testing.T) {
 	}
 
 	goFile := filepath.Join(root, "main.go")
-	os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0644)
+	os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0o644)
 
 	err = ExecuteScan(ScanOptions{Root: root, Full: true})
 	if err != nil {

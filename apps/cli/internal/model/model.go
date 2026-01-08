@@ -1,3 +1,4 @@
+// Package model defines the core data structures used by Mind Palace.
 package model
 
 import (
@@ -10,6 +11,7 @@ import (
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/jsonc"
 )
 
+// Capability defines a task or tool that can be executed within a room.
 type Capability struct {
 	Command          string            `json:"command"`
 	Description      string            `json:"description"`
@@ -17,6 +19,7 @@ type Capability struct {
 	Env              map[string]string `json:"env,omitempty"`
 }
 
+// ProjectProfile describes the project's structure, languages, and capabilities.
 type ProjectProfile struct {
 	SchemaVersion string                `json:"schemaVersion"`
 	Kind          string                `json:"kind"`
@@ -27,6 +30,7 @@ type ProjectProfile struct {
 	Provenance    map[string]string     `json:"provenance"`
 }
 
+// ScopeInfo tracks the analysis scope (full scan vs incremental diff).
 type ScopeInfo struct {
 	Mode      string `json:"mode"`                // "full" | "diff"
 	Source    string `json:"source"`              // "full-scan" | "git-diff" | "change-signal"
@@ -34,6 +38,7 @@ type ScopeInfo struct {
 	DiffRange string `json:"diffRange,omitempty"` // when mode="diff"
 }
 
+// ContextPack is a portable bundle of context, findings, and plans for a task.
 type ContextPack struct {
 	SchemaVersion     string               `json:"schemaVersion"`
 	Kind              string               `json:"kind"`
@@ -55,6 +60,7 @@ type ContextPack struct {
 	Provenance Provenance `json:"provenance"`
 }
 
+// CorridorInfo describes context available from a neighboring project.
 type CorridorInfo struct {
 	Name      string   `json:"name"`            // Neighbor name
 	Source    string   `json:"source"`          // URL or local path
@@ -66,6 +72,7 @@ type CorridorInfo struct {
 	Error     string   `json:"error,omitempty"` // Any fetch errors (non-fatal)
 }
 
+// Finding represents an observation made during analysis.
 type Finding struct {
 	Summary  string `json:"summary"`
 	Detail   string `json:"detail,omitempty"`
@@ -73,17 +80,20 @@ type Finding struct {
 	File     string `json:"file,omitempty"`
 }
 
+// PlanStep represents a single step in a task execution plan.
 type PlanStep struct {
 	Step   string `json:"step"`
 	Status string `json:"status"`
 }
 
+// VerificationResult represents the outcome of a verification check.
 type VerificationResult struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
 	Detail string `json:"detail,omitempty"`
 }
 
+// Provenance tracks the origin and creation details of an object.
 type Provenance struct {
 	CreatedBy        string `json:"createdBy"`
 	CreatedAt        string `json:"createdAt"`
@@ -93,6 +103,7 @@ type Provenance struct {
 	GeneratorVersion string `json:"generatorVersion,omitempty"`
 }
 
+// Room defines a logical grouping of context and tools for specific tasks.
 type Room struct {
 	SchemaVersion string         `json:"schemaVersion"`
 	Kind          string         `json:"kind"`
@@ -104,6 +115,7 @@ type Room struct {
 	Steps         []RoomStep     `json:"steps,omitempty"`
 }
 
+// Playbook is a sequence of rooms to be visited for a high-level goal.
 type Playbook struct {
 	SchemaVersion string   `json:"schemaVersion"`
 	Kind          string   `json:"kind"`
@@ -112,12 +124,14 @@ type Playbook struct {
 	Rooms         []string `json:"rooms"`
 }
 
+// RoomArtifact describes a specific file or object produced/consumed in a room.
 type RoomArtifact struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 	PathHint    string `json:"pathHint,omitempty"`
 }
 
+// RoomStep defines a specific action to take within a room.
 type RoomStep struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
@@ -125,6 +139,7 @@ type RoomStep struct {
 	Evidence    string `json:"evidence,omitempty"`
 }
 
+// LoadContextPack loads a context pack from a JSONC file.
 func LoadContextPack(path string) (ContextPack, error) {
 	var cp ContextPack
 	if err := jsonc.DecodeFile(path, &cp); err != nil {
@@ -133,6 +148,7 @@ func LoadContextPack(path string) (ContextPack, error) {
 	return cp, nil
 }
 
+// WriteContextPack writes a context pack to a JSON file.
 func WriteContextPack(path string, cp ContextPack) error {
 	normalizeContextPack(&cp)
 	data, err := json.MarshalIndent(cp, "", "  ")
@@ -145,6 +161,7 @@ func WriteContextPack(path string, cp ContextPack) error {
 	return nil
 }
 
+// NewContextPack creates a fresh context pack for a new task.
 func NewContextPack(goal string) ContextPack {
 	now := time.Now().UTC().Format(time.RFC3339)
 	return ContextPack{
@@ -168,6 +185,7 @@ func NewContextPack(goal string) ContextPack {
 	}
 }
 
+// Clone creates a deep copy of the context pack.
 func (cp ContextPack) Clone() ContextPack {
 	return cp
 }

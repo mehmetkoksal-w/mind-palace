@@ -7,10 +7,10 @@ import (
 
 // LevenshteinDistance calculates the edit distance between two strings
 func LevenshteinDistance(a, b string) int {
-	if len(a) == 0 {
+	if a == "" {
 		return len(b)
 	}
-	if len(b) == 0 {
+	if b == "" {
 		return len(a)
 	}
 
@@ -42,7 +42,7 @@ func LevenshteinDistance(a, b string) int {
 			if aRunes[i-1] != bRunes[j-1] {
 				cost = 1
 			}
-			dist[i][j] = min(
+			dist[i][j] = minInt(
 				dist[i-1][j]+1,      // deletion
 				dist[i][j-1]+1,      // insertion
 				dist[i-1][j-1]+cost, // substitution
@@ -62,7 +62,7 @@ func FuzzyMatch(query, target string, maxDistance int) bool {
 // FuzzyMatchScore returns a normalized similarity score (0-1, 1 = identical)
 func FuzzyMatchScore(query, target string) float64 {
 	dist := LevenshteinDistance(query, target)
-	maxLen := max(len(query), len(target))
+	maxLen := maxInt(len(query), len(target))
 	if maxLen == 0 {
 		return 1.0
 	}
@@ -192,7 +192,7 @@ func NormalizeForFuzzy(s string) string {
 	return result.String()
 }
 
-func min(values ...int) int {
+func minInt(values ...int) int {
 	m := values[0]
 	for _, v := range values[1:] {
 		if v < m {
@@ -202,7 +202,7 @@ func min(values ...int) int {
 	return m
 }
 
-func max(a, b int) int {
+func maxInt(a, b int) int {
 	if a > b {
 		return a
 	}

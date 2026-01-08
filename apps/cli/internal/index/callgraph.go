@@ -1,11 +1,13 @@
+// Package index provides the core database functionality for indexing project files and symbols.
 package index
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 )
 
-// CallSite represents a location where a function is called
+// CallSite represents a location where a function is called.
 type CallSite struct {
 	FilePath     string `json:"filePath"`
 	Line         int    `json:"line"`
@@ -13,14 +15,14 @@ type CallSite struct {
 	CalleeSymbol string `json:"calleeSymbol"`           // The function being called
 }
 
-// CallGraph represents the complete call graph for a scope
+// CallGraph represents the complete call graph for a scope.
 type CallGraph struct {
 	Scope         string     `json:"scope"`         // File or symbol name
 	IncomingCalls []CallSite `json:"incomingCalls"` // Who calls this
 	OutgoingCalls []CallSite `json:"outgoingCalls"` // What does this call
 }
 
-// GetIncomingCalls returns all locations that call the given symbol
+// GetIncomingCalls returns all locations that call the given symbol.
 // symbolName can be:
 //   - Simple name: "parseConfig"
 //   - Qualified name: "config.Parse"
@@ -28,7 +30,7 @@ type CallGraph struct {
 func GetIncomingCalls(db *sql.DB, symbolName string) ([]CallSite, error) {
 	// Search for calls where target_symbol matches or ends with the symbol name
 	// Also handles Dart patterns like "get foo", "set foo"
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT r.source_file, r.line, r.target_symbol
 		FROM relationships r
 		WHERE r.kind = 'call'
@@ -60,11 +62,11 @@ func GetIncomingCalls(db *sql.DB, symbolName string) ([]CallSite, error) {
 	return calls, rows.Err()
 }
 
-// GetOutgoingCalls returns all functions/methods called by the given symbol
-func GetOutgoingCalls(db *sql.DB, symbolName string, filePath string) ([]CallSite, error) {
+// GetOutgoingCalls returns all functions/methods called by the given symbol.
+func GetOutgoingCalls(db *sql.DB, symbolName, filePath string) ([]CallSite, error) {
 	// First, find the symbol to get its line range
 	var startLine, endLine int
-	err := db.QueryRow(`
+	err := db.QueryRowContext(context.Background(), `
 		SELECT line_start, line_end
 		FROM symbols
 		WHERE name = ? AND (file_path = ? OR ? = '')
@@ -83,7 +85,7 @@ func GetOutgoingCalls(db *sql.DB, symbolName string, filePath string) ([]CallSit
 		AND r.line >= ? AND r.line <= ?
 		ORDER BY r.line;
 	`
-	rows, err := db.Query(query, filePath, startLine, endLine)
+	rows, err := db.QueryContext(context.Background(), query, filePath, startLine, endLine)
 	if err != nil {
 		return nil, fmt.Errorf("query outgoing calls: %w", err)
 	}
@@ -102,14 +104,14 @@ func GetOutgoingCalls(db *sql.DB, symbolName string, filePath string) ([]CallSit
 	return calls, rows.Err()
 }
 
-// GetCallGraph returns the complete call graph for a file
+// GetCallGraph returns the complete call graph for a file.
 func GetCallGraph(db *sql.DB, filePath string) (*CallGraph, error) {
 	result := &CallGraph{
 		Scope: filePath,
 	}
 
 	// Get all calls made from this file
-	outRows, err := db.Query(`
+	outRows, err := db.QueryContext(context.Background(), `
 		SELECT source_file, line, target_symbol
 		FROM relationships
 		WHERE kind = 'call' AND source_file = ?
@@ -131,7 +133,7 @@ func GetCallGraph(db *sql.DB, filePath string) (*CallGraph, error) {
 
 	// Get all calls to symbols defined in this file
 	// First get all symbols in the file
-	symRows, err := db.Query(`SELECT name FROM symbols WHERE file_path = ?;`, filePath)
+	symRows, err := db.QueryContext(context.Background(), `SELECT name FROM symbols WHERE file_path = ?;`, filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +168,7 @@ func GetCallGraph(db *sql.DB, filePath string) (*CallGraph, error) {
 // findEnclosingSymbol finds the function/method that contains the given line
 func findEnclosingSymbol(db *sql.DB, filePath string, line int) string {
 	var name string
-	err := db.QueryRow(`
+	err := db.QueryRowContext(context.Background(), `
 		SELECT name FROM symbols
 		WHERE file_path = ?
 		AND line_start <= ? AND line_end >= ?
@@ -180,10 +182,10 @@ func findEnclosingSymbol(db *sql.DB, filePath string, line int) string {
 	return name
 }
 
-// GetCallersCount returns the number of places a symbol is called
+// GetCallersCount returns the number of places a symbol is called.
 func GetCallersCount(db *sql.DB, symbolName string) (int, error) {
 	var count int
-	err := db.QueryRow(`
+	err := db.QueryRowContext(context.Background(), `
 		SELECT COUNT(*) FROM relationships
 		WHERE kind = 'call'
 		AND (target_symbol = ? OR target_symbol LIKE ? OR target_symbol LIKE ?)
@@ -191,7 +193,7 @@ func GetCallersCount(db *sql.DB, symbolName string) (int, error) {
 	return count, err
 }
 
-// GetMostCalledSymbols returns the most frequently called symbols
+// GetMostCalledSymbols returns the most frequently called symbols.
 func GetMostCalledSymbols(db *sql.DB, limit int) ([]struct {
 	Symbol string
 	Count  int
@@ -200,7 +202,7 @@ func GetMostCalledSymbols(db *sql.DB, limit int) ([]struct {
 		limit = 20
 	}
 
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT target_symbol, COUNT(*) as call_count
 		FROM relationships
 		WHERE kind = 'call'
@@ -231,7 +233,7 @@ func GetMostCalledSymbols(db *sql.DB, limit int) ([]struct {
 	return results, rows.Err()
 }
 
-// CallChainNode represents a node in the call chain tree
+// CallChainNode represents a node in the call chain tree.
 type CallChainNode struct {
 	Symbol   string           `json:"symbol"`
 	FilePath string           `json:"filePath,omitempty"`
@@ -240,18 +242,18 @@ type CallChainNode struct {
 	Children []*CallChainNode `json:"children,omitempty"`
 }
 
-// CallChainResult represents the result of a call chain trace
+// CallChainResult represents the result of a call chain trace.
 type CallChainResult struct {
-	Target    string           `json:"target"`
-	Direction string           `json:"direction"` // "up", "down", or "both"
-	MaxDepth  int              `json:"maxDepth"`
-	Chains    []*CallChainNode `json:"chains"`
-	TotalPaths int             `json:"totalPaths"`
-	Truncated  bool            `json:"truncated,omitempty"`
+	Target     string           `json:"target"`
+	Direction  string           `json:"direction"` // "up", "down", or "both"
+	MaxDepth   int              `json:"maxDepth"`
+	Chains     []*CallChainNode `json:"chains"`
+	TotalPaths int              `json:"totalPaths"`
+	Truncated  bool             `json:"truncated,omitempty"`
 }
 
-// GetCallChainUp traces callers recursively up to maxDepth
-// Returns all paths from entry points down to the target symbol
+// GetCallChainUp traces callers recursively up to maxDepth.
+// Returns all paths from entry points down to the target symbol.
 func GetCallChainUp(db *sql.DB, symbolName string, maxDepth int) (*CallChainResult, error) {
 	if maxDepth <= 0 {
 		maxDepth = 3
@@ -338,9 +340,9 @@ func GetCallChainUp(db *sql.DB, symbolName string, maxDepth int) (*CallChainResu
 	return result, nil
 }
 
-// GetCallChainDown traces callees recursively down to maxDepth
-// Returns all paths from the target symbol to leaf functions
-func GetCallChainDown(db *sql.DB, symbolName string, filePath string, maxDepth int) (*CallChainResult, error) {
+// GetCallChainDown traces callees recursively down to maxDepth.
+// Returns all paths from the target symbol to leaf functions.
+func GetCallChainDown(db *sql.DB, symbolName, filePath string, maxDepth int) (*CallChainResult, error) {
 	if maxDepth <= 0 {
 		maxDepth = 3
 	}
@@ -436,7 +438,7 @@ func GetCallChainDown(db *sql.DB, symbolName string, filePath string, maxDepth i
 // findSymbolFile finds the file where a symbol is defined
 func findSymbolFile(db *sql.DB, symbolName string) string {
 	var filePath string
-	err := db.QueryRow(`
+	err := db.QueryRowContext(context.Background(), `
 		SELECT file_path FROM symbols
 		WHERE name = ?
 		LIMIT 1;
@@ -447,8 +449,8 @@ func findSymbolFile(db *sql.DB, symbolName string) string {
 	return filePath
 }
 
-// GetCallChain traces calls in the specified direction
-func GetCallChain(db *sql.DB, symbolName string, filePath string, direction string, maxDepth int) (*CallChainResult, error) {
+// GetCallChain traces calls in the specified direction.
+func GetCallChain(db *sql.DB, symbolName, filePath, direction string, maxDepth int) (*CallChainResult, error) {
 	switch direction {
 	case "up":
 		return GetCallChainUp(db, symbolName, maxDepth)
@@ -478,15 +480,16 @@ func GetCallChain(db *sql.DB, symbolName string, filePath string, direction stri
 	}
 }
 
-// FlattenCallChain converts a tree of call chains into flat paths
-// Each path is a slice of symbols from root to leaf
+// FlattenCallChain converts a tree of call chains into flat paths.
+// Each path is a slice of symbols from root to leaf.
 func FlattenCallChain(result *CallChainResult) [][]CallChainNode {
 	var paths [][]CallChainNode
 
 	var flatten func(nodes []*CallChainNode, currentPath []CallChainNode)
 	flatten = func(nodes []*CallChainNode, currentPath []CallChainNode) {
 		for _, node := range nodes {
-			newPath := append(currentPath, CallChainNode{
+			newPath := append([]CallChainNode{}, currentPath...)
+			newPath = append(newPath, CallChainNode{
 				Symbol:   node.Symbol,
 				FilePath: node.FilePath,
 				Line:     node.Line,

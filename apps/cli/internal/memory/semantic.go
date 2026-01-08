@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -131,17 +132,17 @@ func (m *Memory) GetRecordContent(id, kind string) (string, time.Time, error) {
 
 	switch kind {
 	case "idea":
-		err := m.db.QueryRow(`SELECT content, created_at FROM ideas WHERE id = ?`, id).Scan(&content, &createdAtStr)
+		err := m.db.QueryRowContext(context.Background(), `SELECT content, created_at FROM ideas WHERE id = ?`, id).Scan(&content, &createdAtStr)
 		if err != nil {
 			return "", time.Time{}, err
 		}
 	case "decision":
-		err := m.db.QueryRow(`SELECT content, created_at FROM decisions WHERE id = ?`, id).Scan(&content, &createdAtStr)
+		err := m.db.QueryRowContext(context.Background(), `SELECT content, created_at FROM decisions WHERE id = ?`, id).Scan(&content, &createdAtStr)
 		if err != nil {
 			return "", time.Time{}, err
 		}
 	case "learning":
-		err := m.db.QueryRow(`SELECT content, created_at FROM learnings WHERE id = ?`, id).Scan(&content, &createdAtStr)
+		err := m.db.QueryRowContext(context.Background(), `SELECT content, created_at FROM learnings WHERE id = ?`, id).Scan(&content, &createdAtStr)
 		if err != nil {
 			return "", time.Time{}, err
 		}
@@ -159,21 +160,20 @@ func (m *Memory) getRecordScope(id, kind string) (string, string) {
 
 	switch kind {
 	case "idea":
-		m.db.QueryRow(`SELECT scope, scope_path FROM ideas WHERE id = ?`, id).Scan(&scope, &scopePath)
+		m.db.QueryRowContext(context.Background(), `SELECT scope, scope_path FROM ideas WHERE id = ?`, id).Scan(&scope, &scopePath)
 	case "decision":
-		m.db.QueryRow(`SELECT scope, scope_path FROM decisions WHERE id = ?`, id).Scan(&scope, &scopePath)
+		m.db.QueryRowContext(context.Background(), `SELECT scope, scope_path FROM decisions WHERE id = ?`, id).Scan(&scope, &scopePath)
 	case "learning":
-		m.db.QueryRow(`SELECT scope, scope_path FROM learnings WHERE id = ?`, id).Scan(&scope, &scopePath)
+		m.db.QueryRowContext(context.Background(), `SELECT scope, scope_path FROM learnings WHERE id = ?`, id).Scan(&scope, &scopePath)
 	}
 
 	return scope, scopePath
 }
 
-// HybridSearch combines FTS5 keyword search with semantic search.
-// Returns results that match either keyword or semantic criteria.
+// HybridSearchResult contains results from combined keyword and semantic search.
 type HybridSearchResult struct {
 	SemanticSearchResult
-	MatchType string `json:"matchType"` // "keyword", "semantic", "both"
+	MatchType string  `json:"matchType"` // "keyword", "semantic", "both"
 	FTSScore  float64 `json:"ftsScore,omitempty"`
 }
 
@@ -271,7 +271,7 @@ func (m *Memory) ftsSearch(query, kind string, limit int) []ftsResult {
 
 	switch kind {
 	case "idea":
-		rows, err := m.db.Query(`
+		rows, err := m.db.QueryContext(context.Background(), `
 			SELECT i.id, i.content, i.created_at, rank
 			FROM ideas i
 			JOIN ideas_fts fts ON i.rowid = fts.rowid
@@ -287,9 +287,12 @@ func (m *Memory) ftsSearch(query, kind string, limit int) []ftsResult {
 				r.CreatedAt = parseTimeOrZero(createdAt)
 				results = append(results, r)
 			}
+			if err := rows.Err(); err != nil {
+				_ = rows.Err()
+			}
 		}
 	case "decision":
-		rows, err := m.db.Query(`
+		rows, err := m.db.QueryContext(context.Background(), `
 			SELECT d.id, d.content, d.created_at, rank
 			FROM decisions d
 			JOIN decisions_fts fts ON d.rowid = fts.rowid
@@ -307,7 +310,7 @@ func (m *Memory) ftsSearch(query, kind string, limit int) []ftsResult {
 			}
 		}
 	case "learning":
-		rows, err := m.db.Query(`
+		rows, err := m.db.QueryContext(context.Background(), `
 			SELECT l.id, l.content, l.created_at, rank
 			FROM learnings l
 			JOIN learnings_fts fts ON l.rowid = fts.rowid

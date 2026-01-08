@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
-import { Subject, Observable } from 'rxjs';
+import { Injectable, signal, inject } from "@angular/core";
+import { Subject, Observable } from "rxjs";
+import { LoggerService } from "./logger.service";
 
 export interface WebSocketEvent {
   type: string;
@@ -7,8 +8,10 @@ export interface WebSocketEvent {
   timestamp?: string;
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class WebSocketService {
+  private readonly logger =
+    inject(LoggerService).forContext("WebSocketService");
   private socket: WebSocket | null = null;
   private eventsSubject = new Subject<WebSocketEvent>();
   private reconnectAttempts = 0;
@@ -25,26 +28,24 @@ export class WebSocketService {
       return;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/api/ws`;
 
     try {
       this.socket = new WebSocket(wsUrl);
 
       this.socket.onopen = () => {
-        console.log('[WebSocket] Connected');
         this.connected.set(true);
         this.reconnectAttempts = 0;
       };
 
       this.socket.onclose = (event) => {
-        console.log('[WebSocket] Disconnected:', event.reason || 'Connection closed');
         this.connected.set(false);
         this.attemptReconnect();
       };
 
       this.socket.onerror = (error) => {
-        console.error('[WebSocket] Error:', error);
+        this.logger.error("WebSocket error occurred", error, { url: wsUrl });
         this.connected.set(false);
       };
 
@@ -53,11 +54,15 @@ export class WebSocketService {
           const data = JSON.parse(event.data);
           this.eventsSubject.next(data);
         } catch (e) {
-          console.error('[WebSocket] Failed to parse message:', e);
+          this.logger.error("Failed to parse WebSocket message", e, {
+            rawData: event.data?.substring(0, 100),
+          });
         }
       };
     } catch (e) {
-      console.error('[WebSocket] Failed to connect:', e);
+      this.logger.error("Failed to create WebSocket connection", e, {
+        url: wsUrl,
+      });
       this.attemptReconnect();
     }
   }
@@ -87,7 +92,10 @@ export class WebSocketService {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message));
     } else {
-      console.warn('[WebSocket] Cannot send message - not connected');
+      this.logger.warn("Cannot send message - WebSocket not connected", {
+        messageType: message?.type,
+        readyState: this.socket?.readyState,
+      });
     }
   }
 
@@ -96,14 +104,11 @@ export class WebSocketService {
    */
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('[WebSocket] Max reconnect attempts reached');
       return;
     }
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-
-    console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     setTimeout(() => {
       this.connect();

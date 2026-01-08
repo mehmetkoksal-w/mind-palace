@@ -36,25 +36,25 @@ The [Method of Loci](https://en.wikipedia.org/wiki/Method_of_loci) (memory palac
 
 Mind Palace applies this to code:
 
-| Memory Palace | Mind Palace |
-|---------------|-------------|
-| Imagined building | Your codebase |
-| Rooms | Logical groupings (auth, api, cli) |
-| Objects in rooms | Entry points, key files |
-| Walking through | Querying with Butler |
-| Recalling | Assembling context packs |
+| Memory Palace     | Mind Palace                        |
+| ----------------- | ---------------------------------- |
+| Imagined building | Your codebase                      |
+| Rooms             | Logical groupings (auth, api, cli) |
+| Objects in rooms  | Entry points, key files            |
+| Walking through   | Querying with Butler               |
+| Recalling         | Assembling context packs           |
 
 The metaphor isn't decorative—it's the architecture.
 
 ## Key Properties
 
-| Property | How |
-|----------|-----|
+| Property          | How                                                 |
+| ----------------- | --------------------------------------------------- |
 | **Deterministic** | SHA-256 hashes, SQLite with WAL, reproducible scans |
-| **Schema-first** | JSON Schema validation on all artifacts |
-| **Verifiable** | `palace check` proves freshness |
-| **Agent-ready** | MCP server for direct AI integration |
-| **Diff-scoped** | Constrain context to changed files only |
+| **Schema-first**  | JSON Schema validation on all artifacts             |
+| **Verifiable**    | `palace check` proves freshness                     |
+| **Agent-ready**   | MCP server for direct AI integration                |
+| **Diff-scoped**   | Constrain context to changed files only             |
 
 ## Quick Start
 
@@ -66,25 +66,26 @@ chmod +x palace && sudo mv palace /usr/local/bin/
 # Initialize
 palace init && palace scan
 
-# Query
-palace query "where is authentication handled"
+# Explore
+palace explore "where is authentication handled"
 
 # Generate context for an AI agent
-palace context "fix the login bug"
+palace explore "fix the login bug" --full
 ```
 
 ## Components
 
-| Component | Purpose |
-|-----------|---------|
-| [CLI](/reference/cli) | Core engine: `palace scan`, `context`, `check`, `query`, `serve` |
-| [VS Code Extension](/reference/extension) | HUD, sidebar, auto-sync |
-| [MCP Server](/features/agents) | AI agent integration via JSON-RPC |
-| [Dashboard](/features/dashboard) | Web UI for visualization and monitoring |
+| Component                                 | Purpose                                                          |
+| ----------------------------------------- | ---------------------------------------------------------------- |
+| [CLI](/reference/cli)                     | Core engine: `palace scan`, `explore`, `check`, `store`, `serve` |
+| [VS Code Extension](/reference/extension) | HUD, sidebar, auto-sync                                          |
+| [MCP Server](/features/agents)            | AI agent integration via JSON-RPC                                |
+| [Dashboard](/features/dashboard)          | Web UI for visualization and monitoring                          |
 
 ## Features
 
 ### Brain (Ideas & Decisions)
+
 Track ideas, decisions, and their outcomes over time.
 
 ```bash
@@ -94,6 +95,7 @@ palace review
 ```
 
 ### Session Memory
+
 Track agent work sessions, activities, and learnings. See [Session Memory](/features/session-memory).
 
 ```bash
@@ -105,6 +107,7 @@ palace brief src/auth.go
 ```
 
 ### Call Graph
+
 Explore function relationships in your codebase.
 
 ```bash
@@ -113,6 +116,7 @@ palace graph processRequest --callees --depth 3
 ```
 
 ### Corridors
+
 Share knowledge across projects. See [Corridors](/features/corridors).
 
 ```bash
@@ -123,6 +127,7 @@ palace corridor promote learning_123
 ```
 
 ### Dashboard
+
 Visual exploration of your codebase. See [Dashboard](/features/dashboard).
 
 ```bash

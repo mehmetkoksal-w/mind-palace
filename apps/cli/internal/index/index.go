@@ -1,6 +1,8 @@
+// Package index provides the core database functionality for indexing project files and symbols.
 package index
 
 import (
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"fmt"
@@ -10,13 +12,14 @@ import (
 	"strings"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // sqlite driver for database/sql
 
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
 )
 
+// FileRecord represents an indexed file with its content and analysis.
 type FileRecord struct {
 	Path     string
 	Hash     string
@@ -27,6 +30,7 @@ type FileRecord struct {
 	Analysis *analysis.FileAnalysis
 }
 
+// ScanSummary provides metadata about a completed index scan.
 type ScanSummary struct {
 	ID                int64
 	Root              string
@@ -39,6 +43,7 @@ type ScanSummary struct {
 	CompletedAt       time.Time
 }
 
+// Open opens the sqlite database at the given path and applies pragmas.
 func Open(dbPath string) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
 		return nil, err
@@ -53,13 +58,13 @@ func Open(dbPath string) (*sql.DB, error) {
 		"PRAGMA synchronous=NORMAL;",
 	}
 	for _, p := range pragmas {
-		if _, err := db.Exec(p); err != nil {
-			db.Close()
+		if _, err := db.ExecContext(context.Background(), p); err != nil {
+			_ = db.Close()
 			return nil, fmt.Errorf("apply pragma %s: %w", p, err)
 		}
 	}
 	if err := ensureSchema(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 	return db, nil
@@ -199,7 +204,7 @@ func indexMigrateV0(tx *sql.Tx) error {
 	}
 
 	for _, stmt := range stmts {
-		if _, err := tx.Exec(stmt); err != nil {
+		if _, err := tx.ExecContext(context.Background(), stmt); err != nil {
 			return fmt.Errorf("create table: %w", err)
 		}
 	}
@@ -208,13 +213,13 @@ func indexMigrateV0(tx *sql.Tx) error {
 
 func ensureSchema(db *sql.DB) error {
 	// Create schema version table first
-	if _, err := db.Exec(indexSchemaVersionTable); err != nil {
+	if _, err := db.ExecContext(context.Background(), indexSchemaVersionTable); err != nil {
 		return fmt.Errorf("create schema_version table: %w", err)
 	}
 
 	// Get current schema version
 	var currentVersion int
-	row := db.QueryRow("SELECT COALESCE(MAX(version), -1) FROM schema_version")
+	row := db.QueryRowContext(context.Background(), "SELECT COALESCE(MAX(version), -1) FROM schema_version")
 	if err := row.Scan(&currentVersion); err != nil {
 		return fmt.Errorf("get schema version: %w", err)
 	}
@@ -231,11 +236,11 @@ func ensureSchema(db *sql.DB) error {
 
 // runIndexMigration executes a single migration in a transaction
 func runIndexMigration(db *sql.DB, version int) error {
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Run the migration
 	if err := indexMigrations[version](tx); err != nil {
@@ -244,7 +249,7 @@ func runIndexMigration(db *sql.DB, version int) error {
 
 	// Record the migration
 	now := time.Now().UTC().Format(time.RFC3339)
-	if _, err := tx.Exec("INSERT INTO schema_version (version, applied_at) VALUES (?, ?)", version, now); err != nil {
+	if _, err := tx.ExecContext(context.Background(), "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)", version, now); err != nil {
 		return fmt.Errorf("record migration: %w", err)
 	}
 
@@ -254,11 +259,12 @@ func runIndexMigration(db *sql.DB, version int) error {
 // GetIndexSchemaVersion returns the current index schema version
 func GetIndexSchemaVersion(db *sql.DB) (int, error) {
 	var version int
-	row := db.QueryRow("SELECT COALESCE(MAX(version), -1) FROM schema_version")
+	row := db.QueryRowContext(context.Background(), "SELECT COALESCE(MAX(version), -1) FROM schema_version")
 	err := row.Scan(&version)
 	return version, err
 }
 
+// BuildFileRecords scans the project and builds record summaries and analysis.
 func BuildFileRecords(root string, guardrails config.Guardrails) ([]FileRecord, error) {
 	files, err := fsutil.ListFiles(root, guardrails)
 	if err != nil {
@@ -302,12 +308,13 @@ func BuildFileRecords(root string, guardrails config.Guardrails) ([]FileRecord, 
 	return records, nil
 }
 
+// WriteScan writes a batch of file records to the index database.
 func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Time) (ScanSummary, error) {
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return ScanSummary{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	clearStmts := []string{
 		"DELETE FROM relationships;",
@@ -318,7 +325,7 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 		"DELETE FROM files;",
 	}
 	for _, stmt := range clearStmts {
-		if _, err := tx.Exec(stmt); err != nil {
+		if _, err := tx.ExecContext(context.Background(), stmt); err != nil {
 			return ScanSummary{}, fmt.Errorf("reset index: %w", err)
 		}
 	}
@@ -328,60 +335,60 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 	symbolCount := 0
 	relationshipCount := 0
 
-	fileStmt, err := tx.Prepare(`INSERT INTO files(path, hash, size, mod_time, indexed_at, language) VALUES(?, ?, ?, ?, ?, ?);`)
+	fileStmt, err := tx.PrepareContext(context.Background(), `INSERT INTO files(path, hash, size, mod_time, indexed_at, language) VALUES(?, ?, ?, ?, ?, ?);`)
 	if err != nil {
 		return ScanSummary{}, err
 	}
 	defer fileStmt.Close()
 
-	chunkStmt, err := tx.Prepare(`INSERT INTO chunks(path, chunk_index, start_line, end_line, content) VALUES(?, ?, ?, ?, ?);`)
+	chunkStmt, err := tx.PrepareContext(context.Background(), `INSERT INTO chunks(path, chunk_index, start_line, end_line, content) VALUES(?, ?, ?, ?, ?);`)
 	if err != nil {
 		return ScanSummary{}, err
 	}
 	defer chunkStmt.Close()
 
-	ftsStmt, err := tx.Prepare(`INSERT INTO chunks_fts(path, content, chunk_index) VALUES(?, ?, ?);`)
+	ftsStmt, err := tx.PrepareContext(context.Background(), `INSERT INTO chunks_fts(path, content, chunk_index) VALUES(?, ?, ?);`)
 	if err != nil {
 		return ScanSummary{}, err
 	}
 	defer ftsStmt.Close()
 
-	symbolStmt, err := tx.Prepare(`INSERT INTO symbols(file_path, name, kind, line_start, line_end, signature, doc_comment, parent_id, exported) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`)
+	symbolStmt, err := tx.PrepareContext(context.Background(), `INSERT INTO symbols(file_path, name, kind, line_start, line_end, signature, doc_comment, parent_id, exported) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`)
 	if err != nil {
 		return ScanSummary{}, err
 	}
 	defer symbolStmt.Close()
 
-	symbolFtsStmt, err := tx.Prepare(`INSERT INTO symbols_fts(name, file_path, kind, doc_comment) VALUES(?, ?, ?, ?);`)
+	symbolFtsStmt, err := tx.PrepareContext(context.Background(), `INSERT INTO symbols_fts(name, file_path, kind, doc_comment) VALUES(?, ?, ?, ?);`)
 	if err != nil {
 		return ScanSummary{}, err
 	}
 	defer symbolFtsStmt.Close()
 
-	relStmt, err := tx.Prepare(`INSERT INTO relationships(source_file, source_symbol_id, target_file, target_symbol, kind, line, column) VALUES(?, ?, ?, ?, ?, ?, ?);`)
+	relStmt, err := tx.PrepareContext(context.Background(), `INSERT INTO relationships(source_file, source_symbol_id, target_file, target_symbol, kind, line, column) VALUES(?, ?, ?, ?, ?, ?, ?);`)
 	if err != nil {
 		return ScanSummary{}, err
 	}
 	defer relStmt.Close()
 
 	for _, r := range records {
-		if _, err := fileStmt.Exec(r.Path, r.Hash, r.Size, r.ModTime.Format(time.RFC3339), now.Format(time.RFC3339), r.Language); err != nil {
+		if _, err := fileStmt.ExecContext(context.Background(), r.Path, r.Hash, r.Size, r.ModTime.Format(time.RFC3339), now.Format(time.RFC3339), r.Language); err != nil {
 			return ScanSummary{}, fmt.Errorf("insert file %s: %w", r.Path, err)
 		}
 
 		for _, c := range r.Chunks {
 			chunkCount++
-			if _, err := chunkStmt.Exec(r.Path, c.Index, c.StartLine, c.EndLine, c.Content); err != nil {
+			if _, err := chunkStmt.ExecContext(context.Background(), r.Path, c.Index, c.StartLine, c.EndLine, c.Content); err != nil {
 				return ScanSummary{}, fmt.Errorf("insert chunk %s:%d: %w", r.Path, c.Index, err)
 			}
-			if _, err := ftsStmt.Exec(r.Path, c.Content, c.Index); err != nil {
+			if _, err := ftsStmt.ExecContext(context.Background(), r.Path, c.Content, c.Index); err != nil {
 				return ScanSummary{}, fmt.Errorf("insert fts %s:%d: %w", r.Path, c.Index, err)
 			}
 		}
 
 		// Insert symbols and relationships from analysis
 		if r.Analysis != nil {
-			symCount, err := insertSymbols(tx, symbolStmt, symbolFtsStmt, r.Path, r.Analysis.Symbols, nil)
+			symCount, err := insertSymbols(symbolStmt, symbolFtsStmt, r.Path, r.Analysis.Symbols, nil)
 			if err != nil {
 				return ScanSummary{}, fmt.Errorf("insert symbols %s: %w", r.Path, err)
 			}
@@ -389,7 +396,7 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 
 			for _, rel := range r.Analysis.Relationships {
 				relationshipCount++
-				if _, err := relStmt.Exec(r.Path, nil, rel.TargetFile, rel.TargetSymbol, string(rel.Kind), rel.Line, rel.Column); err != nil {
+				if _, err := relStmt.ExecContext(context.Background(), r.Path, nil, rel.TargetFile, rel.TargetSymbol, string(rel.Kind), rel.Line, rel.Column); err != nil {
 					return ScanSummary{}, fmt.Errorf("insert relationship %s: %w", r.Path, err)
 				}
 			}
@@ -397,7 +404,7 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 	}
 
 	scanHash := computeScanHash(records)
-	res, err := tx.Exec(`INSERT INTO scans(root, scan_hash, started_at, completed_at) VALUES(?, ?, ?, ?);`, root, scanHash, startedAt.UTC().Format(time.RFC3339), now.Format(time.RFC3339))
+	res, err := tx.ExecContext(context.Background(), `INSERT INTO scans(root, scan_hash, started_at, completed_at) VALUES(?, ?, ?, ?);`, root, scanHash, startedAt.UTC().Format(time.RFC3339), now.Format(time.RFC3339))
 	if err != nil {
 		return ScanSummary{}, fmt.Errorf("insert scan: %w", err)
 	}
@@ -420,7 +427,7 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 	}, nil
 }
 
-func insertSymbols(tx *sql.Tx, symbolStmt, symbolFtsStmt *sql.Stmt, filePath string, symbols []analysis.Symbol, parentID *int64) (int, error) {
+func insertSymbols(symbolStmt, symbolFtsStmt *sql.Stmt, filePath string, symbols []analysis.Symbol, parentID *int64) (int, error) {
 	count := 0
 	for _, sym := range symbols {
 		exported := 0
@@ -428,20 +435,20 @@ func insertSymbols(tx *sql.Tx, symbolStmt, symbolFtsStmt *sql.Stmt, filePath str
 			exported = 1
 		}
 
-		res, err := symbolStmt.Exec(filePath, sym.Name, string(sym.Kind), sym.LineStart, sym.LineEnd, sym.Signature, sym.DocComment, parentID, exported)
+		res, err := symbolStmt.ExecContext(context.Background(), filePath, sym.Name, string(sym.Kind), sym.LineStart, sym.LineEnd, sym.Signature, sym.DocComment, parentID, exported)
 		if err != nil {
 			return count, err
 		}
 		count++
 
-		if _, err := symbolFtsStmt.Exec(sym.Name, filePath, string(sym.Kind), sym.DocComment); err != nil {
+		if _, err := symbolFtsStmt.ExecContext(context.Background(), sym.Name, filePath, string(sym.Kind), sym.DocComment); err != nil {
 			return count, err
 		}
 
 		// Insert children recursively
 		if len(sym.Children) > 0 {
 			symID, _ := res.LastInsertId()
-			childCount, err := insertSymbols(tx, symbolStmt, symbolFtsStmt, filePath, sym.Children, &symID)
+			childCount, err := insertSymbols(symbolStmt, symbolFtsStmt, filePath, sym.Children, &symID)
 			if err != nil {
 				return count, err
 			}
@@ -454,14 +461,15 @@ func insertSymbols(tx *sql.Tx, symbolStmt, symbolFtsStmt *sql.Stmt, filePath str
 func computeScanHash(records []FileRecord) string {
 	h := sha256.New()
 	for _, r := range records {
-		h.Write([]byte(r.Path))
-		h.Write([]byte(r.Hash))
+		_, _ = h.Write([]byte(r.Path))
+		_, _ = h.Write([]byte(r.Hash))
 	}
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
+// LatestScan returns the most recent scan metadata.
 func LatestScan(db *sql.DB) (ScanSummary, error) {
-	row := db.QueryRow(`SELECT id, root, scan_hash, completed_at FROM scans ORDER BY id DESC LIMIT 1;`)
+	row := db.QueryRowContext(context.Background(), `SELECT id, root, scan_hash, completed_at FROM scans ORDER BY id DESC LIMIT 1;`)
 	var id int64
 	var root, hash, completed string
 	if err := row.Scan(&id, &root, &hash, &completed); err != nil {
@@ -477,14 +485,16 @@ func LatestScan(db *sql.DB) (ScanSummary, error) {
 	return ScanSummary{ID: id, Root: root, ScanHash: hash, CompletedAt: t}, nil
 }
 
+// FileMetadata contains basic information about an indexed file.
 type FileMetadata struct {
 	Hash    string
 	Size    int64
 	ModTime time.Time
 }
 
+// LoadFileMetadata loads metadata for all indexed files.
 func LoadFileMetadata(db *sql.DB) (map[string]FileMetadata, error) {
-	rows, err := db.Query(`SELECT path, hash, size, mod_time FROM files;`)
+	rows, err := db.QueryContext(context.Background(), `SELECT path, hash, size, mod_time FROM files;`)
 	if err != nil {
 		return nil, err
 	}
@@ -508,6 +518,7 @@ func LoadFileMetadata(db *sql.DB) (map[string]FileMetadata, error) {
 // DBHandle aliases sql.DB for external packages.
 type DBHandle = sql.DB
 
+// ChunkHit represents a search result in the code.
 type ChunkHit struct {
 	Path       string
 	ChunkIndex int
@@ -516,6 +527,7 @@ type ChunkHit struct {
 	Content    string
 }
 
+// ChunkRow represents a raw row from the chunks table.
 type ChunkRow struct {
 	ChunkIndex int
 	StartLine  int
@@ -523,6 +535,7 @@ type ChunkRow struct {
 	Content    string
 }
 
+// SearchChunks performs a full-text search across indexed code chunks.
 func SearchChunks(db *sql.DB, query string, limit int) ([]ChunkHit, error) {
 	if strings.TrimSpace(query) == "" {
 		return nil, nil
@@ -531,7 +544,7 @@ func SearchChunks(db *sql.DB, query string, limit int) ([]ChunkHit, error) {
 		limit = 20
 	}
 	escaped := sanitizeFTSQuery(query)
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
         SELECT c.path, c.chunk_index, c.start_line, c.end_line, c.content
         FROM chunks_fts
         JOIN chunks c ON c.path = chunks_fts.path AND c.chunk_index = chunks_fts.chunk_index
@@ -557,11 +570,12 @@ func SearchChunks(db *sql.DB, query string, limit int) ([]ChunkHit, error) {
 func sanitizeFTSQuery(q string) string {
 	trimmed := strings.TrimSpace(q)
 	trimmed = strings.ReplaceAll(trimmed, "\"", "\"\"")
-	return fmt.Sprintf("\"%s\"", trimmed)
+	return "\"" + trimmed + "\""
 }
 
+// GetChunksForFile retrieves all chunks for a given file path.
 func GetChunksForFile(db *sql.DB, path string) ([]ChunkRow, error) {
-	rows, err := db.Query(`SELECT chunk_index, start_line, end_line, content FROM chunks WHERE path = ? ORDER BY chunk_index ASC;`, path)
+	rows, err := db.QueryContext(context.Background(), `SELECT chunk_index, start_line, end_line, content FROM chunks WHERE path = ? ORDER BY chunk_index ASC;`, path)
 	if err != nil {
 		return nil, err
 	}

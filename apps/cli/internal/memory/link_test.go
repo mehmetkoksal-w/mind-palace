@@ -358,7 +358,7 @@ func TestValidateCodeTarget(t *testing.T) {
 	// Create a test file
 	testFile := filepath.Join(tmpDir, "test.go")
 	content := "line1\nline2\nline3\nline4\nline5\n"
-	os.WriteFile(testFile, []byte(content), 0644)
+	os.WriteFile(testFile, []byte(content), 0o644)
 
 	tests := []struct {
 		name    string
@@ -392,7 +392,7 @@ func TestCheckAndUpdateStaleness(t *testing.T) {
 
 	// Create test file
 	testFile := filepath.Join(tmpDir, "test.go")
-	os.WriteFile(testFile, []byte("content\n"), 0644)
+	os.WriteFile(testFile, []byte("content\n"), 0o644)
 
 	// Get file mtime
 	info, _ := os.Stat(testFile)

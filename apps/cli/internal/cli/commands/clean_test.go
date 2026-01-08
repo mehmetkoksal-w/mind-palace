@@ -19,7 +19,7 @@ func TestRunCleanInvalidFlag(t *testing.T) {
 func TestExecuteCleanDryRun(t *testing.T) {
 	tmpDir := t.TempDir()
 	palaceDir := filepath.Join(tmpDir, ".palace")
-	os.MkdirAll(palaceDir, 0755)
+	os.MkdirAll(palaceDir, 0o755)
 
 	// Initialize memory
 	mem, err := memory.Open(tmpDir)
@@ -53,7 +53,7 @@ func TestExecuteCleanNoMemory(t *testing.T) {
 func TestExecuteCleanActual(t *testing.T) {
 	tmpDir := t.TempDir()
 	palaceDir := filepath.Join(tmpDir, ".palace")
-	os.MkdirAll(palaceDir, 0755)
+	os.MkdirAll(palaceDir, 0o755)
 
 	// Initialize memory
 	mem, err := memory.Open(tmpDir)

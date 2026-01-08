@@ -1,0 +1,311 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - sqlclosecheck
+    - rowserrcheck
+    - bodyclose
+    - errname
+    - errorlint
+    - nilerr
+    - gocognit
+    - gocyclo
+    - nestif
+    - prealloc
+    - unconvert
+    - misspell
+    - revive
+    - copyloopvar
+    - durationcheck
+    - noctx
+    - nolintlint
+    - predeclared
+    - reassign
+    - unparam
+    - wastedassign
+    - gosec
+    - gocritic
+    - testifylint
+    - tparallel
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (io.ReadCloser).Close
+        - io.Copy
+        - (*database/sql.DB).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.Stmt).Close
+        - (*database/sql.Tx).Rollback
+        - (*os.Process).Kill
+        - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.GoLSPClient).sendNotification
+        - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.DartLSPClient).sendNotification
+        - filepath.Glob
+        - filepath.Match
+    govet:
+      enable-all: true
+      disable:
+        - shadow
+        - fieldalignment
+    staticcheck:
+      checks:
+        - "all"
+        - "-SA1019"
+        - "-ST1000"
+        - "-ST1003"
+    gocognit:
+      min-complexity: 25
+    gocyclo:
+      min-complexity: 25
+    nestif:
+      min-complexity: 5
+    revive:
+      confidence: 0.8
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          arguments:
+            - "checkPrivateReceivers"
+            - "sayRepetitiveInsteadOfStutters"
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - whyNoLint
+        - unnamedResult
+        - hugeParam
+    gosec:
+      severity: medium
+      confidence: medium
+      excludes:
+        - G104
+        - G307
+        - G306
+        - G110
+        - G201
+        - G301
+        - G304
+    misspell:
+      locale: US
+      ignore-rules:
+        - "colour"
+    unparam:
+      check-exported: false
+    testifylint:
+      enable-all: true
+      disable:
+        - float-compare
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: true
+
+  exclusions:
+    generated: lax
+    paths:
+      - vendor
+      - node_modules
+      - apps/dashboard
+      - apps/docs
+      - apps/vscode
+      - scripts
+      - packaging
+    rules:
+      - path: _test\.go
+        linters:
+          - gocognit
+          - gocyclo
+          - errcheck
+          - gosec
+          - funlen
+          - dupl
+          - revive
+          - wastedassign
+          - staticcheck
+          - bodyclose
+          - mnd
+      - path: apps/cli/schemas/
+        linters:
+          - errcheck
+          - govet
+          - staticcheck
+          - revive
+          - gosec
+          - errname
+      - path: apps/cli/starter/
+        linters:
+          - errcheck
+          - gosec
+      - text: "do not define dynamic errors, use wrapped static errors instead"
+        linters:
+          - err113
+      - path: apps/cli/internal/analysis/parser_.*\.go
+        linters:
+          - gocognit
+          - gocyclo
+          - revive
+          - nestif
+          - nilerr
+      - path: apps/cli/internal/(index|scan)/
+        linters:
+          - gocognit
+          - gocyclo
+          - unparam
+          - prealloc
+      - path: apps/cli/internal/butler/
+        linters:
+          - gocognit
+          - gocyclo
+          - nestif
+          - prealloc
+          - rowserrcheck
+          - errcheck
+          - errorlint
+      - path: apps/cli/main.go
+        text: "context.Background"
+        linters:
+          - contextcheck
+      - text: "Close` is not checked"
+        linters:
+          - errcheck
+      - path: apps/cli/internal/analysis/(lsp_client|dart_lsp|dart_analyzer)\.go
+        linters:
+          - errcheck
+          - revive
+          - gocognit
+          - unparam
+          - prealloc
+      - path: apps/cli/internal/update/
+        text: "os.Rename|os.WriteFile|fmt.Sscanf"
+        linters:
+          - errcheck
+      - path: apps/cli/internal/update/update\.go
+        linters:
+          - errcheck
+      - path: apps/cli/internal/index/
+        text: "LastInsertId"
+        linters:
+          - errcheck
+      - path: apps/cli/internal/index/
+        linters:
+          - prealloc
+          - revive
+      - path: apps/cli/internal/lint/
+        text: "filepath.Glob"
+        linters:
+          - errcheck
+      - path: apps/cli/internal/memory/
+        linters:
+          - rowserrcheck
+          - prealloc
+          - errcheck
+          - nestif
+          - gocognit
+          - errorlint
+          - revive
+          - gocritic
+      - path: apps/cli/internal/(butler|corridor|index)/
+        linters:
+          - rowserrcheck
+          - errcheck
+          - errorlint
+          - prealloc
+      - path: apps/cli/internal/signal/
+        linters:
+          - prealloc
+          - nilerr
+      - path: apps/cli/internal/fsutil/
+        linters:
+          - wastedassign
+          - prealloc
+          - nilerr
+      - path: apps/cli/internal/memory/contradiction\.go
+        linters:
+          - nilerr
+      - path: apps/cli/internal/cli/commands/
+        linters:
+          - nestif
+          - gocognit
+          - gocyclo
+          - prealloc
+      - path: apps/cli/internal/collect/
+        linters:
+          - nestif
+          - gocognit
+          - prealloc
+          - gocyclo
+      - path: apps/cli/internal/dashboard/
+        linters:
+          - nestif
+          - gocognit
+          - gocyclo
+          - errcheck
+          - prealloc
+      - path: apps/cli/internal/project/
+        linters:
+          - gocyclo
+      - path: apps/cli/internal/(signal|stale)/
+        linters:
+          - gocognit
+      - path: apps/cli/internal/llm/
+        linters:
+          - prealloc
+      - path: apps/cli/internal/corridor/
+        linters:
+          - prealloc
+          - revive
+      - path: apps/cli/internal/llm/llm_test\.go
+        linters:
+          - gocritic
+      - path: apps/cli/pkg/
+        linters:
+          - revive
+      - path: apps/cli/internal/(config|fsutil|jsonc|lint|project|scan|signal|stale|update|validate|verify)/
+        linters:
+          - revive
+      - path: apps/cli/main\.go
+        linters:
+          - revive
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

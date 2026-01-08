@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,11 +15,23 @@ import (
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/validate"
 )
 
+// resolveAndValidateRoot converts a path to absolute and verifies it exists.
+func resolveAndValidateRoot(root string) (string, error) {
+	rootPath, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(rootPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("directory does not exist: %s", rootPath)
+	}
+	return rootPath, nil
+}
+
 // RunIncremental performs an incremental scan, only processing changed files.
 // Returns the number of changes applied and an error if any.
 // If there are no changes, returns (0, nil).
 func RunIncremental(root string) (index.IncrementalScanSummary, error) {
-	rootPath, err := filepath.Abs(root)
+	rootPath, err := resolveAndValidateRoot(root)
 	if err != nil {
 		return index.IncrementalScanSummary{}, err
 	}
@@ -46,7 +59,7 @@ func RunIncremental(root string) (index.IncrementalScanSummary, error) {
 	if len(changes) == 0 {
 		// Count unchanged files
 		var count int
-		if err := db.QueryRow("SELECT COUNT(*) FROM files").Scan(&count); err != nil {
+		if err := db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files").Scan(&count); err != nil {
 			return index.IncrementalScanSummary{}, fmt.Errorf("count files: %w", err)
 		}
 		return index.IncrementalScanSummary{
@@ -56,7 +69,7 @@ func RunIncremental(root string) (index.IncrementalScanSummary, error) {
 
 	// Count files before changes to calculate unchanged correctly
 	var initialCount int
-	if err := db.QueryRow("SELECT COUNT(*) FROM files").Scan(&initialCount); err != nil {
+	if err := db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files").Scan(&initialCount); err != nil {
 		return index.IncrementalScanSummary{}, fmt.Errorf("count initial files: %w", err)
 	}
 
@@ -76,10 +89,11 @@ func RunIncremental(root string) (index.IncrementalScanSummary, error) {
 
 // Run performs a full scan of the workspace
 func Run(root string) (index.ScanSummary, int, error) {
-	rootPath, err := filepath.Abs(root)
+	rootPath, err := resolveAndValidateRoot(root)
 	if err != nil {
 		return index.ScanSummary{}, 0, err
 	}
+
 	if _, err := config.EnsureLayout(rootPath); err != nil {
 		return index.ScanSummary{}, 0, err
 	}

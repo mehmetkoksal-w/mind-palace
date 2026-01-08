@@ -6,7 +6,7 @@ import (
 )
 
 // handleHealth returns server health status.
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, map[string]any{
 		"status":    "ok",
 		"timestamp": time.Now().UTC(),
@@ -27,7 +27,7 @@ const faviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512
 </svg>`
 
 // handleFavicon serves a simple SVG favicon.
-func (s *Server) handleFavicon(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleFavicon(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "image/svg+xml")
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	w.Write([]byte(faviconSVG))

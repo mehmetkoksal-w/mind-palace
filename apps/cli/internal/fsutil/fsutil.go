@@ -112,7 +112,7 @@ func ListFiles(root string, guardrails config.Guardrails) ([]string, error) {
 	return files, nil
 }
 
-func ChunkContent(content string, maxLines int, maxBytes int) []Chunk {
+func ChunkContent(content string, maxLines, maxBytes int) []Chunk {
 	if maxLines <= 0 {
 		maxLines = 120
 	}
@@ -168,7 +168,7 @@ type SymbolBoundary struct {
 // ChunkContentSmart creates chunks that respect symbol boundaries (AST-aware).
 // It never splits in the middle of a function, class, or method.
 // Falls back to line-based chunking if no symbols are provided.
-func ChunkContentSmart(content string, symbols []SymbolBoundary, maxLines int, maxBytes int) []Chunk {
+func ChunkContentSmart(content string, symbols []SymbolBoundary, maxLines, maxBytes int) []Chunk {
 	if len(symbols) == 0 {
 		// Fall back to line-based chunking
 		return ChunkContent(content, maxLines, maxBytes)
@@ -224,7 +224,7 @@ func ChunkContentSmart(content string, symbols []SymbolBoundary, maxLines int, m
 	// Handle remaining content
 	if currentStart <= totalLines {
 		chunkContent := extractLines(lines, currentStart, totalLines)
-		if len(chunkContent) > 0 {
+		if chunkContent != "" {
 			chunks = append(chunks, Chunk{
 				Index:     len(chunks),
 				StartLine: currentStart,
@@ -346,7 +346,7 @@ func splitLargeChunk(lines []string, start, end int, symbols []SymbolBoundary, m
 		symLines := sym.EndLine - sym.StartLine + 1
 
 		// Check if adding this symbol would exceed limits
-		groupLines := 0
+		var groupLines int
 		if len(currentSymbols) > 0 {
 			groupLines = sym.EndLine - currentStart + 1
 		} else {

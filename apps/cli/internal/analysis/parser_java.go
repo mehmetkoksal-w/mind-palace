@@ -353,8 +353,7 @@ func (p *JavaParser) extractRelationships(node *sitter.Node, content []byte, ana
 			continue
 		}
 
-		switch child.Type() {
-		case "import_declaration":
+		if child.Type() == "import_declaration" {
 			p.parseImport(child, content, analysis)
 		}
 

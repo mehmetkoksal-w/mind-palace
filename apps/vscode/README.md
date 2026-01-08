@@ -36,12 +36,12 @@ chmod +x palace && sudo mv palace /usr/local/bin/
 
 ### VS Code Settings
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `mindPalace.binaryPath` | `palace` | Path to CLI binary |
-| `mindPalace.autoSync` | `true` | Auto-heal on file save |
-| `mindPalace.autoSyncDelay` | `3000` | Debounce delay (ms) |
-| `mindPalace.waitForCleanWorkspace` | `true` | Wait for all files saved |
+| Setting                            | Default  | Description              |
+| ---------------------------------- | -------- | ------------------------ |
+| `mindPalace.binaryPath`            | `palace` | Path to CLI binary       |
+| `mindPalace.autoSync`              | `true`   | Auto-heal on file save   |
+| `mindPalace.autoSyncDelay`         | `3000`   | Debounce delay (ms)      |
+| `mindPalace.waitForCleanWorkspace` | `true`   | Wait for all files saved |
 
 ### Project Configuration
 
@@ -72,7 +72,7 @@ Full documentation lives in the CLI repository:
 ## Version Compatibility
 
 | CLI Version | Extension Version |
-|-------------|-------------------|
+| ----------- | ----------------- |
 | 0.0.1-alpha | 0.0.1-alpha       |
 
 The extension checks CLI version on startup and warns if incompatible.
@@ -83,4 +83,4 @@ The extension checks CLI version on startup and warns if incompatible.
 
 ## License
 
-PolyForm Shield 1.0.0 — see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE) for details.

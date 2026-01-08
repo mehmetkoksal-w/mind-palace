@@ -117,7 +117,7 @@ func (p *SvelteParser) parseScriptElement(node *sitter.Node, content []byte, ana
 	})
 }
 
-func (p *SvelteParser) parseScriptContent(node *sitter.Node, content []byte, analysis *FileAnalysis, isModule bool) {
+func (p *SvelteParser) parseScriptContent(node *sitter.Node, content []byte, analysis *FileAnalysis, _ bool) {
 	text := node.Content(content)
 
 	lines := strings.Split(text, "\n")
@@ -221,7 +221,7 @@ func (p *SvelteParser) parseElement(node *sitter.Node, content []byte, analysis 
 	}
 }
 
-func (p *SvelteParser) parseEachStatement(node *sitter.Node, content []byte, analysis *FileAnalysis) {
+func (p *SvelteParser) parseEachStatement(node *sitter.Node, _ []byte, analysis *FileAnalysis) {
 	analysis.Symbols = append(analysis.Symbols, Symbol{
 		Name:      "{#each}",
 		Kind:      KindFunction,
@@ -231,7 +231,7 @@ func (p *SvelteParser) parseEachStatement(node *sitter.Node, content []byte, ana
 	})
 }
 
-func (p *SvelteParser) parseIfStatement(node *sitter.Node, content []byte, analysis *FileAnalysis) {
+func (p *SvelteParser) parseIfStatement(node *sitter.Node, _ []byte, analysis *FileAnalysis) {
 	analysis.Symbols = append(analysis.Symbols, Symbol{
 		Name:      "{#if}",
 		Kind:      KindFunction,
@@ -303,7 +303,7 @@ func (p *SvelteParser) parseComponentUsage(node *sitter.Node, content []byte, an
 				tagChild := child.Child(j)
 				if tagChild != nil && tagChild.Type() == "tag_name" {
 					tagName := tagChild.Content(content)
-					if len(tagName) > 0 && tagName[0] >= 'A' && tagName[0] <= 'Z' {
+					if tagName != "" && tagName[0] >= 'A' && tagName[0] <= 'Z' {
 						analysis.Relationships = append(analysis.Relationships, Relationship{
 							TargetSymbol: tagName,
 							Kind:         RelUses,

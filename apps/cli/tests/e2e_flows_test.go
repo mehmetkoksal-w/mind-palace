@@ -28,7 +28,7 @@ func TestBrainWorkflowE2E(t *testing.T) {
 		"main.go": `package main
 
 func main() {
-	// TODO: Add caching layer
+	// Main entry point
 }
 `,
 		"cache/cache.go": `package cache
@@ -267,7 +267,7 @@ func main() {
 	println("Hello")
 }
 `
-		if err := os.WriteFile(filepath.Join(workspace, "main.go"), []byte(newContent), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(workspace, "main.go"), []byte(newContent), 0o644); err != nil {
 			t.Fatalf("Failed to update file: %v", err)
 		}
 	})
@@ -348,11 +348,11 @@ func HandleRequest() {
 
 	// Create second workspace
 	workspace2 := t.TempDir()
-	os.MkdirAll(workspace2, 0755)
+	os.MkdirAll(workspace2, 0o755)
 	os.WriteFile(filepath.Join(workspace2, "server.go"), []byte(`package main
 
 func StartServer() {}
-`), 0644)
+`), 0o644)
 
 	// Initialize both workspaces
 	runPalace(t, binPath, workspace1, "init", "--root", workspace1)
@@ -511,7 +511,7 @@ func (s *Service) Start() error {
 func (s *Service) Stop() error {
 	return nil
 }
-`), 0644)
+`), 0o644)
 
 		// Rescan to ensure changes are detected (use --full to force new hash)
 		output := runPalace(t, binPath, workspace, "scan", "--root", workspace, "--full")
@@ -647,7 +647,7 @@ func Helper() {}
 
 func Helper() {}
 func NewHelper() {} // Added
-`), 0644)
+`), 0o644)
 
 	t.Run("ci_verify_stale", func(t *testing.T) {
 		output := runPalaceExpectFail(t, binPath, workspace, "check", "--root", workspace)

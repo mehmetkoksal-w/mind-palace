@@ -23,7 +23,7 @@ func TestJSONC(t *testing.T) {
 				"createdAt": "2024-01-01T00:00:00Z"
 			}
 		}`
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -39,7 +39,7 @@ func TestJSONC(t *testing.T) {
 
 		// Missing required fields
 		content := `{"invalid": true}`
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -59,7 +59,7 @@ func TestJSONC(t *testing.T) {
 	t.Run("returns error for invalid schema name", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "test.jsonc")
-		if err := os.WriteFile(path, []byte(`{}`), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(`{}`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -72,7 +72,7 @@ func TestJSONC(t *testing.T) {
 	t.Run("returns error for invalid JSON", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "invalid.jsonc")
-		if err := os.WriteFile(path, []byte(`{not valid`), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(`{not valid`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -98,7 +98,7 @@ func TestJSON(t *testing.T) {
 				"createdAt": "2024-01-01T00:00:00Z"
 			}
 		}`
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -114,7 +114,7 @@ func TestJSON(t *testing.T) {
 
 		// Missing required fields
 		content := `{"invalid": true}`
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -134,7 +134,7 @@ func TestJSON(t *testing.T) {
 	t.Run("returns error for invalid schema name", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "test.json")
-		if err := os.WriteFile(path, []byte(`{}`), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(`{}`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -147,7 +147,7 @@ func TestJSON(t *testing.T) {
 	t.Run("returns error for invalid JSON", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "invalid.json")
-		if err := os.WriteFile(path, []byte(`{not valid`), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(`{not valid`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 

@@ -444,7 +444,7 @@ func Routes() {}
 
 	// Create a room configuration
 	roomsDir := filepath.Join(workspace, ".palace", "rooms")
-	os.MkdirAll(roomsDir, 0755)
+	os.MkdirAll(roomsDir, 0o755)
 
 	authRoom := `{
   "$schema": "../schemas/room.schema.json",
@@ -454,7 +454,7 @@ func Routes() {}
   "summary": "Authentication and authorization module",
   "entryPoints": ["internal/auth/**/*.go"]
 }`
-	os.WriteFile(filepath.Join(roomsDir, "auth.jsonc"), []byte(authRoom), 0644)
+	os.WriteFile(filepath.Join(roomsDir, "auth.jsonc"), []byte(authRoom), 0o644)
 
 	runPalace(t, binPath, workspace, "init", "--root", workspace)
 	runPalace(t, binPath, workspace, "scan", "--root", workspace)
@@ -498,7 +498,7 @@ func Original() {}
 
 func Original() {}
 func NewFunction() {} // Added
-`), 0644)
+`), 0o644)
 
 		output := runPalaceExpectFail(t, binPath, workspace, "check", "--root", workspace)
 
@@ -535,10 +535,10 @@ func setupTestWorkspace(t *testing.T, files map[string]string) (workspace, binPa
 	for path, content := range files {
 		fullPath := filepath.Join(workspace, path)
 		dir := filepath.Dir(fullPath)
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatalf("Failed to create dir %s: %v", dir, err)
 		}
-		if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
 			t.Fatalf("Failed to write file %s: %v", path, err)
 		}
 	}
