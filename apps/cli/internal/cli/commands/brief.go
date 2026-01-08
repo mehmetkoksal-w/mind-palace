@@ -72,7 +72,8 @@ func ExecuteBrief(opts BriefOptions) error {
 	agents, err := mem.GetActiveAgents(5 * time.Minute)
 	if err == nil && len(agents) > 0 {
 		fmt.Printf("\n🤖 Active Agents:\n")
-		for _, a := range agents {
+		for i := range agents {
+			a := &agents[i]
 			currentFile := ""
 			if a.CurrentFile != "" {
 				currentFile = fmt.Sprintf(" working on %s", a.CurrentFile)
@@ -86,7 +87,8 @@ func ExecuteBrief(opts BriefOptions) error {
 		sessions, err := mem.ListSessions(false, 10)
 		if err == nil && len(sessions) > 0 {
 			fmt.Printf("\n📋 Recent Sessions:\n")
-			for _, s := range sessions {
+			for i := range sessions {
+				s := &sessions[i]
 				stateIcon := "✅"
 				switch s.State {
 				case "active":
@@ -138,7 +140,8 @@ func ExecuteBrief(opts BriefOptions) error {
 		fileLearnings, err := mem.GetFileLearnings(opts.FilePath)
 		if err == nil && len(fileLearnings) > 0 {
 			fmt.Printf("\n📝 File-Specific Learnings:\n")
-			for _, l := range fileLearnings {
+			for i := range fileLearnings {
+				l := &fileLearnings[i]
 				fmt.Printf("  • [%.0f%%] %s\n", l.Confidence*100, util.TruncateLine(l.Content, 50))
 			}
 		}
@@ -148,7 +151,8 @@ func ExecuteBrief(opts BriefOptions) error {
 	learnings, err := mem.GetRelevantLearnings(opts.FilePath, "", 5)
 	if err == nil && len(learnings) > 0 {
 		fmt.Printf("\n💡 Relevant Learnings:\n")
-		for _, l := range learnings {
+		for i := range learnings {
+			l := &learnings[i]
 			scopeInfo := ""
 			if l.Scope != "palace" {
 				scopeInfo = fmt.Sprintf(" [%s]", l.Scope)
@@ -161,7 +165,8 @@ func ExecuteBrief(opts BriefOptions) error {
 	ideas, err := mem.GetIdeas("active", "", "", 5)
 	if err == nil && len(ideas) > 0 {
 		fmt.Printf("\n💭 Active Ideas:\n")
-		for _, idea := range ideas {
+		for i := range ideas {
+			idea := &ideas[i]
 			fmt.Printf("  • [%s] %s\n", idea.ID, util.TruncateLine(idea.Content, 45))
 		}
 	}
@@ -170,7 +175,8 @@ func ExecuteBrief(opts BriefOptions) error {
 	decisions, err := mem.GetDecisions("active", "", "", "", 5)
 	if err == nil && len(decisions) > 0 {
 		fmt.Printf("\n📋 Active Decisions:\n")
-		for _, d := range decisions {
+		for i := range decisions {
+			d := &decisions[i]
 			outcomeIcon := ""
 			switch d.Outcome {
 			case "successful":
@@ -188,7 +194,8 @@ func ExecuteBrief(opts BriefOptions) error {
 	hotspots, err := mem.GetFileHotspots(5)
 	if err == nil && len(hotspots) > 0 {
 		fmt.Printf("\n🔥 Hotspots (most edited files):\n")
-		for _, h := range hotspots {
+		for i := range hotspots {
+			h := &hotspots[i]
 			warning := ""
 			if h.FailureCount > 0 {
 				warning = fmt.Sprintf(" (⚠️ %d failures)", h.FailureCount)

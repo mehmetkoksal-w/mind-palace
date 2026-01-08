@@ -233,7 +233,7 @@ func defaultLintCommand(langs []string) string {
 		case "swift":
 			return "swiftlint"
 		case "php":
-			return "composer lint || ./vendor/bin/phpstan analyse"
+			return "composer lint || ./vendor/bin/phpstan analyze"
 		}
 	}
 	return "echo lint not configured"

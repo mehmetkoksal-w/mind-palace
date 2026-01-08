@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
-	"sync/atomic"
 )
 
 // MockLSPClient is a mock implementation of LSP client for testing
@@ -51,7 +50,7 @@ func NewMockLSPClient() *MockLSPClient {
 }
 
 // DocumentSymbols returns document symbols (delegates to mock function)
-func (m *MockLSPClient) DocumentSymbols(uri string, content string) ([]LSPDocumentSymbol, error) {
+func (m *MockLSPClient) DocumentSymbols(uri, content string) ([]LSPDocumentSymbol, error) {
 	if m.closed {
 		return nil, fmt.Errorf("client closed")
 	}
@@ -71,11 +70,6 @@ func (m *MockLSPClient) Shutdown() error {
 // Close closes the LSP client (delegates to mock function)
 func (m *MockLSPClient) Close() error {
 	return m.CloseFunc()
-}
-
-// nextID generates the next request ID
-func (m *MockLSPClient) nextID() int64 {
-	return atomic.AddInt64(&m.requestID, 1)
 }
 
 // MockLSPClientFactory creates mock LSP clients for testing

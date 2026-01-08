@@ -19,18 +19,18 @@ type SmartBriefingRequest struct {
 
 // SmartBriefing contains an LLM-generated briefing.
 type SmartBriefing struct {
-	Summary        string           `json:"summary"`
-	KeyPoints      []string         `json:"keyPoints"`
+	Summary        string            `json:"summary"`
+	KeyPoints      []string          `json:"keyPoints"`
 	Warnings       []BriefingWarning `json:"warnings"`
-	Suggestions    []string         `json:"suggestions"`
-	RelatedRecords []BriefingRecord `json:"relatedRecords"`
-	GeneratedAt    time.Time        `json:"generatedAt"`
+	Suggestions    []string          `json:"suggestions"`
+	RelatedRecords []BriefingRecord  `json:"relatedRecords"`
+	GeneratedAt    time.Time         `json:"generatedAt"`
 }
 
 // BriefingWarning represents a warning in the briefing.
 type BriefingWarning struct {
-	Type    string `json:"type"`    // "contradiction", "stale", "at_risk"
-	Message string `json:"message"`
+	Type     string `json:"type"` // "contradiction", "stale", "at_risk"
+	Message  string `json:"message"`
 	RecordID string `json:"recordId,omitempty"`
 }
 
@@ -77,7 +77,8 @@ func (s *MCPServer) toolBriefingSmart(id any, args map[string]interface{}) jsonR
 		learnings, _ := mem.GetFileLearnings(contextPath)
 		if len(learnings) > 0 {
 			contextData.WriteString("## Learnings for this file:\n")
-			for _, l := range learnings {
+			for i := range learnings {
+				l := &learnings[i]
 				contextData.WriteString(fmt.Sprintf("- [%s] (%.0f%% confidence): %s\n", l.ID, l.Confidence*100, l.Content))
 			}
 		}
@@ -93,7 +94,8 @@ func (s *MCPServer) toolBriefingSmart(id any, args map[string]interface{}) jsonR
 		learnings, _ := mem.GetRelevantLearnings("", contextPath, 10)
 		if len(learnings) > 0 {
 			contextData.WriteString("## Learnings in this room:\n")
-			for _, l := range learnings {
+			for i := range learnings {
+				l := &learnings[i]
 				contextData.WriteString(fmt.Sprintf("- [%s] (%.0f%% confidence): %s\n", l.ID, l.Confidence*100, l.Content))
 			}
 		}
@@ -107,7 +109,8 @@ func (s *MCPServer) toolBriefingSmart(id any, args map[string]interface{}) jsonR
 			results, _ := mem.SemanticSearch(embedder, contextPath, opts)
 			if len(results) > 0 {
 				contextData.WriteString("## Relevant knowledge:\n")
-				for _, r := range results {
+				for i := range results {
+					r := &results[i]
 					contextData.WriteString(fmt.Sprintf("- [%s] %s: %s\n", r.ID, r.Kind, truncateForBriefing(r.Content, 100)))
 				}
 			}
@@ -124,7 +127,8 @@ func (s *MCPServer) toolBriefingSmart(id any, args map[string]interface{}) jsonR
 		learnings, _ := mem.GetRelevantLearnings("", "", 10)
 		if len(learnings) > 0 {
 			contextData.WriteString("## Key learnings:\n")
-			for _, l := range learnings {
+			for i := range learnings {
+				l := &learnings[i]
 				contextData.WriteString(fmt.Sprintf("- [%s] (%.0f%%): %s\n", l.ID, l.Confidence*100, truncateForBriefing(l.Content, 100)))
 			}
 		}
@@ -180,7 +184,8 @@ func (s *MCPServer) generateNonLLMBriefing(id any, contextType, contextPath stri
 		learnings, _ := mem.GetFileLearnings(contextPath)
 		if len(learnings) > 0 {
 			output.WriteString("### Learnings\n\n")
-			for _, l := range learnings {
+			for i := range learnings {
+				l := &learnings[i]
 				output.WriteString(fmt.Sprintf("- **%.0f%%** - %s\n", l.Confidence*100, l.Content))
 			}
 		} else {
@@ -192,7 +197,8 @@ func (s *MCPServer) generateNonLLMBriefing(id any, contextType, contextPath stri
 		learnings, _ := mem.GetRelevantLearnings("", contextPath, 10)
 		if len(learnings) > 0 {
 			output.WriteString("### Key Knowledge\n\n")
-			for _, l := range learnings {
+			for i := range learnings {
+				l := &learnings[i]
 				output.WriteString(fmt.Sprintf("- **%.0f%%** - %s\n", l.Confidence*100, l.Content))
 			}
 		}
@@ -211,7 +217,8 @@ func (s *MCPServer) generateNonLLMBriefing(id any, contextType, contextPath stri
 		learnings, _ := mem.GetRelevantLearnings("", "", 5)
 		if len(learnings) > 0 {
 			output.WriteString("\n### Top Learnings\n\n")
-			for _, l := range learnings {
+			for i := range learnings {
+				l := &learnings[i]
 				output.WriteString(fmt.Sprintf("- **%.0f%%** - %s\n", l.Confidence*100, truncateForBriefing(l.Content, 80)))
 			}
 		}

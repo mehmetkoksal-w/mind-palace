@@ -1,3 +1,4 @@
+// Package cli is the main entry point for the Mind Palace CLI application.
 package cli
 
 import (
@@ -27,6 +28,7 @@ func validateLimit(v int) error          { return flags.ValidateLimit(v) }
 func validateScope(v string) error       { return flags.ValidateScope(v) }
 func validatePort(v int) error           { return flags.ValidatePort(v) }
 
+// Run executes the application given the command-line arguments.
 func Run(args []string) error {
 	if len(args) == 0 {
 		return usage()

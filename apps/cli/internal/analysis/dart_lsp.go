@@ -315,7 +315,7 @@ func (c *DartLSPClient) sendNotification(method string, params interface{}) erro
 }
 
 // OpenFile notifies the server about an open file
-func (c *DartLSPClient) OpenFile(filePath string, content string) error {
+func (c *DartLSPClient) OpenFile(filePath, content string) error {
 	uri := pathToURI(filePath)
 
 	params := map[string]interface{}{
@@ -441,7 +441,8 @@ func (c *DartLSPClient) ExtractCallsForSymbol(filePath string, line, character i
 	// Get incoming calls (who calls this)
 	incoming, err := c.GetIncomingCalls(item)
 	if err == nil {
-		for _, call := range incoming {
+		for i := range incoming {
+			call := &incoming[i]
 			for _, r := range call.FromRanges {
 				calls = append(calls, CallInfo{
 					CallerFile:   uriToPath(call.From.URI),
@@ -458,7 +459,8 @@ func (c *DartLSPClient) ExtractCallsForSymbol(filePath string, line, character i
 	// Get outgoing calls (what this calls)
 	outgoing, err := c.GetOutgoingCalls(item)
 	if err == nil {
-		for _, call := range outgoing {
+		for i := range outgoing {
+			call := &outgoing[i]
 			for _, r := range call.FromRanges {
 				calls = append(calls, CallInfo{
 					CallerFile:   uriToPath(item.URI),

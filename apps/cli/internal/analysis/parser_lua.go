@@ -75,9 +75,10 @@ func (p *LuaParser) parseFunctionStatement(node *sitter.Node, content []byte) *S
 		if child == nil {
 			continue
 		}
-		if child.Type() == "local" {
+		switch child.Type() {
+		case "local":
 			isLocal = true
-		} else if child.Type() == "function_name" {
+		case "function_name":
 			// Global function usually has function_name
 			for j := 0; j < int(child.ChildCount()); j++ {
 				sub := child.Child(j)
@@ -86,9 +87,11 @@ func (p *LuaParser) parseFunctionStatement(node *sitter.Node, content []byte) *S
 					break
 				}
 			}
-		} else if child.Type() == "identifier" && nameNode == nil {
-			// Local function or simple global function might have identifier directly
-			nameNode = child
+		default:
+			if child.Type() == "identifier" && nameNode == nil {
+				// Local function or simple global function might have identifier directly
+				nameNode = child
+			}
 		}
 	}
 
@@ -157,7 +160,7 @@ func (p *LuaParser) parseVariableDeclaration(node *sitter.Node, content []byte, 
 				name := identifiers[0]
 				kind := KindVariable
 				// Check if it's all uppercase (constant) and not local
-				if !isLocal && strings.ToUpper(name) == name && len(name) > 0 {
+				if !isLocal && strings.ToUpper(name) == name && name != "" {
 					kind = KindConstant
 				}
 				analysis.Symbols = append(analysis.Symbols, Symbol{

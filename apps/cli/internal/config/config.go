@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -228,22 +229,22 @@ func defaultGuardrails() Guardrails {
 			// Package managers & dependencies
 			"node_modules/**",
 			"vendor/**",
-			"**/Pods/**",           // iOS CocoaPods
-			"**/.symlinks/**",      // Flutter iOS symlinks
-			"**/DerivedData/**",    // Xcode derived data
+			"**/Pods/**",        // iOS CocoaPods
+			"**/.symlinks/**",   // Flutter iOS symlinks
+			"**/DerivedData/**", // Xcode derived data
 
 			// Build outputs
 			"dist/**",
 			"build/**",
-			"**/build/**",          // Nested build directories
+			"**/build/**", // Nested build directories
 			"coverage/**",
-			"target/**",            // Rust/Maven
+			"target/**", // Rust/Maven
 			"out/**",
 
 			// Flutter/Dart specific
 			".dart_tool/**",
 			"**/.dart_tool/**",
-			"**/*.dill",            // Dart compiled files
+			"**/*.dill", // Dart compiled files
 			"**/*.dill.track.dill",
 			"**/test_cache/**",
 
@@ -268,10 +269,10 @@ func defaultGuardrails() Guardrails {
 			"**/*.min.*",
 			"**/*.lock",
 			"**/*.generated.*",
-			"**/*.g.dart",          // Dart generated files
-			"**/*.freezed.dart",    // Freezed generated
-			"**/*.gr.dart",         // Auto-route generated
-			"**/*.mocks.dart",      // Mockito generated
+			"**/*.g.dart",       // Dart generated files
+			"**/*.freezed.dart", // Freezed generated
+			"**/*.gr.dart",      // Auto-route generated
+			"**/*.mocks.dart",   // Mockito generated
 		},
 	}
 }
@@ -325,7 +326,7 @@ func CopySchemas(root string, allowOverwrite bool) error {
 	for name, data := range schemaMap {
 		dest := filepath.Join(schemaDir, fmt.Sprintf("%s.schema.json", name))
 		if existing, err := os.ReadFile(dest); err == nil && len(existing) > 0 {
-			if string(existing) == string(data) {
+			if bytes.Equal(existing, data) {
 				continue // already canonical
 			}
 		}

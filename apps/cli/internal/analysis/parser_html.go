@@ -48,8 +48,7 @@ func (p *HTMLParser) extractSymbols(node *sitter.Node, content []byte, analysis 
 			continue
 		}
 
-		switch child.Type() {
-		case "element":
+		if child.Type() == "element" {
 			p.parseElement(child, content, analysis)
 		}
 
@@ -88,9 +87,10 @@ func (p *HTMLParser) parseElement(node *sitter.Node, content []byte, analysis *F
 			tagName = child.Content(content)
 		case "attribute":
 			attrName, attrValue := p.parseAttribute(child, content)
-			if attrName == "id" {
+			switch attrName {
+			case "id":
 				id = attrValue
-			} else if attrName == "class" {
+			case "class":
 				classes = strings.Fields(attrValue)
 			}
 		}

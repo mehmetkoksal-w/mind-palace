@@ -89,7 +89,8 @@ func ExecuteCorridorList(_ []string) error {
 		fmt.Printf("  No workspaces linked yet.\n")
 		fmt.Printf("  Use 'palace corridor link <name> <path>' to link one.\n")
 	} else {
-		for _, link := range links {
+		for i := range links {
+			link := &links[i]
 			lastAccess := "never"
 			if !link.LastAccessed.IsZero() {
 				lastAccess = link.LastAccessed.Format("2006-01-02")
@@ -191,7 +192,8 @@ func ExecuteCorridorPersonal(args []string) error {
 		return nil
 	}
 
-	for _, l := range learnings {
+	for i := range learnings {
+		l := &learnings[i]
 		confidenceBar := strings.Repeat("█", int(l.Confidence*10)) + strings.Repeat("░", 10-int(l.Confidence*10))
 		origin := ""
 		if l.OriginWorkspace != "" {
@@ -245,9 +247,9 @@ Example:
 	}
 
 	var found *memory.Learning
-	for _, l := range learnings {
-		if l.ID == learningID || strings.HasPrefix(l.ID, learningID) {
-			found = &l
+	for i := range learnings {
+		if learnings[i].ID == learningID || strings.HasPrefix(learnings[i].ID, learningID) {
+			found = &learnings[i]
 			break
 		}
 	}
@@ -311,7 +313,8 @@ func ExecuteCorridorSearch(args []string) error {
 	personalLearnings, err := gc.GetPersonalLearnings(query, *limit)
 	if err == nil && len(personalLearnings) > 0 {
 		fmt.Printf("\n📌 Personal Corridor (%d results)\n", len(personalLearnings))
-		for _, l := range personalLearnings {
+		for i := range personalLearnings {
+			l := &personalLearnings[i]
 			fmt.Printf("  • [%.0f%%] %s\n", l.Confidence*100, util.TruncateLine(l.Content, 50))
 		}
 	}
@@ -321,7 +324,8 @@ func ExecuteCorridorSearch(args []string) error {
 		linkedLearnings, err := gc.GetAllLinkedLearnings(*limit)
 		if err == nil && len(linkedLearnings) > 0 {
 			fmt.Printf("\n🔗 Linked Workspaces (%d results)\n", len(linkedLearnings))
-			for _, l := range linkedLearnings {
+			for i := range linkedLearnings {
+				l := &linkedLearnings[i]
 				scope := l.Scope
 				if l.ScopePath != "" {
 					scope = fmt.Sprintf("%s:%s", l.Scope, l.ScopePath)

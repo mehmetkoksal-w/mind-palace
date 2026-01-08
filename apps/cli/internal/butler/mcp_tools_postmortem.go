@@ -112,7 +112,8 @@ func (s *MCPServer) toolGetPostmortems(id any, args map[string]interface{}) json
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Found %d postmortem(s):\n\n", len(postmortems)))
 
-	for _, pm := range postmortems {
+	for i := range postmortems {
+		pm := &postmortems[i]
 		sb.WriteString(fmt.Sprintf("## %s [%s] - %s\n", pm.Title, pm.Severity, pm.Status))
 		sb.WriteString(fmt.Sprintf("ID: %s | Created: %s\n", pm.ID, pm.CreatedAt.Format("2006-01-02")))
 		sb.WriteString(fmt.Sprintf("What happened: %s\n", truncate(pm.WhatHappened, 200)))
@@ -234,7 +235,7 @@ func (s *MCPServer) toolResolvePostmortem(id any, args map[string]interface{}) j
 }
 
 // toolPostmortemStats returns aggregated postmortem statistics.
-func (s *MCPServer) toolPostmortemStats(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolPostmortemStats(id any, _ map[string]interface{}) jsonRPCResponse {
 	stats, err := s.butler.memory.GetPostmortemStats()
 	if err != nil {
 		return s.toolError(id, err.Error())

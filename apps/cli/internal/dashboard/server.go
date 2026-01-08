@@ -2,6 +2,7 @@
 package dashboard
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -128,7 +129,8 @@ func (s *Server) Start(openBrowser bool) error {
 	mux.Handle("/", spaHandler(embeddedAssets))
 
 	// Find available port
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	lc := net.ListenConfig{}
+	listener, err := lc.Listen(context.Background(), "tcp", fmt.Sprintf(":%d", s.port))
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)
 	}
@@ -158,7 +160,7 @@ func (s *Server) Start(openBrowser bool) error {
 func (s *Server) configureCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		
+
 		// Check if origin is allowed
 		allowed := false
 		for _, allowedOrigin := range s.allowedOrigins {
@@ -208,11 +210,11 @@ func openURL(url string) {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("open", url)
+		cmd = exec.CommandContext(context.Background(), "open", url)
 	case "linux":
-		cmd = exec.Command("xdg-open", url)
+		cmd = exec.CommandContext(context.Background(), "xdg-open", url)
 	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
+		cmd = exec.CommandContext(context.Background(), "cmd", "/c", "start", url)
 	default:
 		return
 	}

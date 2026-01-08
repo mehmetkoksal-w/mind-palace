@@ -30,7 +30,8 @@ func EstimateTokens(text string) int {
 	wordLen := 0
 
 	for _, r := range text {
-		if unicode.IsSpace(r) {
+		switch {
+		case unicode.IsSpace(r):
 			if inWord {
 				// End of word - estimate tokens for it
 				tokens += estimateWordTokens(wordLen)
@@ -42,14 +43,14 @@ func EstimateTokens(text string) int {
 			if r == '\n' {
 				tokens++ // Newlines are usually separate tokens
 			}
-		} else if unicode.IsPunct(r) || unicode.IsSymbol(r) {
+		case unicode.IsPunct(r) || unicode.IsSymbol(r):
 			if inWord {
 				tokens += estimateWordTokens(wordLen)
 				inWord = false
 				wordLen = 0
 			}
 			tokens++ // Punctuation/symbols are usually individual tokens
-		} else {
+		default:
 			inWord = true
 			wordLen++
 		}

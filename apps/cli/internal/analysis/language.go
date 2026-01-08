@@ -117,6 +117,7 @@ var filenameToLanguage = map[string]Language{
 	"WORKSPACE.bazel": LangPython,
 }
 
+// DetectLanguage returns the programming language of a file based on its extension or filename.
 func DetectLanguage(filePath string) Language {
 	// First check extension
 	ext := strings.ToLower(filepath.Ext(filePath))
@@ -138,10 +139,12 @@ func DetectLanguage(filePath string) Language {
 	return LangUnknown
 }
 
+// IsAnalyzable returns true if the file's language is supported for analysis.
 func IsAnalyzable(filePath string) bool {
 	return DetectLanguage(filePath) != LangUnknown
 }
 
+// SupportedExtensions returns a list of all file extensions supported by the system.
 func SupportedExtensions() []string {
 	exts := make([]string, 0, len(extensionToLanguage))
 	for ext := range extensionToLanguage {

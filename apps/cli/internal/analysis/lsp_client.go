@@ -219,7 +219,7 @@ func (c *LSPClient) Close() error {
 }
 
 // initialize sends the LSP initialize request
-func (c *LSPClient) initialize(languageID string) error {
+func (c *LSPClient) initialize(_ string) error {
 	absPath, err := filepath.Abs(c.rootPath)
 	if err != nil {
 		absPath = c.rootPath
@@ -295,17 +295,20 @@ func (c *LSPClient) DocumentSymbols(uri, content string) ([]LSPDocumentSymbol, e
 // openDocument notifies the server about an opened file
 func (c *LSPClient) openDocument(uri, content string) error {
 	// Extract language ID from URI (basic heuristic)
-	languageID := "plaintext"
-	if strings.HasSuffix(uri, ".go") {
+	var languageID string
+	switch {
+	case strings.HasSuffix(uri, ".go"):
 		languageID = "go"
-	} else if strings.HasSuffix(uri, ".ts") || strings.HasSuffix(uri, ".tsx") {
+	case strings.HasSuffix(uri, ".ts") || strings.HasSuffix(uri, ".tsx"):
 		languageID = "typescript"
-	} else if strings.HasSuffix(uri, ".js") || strings.HasSuffix(uri, ".jsx") {
+	case strings.HasSuffix(uri, ".js") || strings.HasSuffix(uri, ".jsx"):
 		languageID = "javascript"
-	} else if strings.HasSuffix(uri, ".py") {
+	case strings.HasSuffix(uri, ".py"):
 		languageID = "python"
-	} else if strings.HasSuffix(uri, ".rs") {
+	case strings.HasSuffix(uri, ".rs"):
 		languageID = "rust"
+	default:
+		languageID = "plaintext"
 	}
 
 	params := map[string]interface{}{

@@ -1,6 +1,7 @@
 package corridor
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -48,19 +49,19 @@ CREATE TABLE IF NOT EXISTS links (
     last_accessed TEXT
 );
 `
-	_, err := tx.Exec(schema)
+	_, err := tx.ExecContext(context.Background(), schema)
 	return err
 }
 
 func initCorridorDB(db *sql.DB) error {
 	// Create schema version table first
-	if _, err := db.Exec(corridorSchemaVersionTable); err != nil {
+	if _, err := db.ExecContext(context.Background(), corridorSchemaVersionTable); err != nil {
 		return fmt.Errorf("create schema_version table: %w", err)
 	}
 
 	// Get current schema version
 	var currentVersion int
-	row := db.QueryRow("SELECT COALESCE(MAX(version), -1) FROM schema_version")
+	row := db.QueryRowContext(context.Background(), "SELECT COALESCE(MAX(version), -1) FROM schema_version")
 	if err := row.Scan(&currentVersion); err != nil {
 		return fmt.Errorf("get schema version: %w", err)
 	}
@@ -77,7 +78,7 @@ func initCorridorDB(db *sql.DB) error {
 
 // runCorridorMigration executes a single migration in a transaction
 func runCorridorMigration(db *sql.DB, version int) error {
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
@@ -90,7 +91,7 @@ func runCorridorMigration(db *sql.DB, version int) error {
 
 	// Record the migration
 	now := time.Now().UTC().Format(time.RFC3339)
-	if _, err := tx.Exec("INSERT INTO schema_version (version, applied_at) VALUES (?, ?)", version, now); err != nil {
+	if _, err := tx.ExecContext(context.Background(), "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)", version, now); err != nil {
 		return fmt.Errorf("record migration: %w", err)
 	}
 
@@ -100,7 +101,7 @@ func runCorridorMigration(db *sql.DB, version int) error {
 // GetCorridorSchemaVersion returns the current corridor schema version
 func GetCorridorSchemaVersion(db *sql.DB) (int, error) {
 	var version int
-	row := db.QueryRow("SELECT COALESCE(MAX(version), -1) FROM schema_version")
+	row := db.QueryRowContext(context.Background(), "SELECT COALESCE(MAX(version), -1) FROM schema_version")
 	err := row.Scan(&version)
 	return version, err
 }

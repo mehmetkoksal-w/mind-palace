@@ -339,7 +339,7 @@ func TestDefaultLintCommand(t *testing.T) {
 		{[]string{"java"}, "gradle check || mvn verify"},
 		{[]string{"csharp"}, "dotnet format --verify-no-changes"},
 		{[]string{"swift"}, "swiftlint"},
-		{[]string{"php"}, "composer lint || ./vendor/bin/phpstan analyse"},
+		{[]string{"php"}, "composer lint || ./vendor/bin/phpstan analyze"},
 		{[]string{"unknown"}, "echo lint not configured"},
 		{[]string{}, "echo lint not configured"},
 	}

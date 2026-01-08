@@ -400,7 +400,7 @@ func (p *GoParser) extractPrecedingComment(node *sitter.Node, content []byte) st
 }
 
 func isExported(name string) bool {
-	if len(name) == 0 {
+	if name == "" {
 		return false
 	}
 	return unicode.IsUpper(rune(name[0]))

@@ -160,17 +160,19 @@ func (s *Server) handleConversations(w http.ResponseWriter, r *http.Request) {
 	if timeline == "true" || timeline == "1" {
 		total, _ := mem.CountConversations()
 		timelineItems := make([]ConversationTimelineItem, len(conversations))
-		for i, c := range conversations {
+		for i := range conversations {
+			c := &conversations[i]
 			duration := ""
 			if len(c.Messages) > 1 {
 				first := c.Messages[0].Timestamp
 				last := c.Messages[len(c.Messages)-1].Timestamp
 				d := last.Sub(first)
-				if d.Hours() >= 1 {
+				switch {
+				case d.Hours() >= 1:
 					duration = strconv.Itoa(int(d.Hours())) + "h"
-				} else if d.Minutes() >= 1 {
+				case d.Minutes() >= 1:
 					duration = strconv.Itoa(int(d.Minutes())) + "m"
-				} else {
+				default:
 					duration = strconv.Itoa(int(d.Seconds())) + "s"
 				}
 			}
@@ -275,11 +277,11 @@ func (s *Server) handleConversationDetail(w http.ResponseWriter, r *http.Request
 // handleConversationTimeline returns a timeline view of the conversation.
 func (s *Server) handleConversationTimeline(w http.ResponseWriter, conv *memory.Conversation, mem *memory.Memory) {
 	type TimelineEvent struct {
-		Timestamp string `json:"timestamp"`
-		Type      string `json:"type"`      // "message", "extraction", "summary"
-		Role      string `json:"role,omitempty"`
-		Content   string `json:"content"`
-		RecordID  string `json:"recordId,omitempty"`
+		Timestamp  string `json:"timestamp"`
+		Type       string `json:"type"` // "message", "extraction", "summary"
+		Role       string `json:"role,omitempty"`
+		Content    string `json:"content"`
+		RecordID   string `json:"recordId,omitempty"`
 		RecordKind string `json:"recordKind,omitempty"`
 	}
 
@@ -479,7 +481,8 @@ func (s *Server) handleDecisionTimeline(w http.ResponseWriter, r *http.Request) 
 	}
 
 	timeline := make([]TimelineDecision, len(decisions))
-	for i, d := range decisions {
+	for i := range decisions {
+		d := &decisions[i]
 		color := "gray" // unknown
 		switch d.Outcome {
 		case "success":
@@ -490,7 +493,7 @@ func (s *Server) handleDecisionTimeline(w http.ResponseWriter, r *http.Request) 
 			color = "yellow"
 		}
 		timeline[i] = TimelineDecision{
-			Decision:     d,
+			Decision:     *d,
 			OutcomeColor: color,
 		}
 	}
@@ -532,11 +535,12 @@ func (s *Server) handleLinks(w http.ResponseWriter, r *http.Request) {
 	var links []memory.Link
 	var err error
 
-	if recordID != "" {
+	switch {
+	case recordID != "":
 		links, err = mem.GetAllLinksFor(recordID)
-	} else if relation != "" {
+	case relation != "":
 		links, err = mem.GetLinksByRelation(relation, limit)
-	} else {
+	default:
 		// Return stale links by default if no filter
 		links, err = mem.GetStaleLinks()
 	}

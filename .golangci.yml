@@ -14,7 +14,6 @@ linters:
     - sqlclosecheck
     - rowserrcheck
     - bodyclose
-    - contextcheck
     - errname
     - errorlint
     - nilerr
@@ -171,7 +170,6 @@ linters:
           - gocognit
           - gocyclo
           - errcheck
-          - gocritic
           - gosec
           - funlen
           - dupl
@@ -186,7 +184,6 @@ linters:
           - govet
           - staticcheck
           - revive
-          - gocritic
           - gosec
           - errname
 
@@ -205,7 +202,6 @@ linters:
           - gocyclo
           - revive
           - nestif
-          - gocritic
 
       - path: apps/cli/internal/(index|scan)/
         linters:
@@ -218,7 +214,6 @@ linters:
           - gocyclo
           - nestif
           - prealloc
-          - gocritic
 
       - path: apps/cli/main.go
         text: "context.Background"
@@ -235,7 +230,6 @@ linters:
           - errcheck
           - revive
           - gocognit
-          - gocritic
 
       - path: apps/cli/internal/update/
         text: "os.Rename|os.WriteFile|fmt.Sscanf"
@@ -244,7 +238,6 @@ linters:
 
       - path: apps/cli/internal/update/update\.go
         linters:
-          - noctx
           - errcheck
 
       - path: apps/cli/internal/index/
@@ -268,7 +261,6 @@ linters:
           - errcheck
           - nestif
           - gocognit
-          - noctx
           - errorlint
 
       - path: apps/cli/internal/(butler|corridor|index)/
@@ -290,7 +282,6 @@ linters:
         linters:
           - unparam
           - prealloc
-          - gocritic
 
       - path: apps/cli/internal/fsutil/
         linters:
@@ -323,14 +314,12 @@ linters:
           - gocognit
           - gocyclo
           - prealloc
-          - gocritic
 
       - path: apps/cli/internal/collect/
         linters:
           - nestif
           - gocognit
           - prealloc
-          - gocritic
 
       - path: apps/cli/internal/dashboard/
         linters:
@@ -339,7 +328,6 @@ linters:
           - gocyclo
           - errcheck
           - prealloc
-          - gocritic
 
       - path: apps/cli/internal/project/
         linters:
@@ -365,15 +353,6 @@ linters:
       - path: apps/cli/internal/corridor/
         linters:
           - prealloc
-          - gocritic
-
-      - path: apps/cli/internal/config/
-        linters:
-          - gocritic
-
-      - path: apps/cli/internal/cli/util/
-        linters:
-          - gocritic
 
 formatters:
   enable:

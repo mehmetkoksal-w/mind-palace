@@ -23,6 +23,7 @@ import (
 //    - Currently: Dart, CUE
 //    - Good for simple languages or when no better option exists
 
+// Parser is the interface implemented by all language-specific parsers.
 type Parser interface {
 	Parse(content []byte, filePath string) (*FileAnalysis, error)
 	Language() Language
@@ -31,6 +32,7 @@ type Parser interface {
 // ParserPriority defines the priority order of parsers
 type ParserPriority int
 
+// Priorities for parser selection.
 const (
 	PriorityLSP        ParserPriority = 1
 	PriorityTreeSitter ParserPriority = 2
@@ -49,6 +51,7 @@ type parserEntry struct {
 	priority ParserPriority
 }
 
+// ParserRegistry manages all registered parsers and their priorities.
 type ParserRegistry struct {
 	parsers   map[Language][]parserEntry
 	rootPath  string
@@ -56,6 +59,7 @@ type ParserRegistry struct {
 	debugMode bool
 }
 
+// NewParserRegistry creates a new registry with default parsers.
 func NewParserRegistry() *ParserRegistry {
 	reg := &ParserRegistry{
 		parsers:   make(map[Language][]parserEntry),
@@ -140,6 +144,7 @@ func (r *ParserRegistry) registerDefaults() {
 	r.RegisterWithPriority(NewCUEParser(), PriorityRegex)
 }
 
+// Register adds a parser to the registry with default Tree-sitter priority.
 func (r *ParserRegistry) Register(p Parser) {
 	r.RegisterWithPriority(p, PriorityTreeSitter)
 }
@@ -164,6 +169,7 @@ func (r *ParserRegistry) RegisterWithPriority(p Parser, priority ParserPriority)
 	r.parsers[lang] = entries
 }
 
+// GetParser returns the highest priority parser available for the given language.
 func (r *ParserRegistry) GetParser(lang Language) (Parser, bool) {
 	entries, ok := r.parsers[lang]
 	if !ok || len(entries) == 0 {
@@ -213,6 +219,7 @@ func (r *ParserRegistry) getPriorityName(priority ParserPriority) string {
 	}
 }
 
+// Parse analyzes the content of a file and returns the symbol extraction results.
 func (r *ParserRegistry) Parse(content []byte, filePath string) (*FileAnalysis, error) {
 	lang := DetectLanguage(filePath)
 	if lang == LangUnknown {
@@ -264,6 +271,7 @@ func init() {
 	defaultRegistry = NewParserRegistryWithPath("")
 }
 
+// Analyze is a convenience function that uses the default registry to analyze a file.
 func Analyze(content []byte, filePath string) (*FileAnalysis, error) {
 	// Update root path if analyzing a real file
 	if defaultRegistry.rootPath == "" && filePath != "" {

@@ -173,7 +173,8 @@ func Run(root string, diffRange string, opts Options) (Result, error) {
 			result.CorridorWarnings = append(result.CorridorWarnings,
 				fmt.Sprintf("corridor fetch failed: %v", err))
 		} else {
-			for _, ctx := range corridorResult.Corridors {
+			for i := range corridorResult.Corridors {
+				ctx := &corridorResult.Corridors[i]
 				info := model.CorridorInfo{
 					Name:      ctx.Name,
 					FromCache: ctx.FromCache,
@@ -197,8 +198,8 @@ func Run(root string, diffRange string, opts Options) (Result, error) {
 					}
 				}
 
-				for _, room := range ctx.Rooms {
-					info.Rooms = append(info.Rooms, room.Name)
+				for j := range ctx.Rooms {
+					info.Rooms = append(info.Rooms, ctx.Rooms[j].Name)
 				}
 
 				cp.Corridors = append(cp.Corridors, info)

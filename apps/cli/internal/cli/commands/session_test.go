@@ -166,7 +166,7 @@ func TestExecuteSessionWorkflow(t *testing.T) {
 
 	// Create memory.db file
 	memDir := filepath.Join(root, ".palace", "index")
-	os.MkdirAll(memDir, 0755)
+	os.MkdirAll(memDir, 0o755)
 
 	// Start a session
 	err = ExecuteSessionStart(SessionStartOptions{

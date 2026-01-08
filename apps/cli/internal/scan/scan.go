@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -58,7 +59,7 @@ func RunIncremental(root string) (index.IncrementalScanSummary, error) {
 	if len(changes) == 0 {
 		// Count unchanged files
 		var count int
-		if err := db.QueryRow("SELECT COUNT(*) FROM files").Scan(&count); err != nil {
+		if err := db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files").Scan(&count); err != nil {
 			return index.IncrementalScanSummary{}, fmt.Errorf("count files: %w", err)
 		}
 		return index.IncrementalScanSummary{
@@ -68,7 +69,7 @@ func RunIncremental(root string) (index.IncrementalScanSummary, error) {
 
 	// Count files before changes to calculate unchanged correctly
 	var initialCount int
-	if err := db.QueryRow("SELECT COUNT(*) FROM files").Scan(&initialCount); err != nil {
+	if err := db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files").Scan(&initialCount); err != nil {
 		return index.IncrementalScanSummary{}, fmt.Errorf("count initial files: %w", err)
 	}
 

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/corridor"
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
 )
 
 // toolCorridorLearnings retrieves personal learnings from the global corridor.
@@ -39,7 +40,8 @@ func (s *MCPServer) toolCorridorLearnings(id any, args map[string]interface{}) j
 	if len(learnings) == 0 {
 		output.WriteString("*No personal learnings found.*\n")
 	} else {
-		for _, l := range learnings {
+		for i := range learnings {
+			l := &learnings[i]
 			fmt.Fprintf(&output, "- **[%s]** %s (confidence: %.1f)\n", l.ID, l.Content, l.Confidence)
 			if l.OriginWorkspace != "" {
 				fmt.Fprintf(&output, "  - Origin: %s\n", l.OriginWorkspace)
@@ -58,7 +60,7 @@ func (s *MCPServer) toolCorridorLearnings(id any, args map[string]interface{}) j
 }
 
 // toolCorridorLinks retrieves linked workspaces.
-func (s *MCPServer) toolCorridorLinks(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolCorridorLinks(id any, _ map[string]interface{}) jsonRPCResponse {
 	gc, err := corridor.OpenGlobal()
 	if err != nil {
 		return s.toolError(id, "open corridor: "+err.Error())
@@ -98,7 +100,7 @@ func (s *MCPServer) toolCorridorLinks(id any, args map[string]interface{}) jsonR
 }
 
 // toolCorridorStats retrieves corridor statistics.
-func (s *MCPServer) toolCorridorStats(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolCorridorStats(id any, _ map[string]interface{}) jsonRPCResponse {
 	gc, err := corridor.OpenGlobal()
 	if err != nil {
 		return s.toolError(id, "open corridor: "+err.Error())
@@ -147,24 +149,26 @@ func (s *MCPServer) toolCorridorPromote(id any, args map[string]interface{}) jso
 	}
 
 	var found bool
-	var content string
-	for _, l := range learnings {
-		if l.ID == learningID {
+	var targetLearning memory.Learning
+	for i := range learnings {
+		if learnings[i].ID == learningID {
 			found = true
-			content = l.Content
-
-			// Promote to personal corridor
-			gc, err := corridor.OpenGlobal()
-			if err != nil {
-				return s.toolError(id, "open corridor: "+err.Error())
-			}
-			defer gc.Close()
-
-			workspaceName := s.butler.GetWorkspaceName()
-			if err := gc.PromoteFromWorkspace(workspaceName, l); err != nil {
-				return s.toolError(id, "promote: "+err.Error())
-			}
+			targetLearning = learnings[i]
 			break
+		}
+	}
+
+	if found {
+		// Promote to personal corridor
+		gc, err := corridor.OpenGlobal()
+		if err != nil {
+			return s.toolError(id, "open corridor: "+err.Error())
+		}
+		defer gc.Close()
+
+		workspaceName := s.butler.GetWorkspaceName()
+		if err := gc.PromoteFromWorkspace(workspaceName, targetLearning); err != nil {
+			return s.toolError(id, "promote: "+err.Error())
 		}
 	}
 
@@ -175,7 +179,7 @@ func (s *MCPServer) toolCorridorPromote(id any, args map[string]interface{}) jso
 	var output strings.Builder
 	output.WriteString("# Learning Promoted\n\n")
 	fmt.Fprintf(&output, "**ID:** %s\n", learningID)
-	fmt.Fprintf(&output, "**Content:** %s\n", content)
+	fmt.Fprintf(&output, "**Content:** %s\n", targetLearning.Content)
 	fmt.Fprintf(&output, "**Origin:** %s\n\n", s.butler.GetWorkspaceName())
 	output.WriteString("This learning is now available in your personal corridor across all workspaces.")
 

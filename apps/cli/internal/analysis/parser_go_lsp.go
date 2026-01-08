@@ -89,8 +89,8 @@ func (p *GoLSPParser) Parse(content []byte, filePath string) (*FileAnalysis, err
 func (p *GoLSPParser) convertSymbols(lspSymbols []LSPDocumentSymbol, content []byte) []Symbol {
 	var symbols []Symbol
 
-	for _, lspSym := range lspSymbols {
-		symbol := p.convertSymbol(lspSym, content)
+	for i := range lspSymbols {
+		symbol := p.convertSymbol(lspSymbols[i], content)
 		symbols = append(symbols, symbol)
 	}
 
@@ -114,8 +114,8 @@ func (p *GoLSPParser) convertSymbol(lspSym LSPDocumentSymbol, content []byte) Sy
 	// Convert children recursively
 	if len(lspSym.Children) > 0 {
 		symbol.Children = make([]Symbol, len(lspSym.Children))
-		for i, child := range lspSym.Children {
-			symbol.Children[i] = p.convertSymbol(child, content)
+		for i := range lspSym.Children {
+			symbol.Children[i] = p.convertSymbol(lspSym.Children[i], content)
 		}
 	}
 

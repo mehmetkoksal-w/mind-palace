@@ -3,6 +3,7 @@
 package memory
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -86,7 +87,7 @@ func Open(root string) (*Memory, error) {
 		"PRAGMA busy_timeout=5000",
 	}
 	for _, pragma := range pragmas {
-		if _, err := db.Exec(pragma); err != nil {
+		if _, err := db.ExecContext(context.Background(), pragma); err != nil {
 			db.Close()
 			return nil, fmt.Errorf("set pragma: %w", err)
 		}
@@ -138,20 +139,20 @@ func (m *Memory) CountSessions(activeOnly bool) (int, error) {
 		query += " WHERE state = 'active'"
 	}
 	var count int
-	err := m.db.QueryRow(query).Scan(&count)
+	err := m.db.QueryRowContext(context.Background(), query).Scan(&count)
 	return count, err
 }
 
 // CountLearnings returns the total number of learnings.
 func (m *Memory) CountLearnings() (int, error) {
 	var count int
-	err := m.db.QueryRow("SELECT COUNT(*) FROM learnings").Scan(&count)
+	err := m.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM learnings").Scan(&count)
 	return count, err
 }
 
 // CountFilesTracked returns the number of unique files with recorded activity.
 func (m *Memory) CountFilesTracked() (int, error) {
 	var count int
-	err := m.db.QueryRow("SELECT COUNT(DISTINCT path) FROM file_intel").Scan(&count)
+	err := m.db.QueryRowContext(context.Background(), "SELECT COUNT(DISTINCT path) FROM file_intel").Scan(&count)
 	return count, err
 }

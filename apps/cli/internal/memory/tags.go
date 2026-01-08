@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -8,14 +9,14 @@ import (
 // SetTags sets the tags for a record, replacing any existing tags.
 func (m *Memory) SetTags(recordID, recordKind string, tags []string) error {
 	// Start a transaction
-	tx, err := m.db.Begin()
+	tx, err := m.db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
 	// Delete existing tags
-	_, err = tx.Exec(`DELETE FROM record_tags WHERE record_id = ? AND record_kind = ?`, recordID, recordKind)
+	_, err = tx.ExecContext(context.Background(), `DELETE FROM record_tags WHERE record_id = ? AND record_kind = ?`, recordID, recordKind)
 	if err != nil {
 		return fmt.Errorf("delete existing tags: %w", err)
 	}
@@ -26,7 +27,7 @@ func (m *Memory) SetTags(recordID, recordKind string, tags []string) error {
 		if tag == "" {
 			continue
 		}
-		_, err = tx.Exec(`INSERT OR IGNORE INTO record_tags (record_id, record_kind, tag) VALUES (?, ?, ?)`,
+		_, err = tx.ExecContext(context.Background(), `INSERT OR IGNORE INTO record_tags (record_id, record_kind, tag) VALUES (?, ?, ?)`,
 			recordID, recordKind, tag)
 		if err != nil {
 			return fmt.Errorf("insert tag: %w", err)
@@ -43,7 +44,7 @@ func (m *Memory) AddTag(recordID, recordKind, tag string) error {
 		return fmt.Errorf("tag cannot be empty")
 	}
 
-	_, err := m.db.Exec(`INSERT OR IGNORE INTO record_tags (record_id, record_kind, tag) VALUES (?, ?, ?)`,
+	_, err := m.db.ExecContext(context.Background(), `INSERT OR IGNORE INTO record_tags (record_id, record_kind, tag) VALUES (?, ?, ?)`,
 		recordID, recordKind, tag)
 	if err != nil {
 		return fmt.Errorf("insert tag: %w", err)
@@ -54,14 +55,14 @@ func (m *Memory) AddTag(recordID, recordKind, tag string) error {
 // RemoveTag removes a single tag from a record.
 func (m *Memory) RemoveTag(recordID, recordKind, tag string) error {
 	tag = normalizeTag(tag)
-	_, err := m.db.Exec(`DELETE FROM record_tags WHERE record_id = ? AND record_kind = ? AND tag = ?`,
+	_, err := m.db.ExecContext(context.Background(), `DELETE FROM record_tags WHERE record_id = ? AND record_kind = ? AND tag = ?`,
 		recordID, recordKind, tag)
 	return err
 }
 
 // GetTags returns all tags for a record.
 func (m *Memory) GetTags(recordID, recordKind string) ([]string, error) {
-	rows, err := m.db.Query(`SELECT tag FROM record_tags WHERE record_id = ? AND record_kind = ? ORDER BY tag`,
+	rows, err := m.db.QueryContext(context.Background(), `SELECT tag FROM record_tags WHERE record_id = ? AND record_kind = ? ORDER BY tag`,
 		recordID, recordKind)
 	if err != nil {
 		return nil, fmt.Errorf("query tags: %w", err)
@@ -91,7 +92,7 @@ func (m *Memory) GetRecordsByTag(tag, recordKind string) ([]string, error) {
 	}
 	query += ` ORDER BY record_id`
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query records by tag: %w", err)
 	}
@@ -119,7 +120,7 @@ func (m *Memory) GetAllTags(recordKind string) ([]string, error) {
 	}
 	query += ` ORDER BY tag`
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query all tags: %w", err)
 	}
@@ -151,7 +152,7 @@ func (m *Memory) GetTagCounts(recordKind string, limit int) (map[string]int, err
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query tag counts: %w", err)
 	}
@@ -216,7 +217,7 @@ func (m *Memory) SearchByTags(tags []string, recordKind string, limit int) ([]st
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("search by tags: %w", err)
 	}
@@ -235,7 +236,7 @@ func (m *Memory) SearchByTags(tags []string, recordKind string, limit int) ([]st
 
 // DeleteTagsForRecord removes all tags for a record.
 func (m *Memory) DeleteTagsForRecord(recordID, recordKind string) error {
-	_, err := m.db.Exec(`DELETE FROM record_tags WHERE record_id = ? AND record_kind = ?`, recordID, recordKind)
+	_, err := m.db.ExecContext(context.Background(), `DELETE FROM record_tags WHERE record_id = ? AND record_kind = ?`, recordID, recordKind)
 	return err
 }
 

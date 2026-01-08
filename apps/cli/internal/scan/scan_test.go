@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -377,7 +378,7 @@ func TestRunIncrementalWithMissingTable(t *testing.T) {
 	// 2. Corrupt DB by dropping table
 	dbPath := filepath.Join(tmpDir, ".palace", "index", "palace.db")
 	db, _ := index.Open(dbPath)
-	db.Exec("DROP TABLE files")
+	db.ExecContext(context.Background(), "DROP TABLE files")
 	db.Close()
 
 	// 3. Increment should fail

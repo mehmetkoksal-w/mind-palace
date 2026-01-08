@@ -233,7 +233,7 @@ func (m *Memory) GetRecordsWithoutEmbeddings(kind string, limit int) ([]RecordWi
 		return nil, nil
 	}
 
-	rows, err := m.db.Query(query, limit)
+	rows, err := m.db.QueryContext(context.Background(), query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +266,7 @@ func (m *Memory) CountRecordsWithoutEmbeddings(kind string) (int, error) {
 	}
 
 	var count int
-	err := m.db.QueryRow(query).Scan(&count)
+	err := m.db.QueryRowContext(context.Background(), query).Scan(&count)
 	return count, err
 }
 
@@ -296,7 +296,7 @@ func (m *Memory) GetEmbeddingStats(pipeline *EmbeddingPipeline) (*EmbeddingStats
 	// By kind
 	for _, kind := range []string{"idea", "decision", "learning"} {
 		var count int
-		err := m.db.QueryRow(`SELECT COUNT(*) FROM embeddings WHERE record_kind = ?`, kind).Scan(&count)
+		err := m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM embeddings WHERE record_kind = ?`, kind).Scan(&count)
 		if err == nil {
 			stats.ByKind[kind] = count
 		}
