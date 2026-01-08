@@ -343,6 +343,27 @@ issues:
       linters:
         - errcheck
 
+    # Memory package (rows.Err checked at scan level, not query level)
+    - path: apps/cli/internal/memory/
+      linters:
+        - rowserrcheck
+
+    # Unused parameters in parsers/index (intentional for interface compatibility)
+    - path: apps/cli/internal/(analysis|index)/
+      linters:
+        - unparam
+
+    # Test files - allow wasted assigns and staticcheck (test setup)
+    - path: _test\.go
+      linters:
+        - wastedassign
+        - staticcheck
+
+    # FSUtil - variable declared for readability
+    - path: apps/cli/internal/fsutil/
+      linters:
+        - wastedassign
+
     # Allow some magic numbers in tests
     - path: _test\.go
       text: "mnd: Magic number"
