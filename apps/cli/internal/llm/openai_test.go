@@ -138,9 +138,9 @@ func TestOpenAICompletion(t *testing.T) {
 
 			// Create client pointing to mock server
 			client := NewOpenAIClient("test-api-key", "gpt-4o-mini")
-			_ = openAIBaseURL // Base URL is fixed; we use transport replacement instead
 
-			// We need to temporarily replace the client's http.Client to use our test server
+			// Replace the client's http.Client to redirect requests to our test server
+			// (openAIBaseURL is a package constant, so we use transport replacement)
 			client.client = &http.Client{
 				Transport: &replaceURLTransport{
 					base:   server.URL,
