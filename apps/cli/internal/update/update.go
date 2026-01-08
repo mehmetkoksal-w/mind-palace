@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -175,7 +176,7 @@ func Update(currentVersion string, progressFn func(string)) error {
 func fetchLatestRelease() (*Release, error) {
 	url := fmt.Sprintf(releasesAPIURL, GitHubOwner, GitHubRepo)
 
-	req, err := http.NewRequest("GET", url, http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +326,7 @@ func extractFromZip(archivePath, binaryName string) (string, error) {
 
 func downloadToTemp(url string) (string, error) {
 	client := &http.Client{Timeout: downloadTimeout}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		return "", err
 	}

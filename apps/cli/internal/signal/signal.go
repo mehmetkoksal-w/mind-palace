@@ -1,9 +1,8 @@
 package signal
 
-import "context"
-
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"

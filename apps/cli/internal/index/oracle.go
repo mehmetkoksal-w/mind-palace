@@ -752,7 +752,8 @@ func GetDependencyGraph(db *sql.DB, rootFiles []string) ([]DependencyNode, error
 	visited := make(map[string]bool)
 	var nodes []DependencyNode
 
-	var visit func(file string) error = func(file string) error {
+	var visit func(file string) error
+	visit = func(file string) error {
 		if visited[file] {
 			return nil
 		}

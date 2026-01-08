@@ -1,8 +1,7 @@
 package signal
 
-import "context"
-
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"

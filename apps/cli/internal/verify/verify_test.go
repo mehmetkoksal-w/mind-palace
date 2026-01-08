@@ -1,8 +1,7 @@
 package verify
 
-import "context"
-
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"

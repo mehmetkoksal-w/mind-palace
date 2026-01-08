@@ -174,10 +174,10 @@ func (s *MCPServer) toolExploreContext(id any, args map[string]interface{}) json
 		output.WriteString("\n")
 	}
 
-	if len(result.ContextResult.Symbols) > 0 {
+	if len(result.Symbols) > 0 {
 		output.WriteString("## Relevant Symbols\n\n")
-		for i := range result.ContextResult.Symbols {
-			sym := &result.ContextResult.Symbols[i]
+		for i := range result.Symbols {
+			sym := &result.Symbols[i]
 			exportMark := ""
 			if sym.Exported {
 				exportMark = " (exported)"
