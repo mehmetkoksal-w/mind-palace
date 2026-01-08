@@ -184,8 +184,8 @@ func (r *ParserRegistry) GetParser(lang Language) (Parser, bool) {
 		}
 
 		// Check if LSP parser is available
-		lspParser, ok := entry.parser.(LSPParser) //nolint:nestif // acceptable complexity for parser selection logic
-		if ok {
+		lspParser, ok := entry.parser.(LSPParser)
+		if ok { //nolint:nestif // acceptable complexity for parser selection logic
 			if !lspParser.IsAvailable() {
 				if r.debugMode {
 					fmt.Printf("[DEBUG] LSP parser for %s not available, trying fallback\n", lang)

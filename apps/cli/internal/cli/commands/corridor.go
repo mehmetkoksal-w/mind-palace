@@ -32,7 +32,7 @@ func RunCorridor(args []string) error {
 			"  personal  Show personal corridor learnings\n" +
 			"  promote   Promote a learning to personal corridor\n" +
 			"  search    Search across all corridors\n\n" +
-			"Run 'palace corridor <subcommand> --help' for subcommand help.")
+			"run 'palace corridor <subcommand> --help' for subcommand help")
 	}
 
 	switch args[0] {
