@@ -38,7 +38,7 @@ func TestExecuteCheckSuccess(t *testing.T) {
 	}
 
 	goFile := filepath.Join(root, "main.go")
-	os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0644)
+	os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0o644)
 
 	err = ExecuteScan(ScanOptions{Root: root, Full: true})
 	if err != nil {
@@ -62,7 +62,7 @@ func TestExecuteCheckStrictMode(t *testing.T) {
 	}
 
 	goFile := filepath.Join(root, "main.go")
-	os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0644)
+	os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0o644)
 
 	err = ExecuteScan(ScanOptions{Root: root, Full: true})
 	if err != nil {

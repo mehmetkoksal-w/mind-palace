@@ -1,6 +1,7 @@
 package index
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"path/filepath"
@@ -184,9 +185,10 @@ func GetContextForTaskWithOptions(db *sql.DB, query string, limit int, opts *Con
 
 	// Filter symbols based on exclusion patterns
 	var filteredSymbols []SymbolInfo
-	for _, sym := range symbols {
+	for i := range symbols {
+		sym := &symbols[i]
 		if !shouldExcludeFile(sym.FilePath, excludePatterns) {
-			filteredSymbols = append(filteredSymbols, sym)
+			filteredSymbols = append(filteredSymbols, *sym)
 			if len(filteredSymbols) >= limit {
 				break
 			}
@@ -196,8 +198,8 @@ func GetContextForTaskWithOptions(db *sql.DB, query string, limit int, opts *Con
 
 	// Get files containing matched symbols
 	fileSet := make(map[string]bool)
-	for _, sym := range filteredSymbols {
-		fileSet[sym.FilePath] = true
+	for i := range filteredSymbols {
+		fileSet[filteredSymbols[i].FilePath] = true
 	}
 
 	// Also search content for query terms
@@ -302,8 +304,8 @@ func applyTokenBudget(result *ContextResult, budget int) *ContextResult {
 
 	// Estimate current token usage
 	symbolTokens := 0
-	for _, sym := range result.Symbols {
-		symbolTokens += estimateSymbolTokens(sym)
+	for i := range result.Symbols {
+		symbolTokens += estimateSymbolTokens(result.Symbols[i])
 	}
 
 	fileTokens := 0
@@ -340,15 +342,15 @@ func applyTokenBudget(result *ContextResult, budget int) *ContextResult {
 	truncatedFiles := truncateFileContexts(result.Files, fileBudget)
 	result.Files = truncatedFiles
 	fileTokens = 0
-	for _, fc := range result.Files {
-		fileTokens += estimateFileContextTokens(fc)
+	for i := range result.Files {
+		fileTokens += estimateFileContextTokens(result.Files[i])
 	}
 
 	// Truncate symbols
 	result.Symbols = TruncateSymbols(result.Symbols, symbolBudget)
 	symbolTokens = 0
-	for _, sym := range result.Symbols {
-		symbolTokens += estimateSymbolTokens(sym)
+	for i := range result.Symbols {
+		symbolTokens += estimateSymbolTokens(result.Symbols[i])
 	}
 
 	// Truncate imports
@@ -390,8 +392,8 @@ func estimateFileContextTokens(fc FileContext) int {
 	if fc.Snippet != "" {
 		tokens += EstimateTokens(fc.Snippet)
 	}
-	for _, sym := range fc.Symbols {
-		tokens += estimateSymbolTokens(sym)
+	for i := range fc.Symbols {
+		tokens += estimateSymbolTokens(fc.Symbols[i])
 	}
 	return tokens
 }
@@ -440,7 +442,7 @@ func truncateImports(imports []ImportInfo, budget int) []ImportInfo {
 // searchSymbols searches for symbols matching the query
 func searchSymbols(db *sql.DB, query string, limit int) ([]SymbolInfo, error) {
 	escaped := sanitizeFTSQuery(query)
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT s.name, s.kind, s.file_path, s.line_start, s.line_end, s.signature, s.doc_comment, s.exported
 		FROM symbols_fts
 		JOIN symbols s ON s.name = symbols_fts.name AND s.file_path = symbols_fts.file_path
@@ -468,7 +470,7 @@ func searchSymbols(db *sql.DB, query string, limit int) ([]SymbolInfo, error) {
 
 // getSymbolsForFile returns all symbols in a file
 func getSymbolsForFile(db *sql.DB, path string) ([]SymbolInfo, error) {
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT id, name, kind, line_start, line_end, signature, doc_comment, parent_id, exported
 		FROM symbols
 		WHERE file_path = ?
@@ -522,7 +524,7 @@ func getSymbolsForFile(db *sql.DB, path string) ([]SymbolInfo, error) {
 
 // getImportsForFile returns all imports for a file
 func getImportsForFile(db *sql.DB, path string) ([]ImportInfo, error) {
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT source_file, target_file, target_symbol, kind, line
 		FROM relationships
 		WHERE source_file = ? AND kind = 'import'
@@ -552,7 +554,7 @@ func getImportsForFile(db *sql.DB, path string) ([]ImportInfo, error) {
 func searchDecisions(db *sql.DB, query string) ([]Decision, error) {
 	// Simple LIKE search for decisions
 	pattern := "%" + query + "%"
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT id, room, title, summary, rationale, affected_files, created_at
 		FROM decisions
 		WHERE title LIKE ? OR summary LIKE ? OR rationale LIKE ?
@@ -584,7 +586,7 @@ func searchDecisions(db *sql.DB, query string) ([]Decision, error) {
 // getFileLanguage returns the language of a file
 func getFileLanguage(db *sql.DB, path string) (string, error) {
 	var lang string
-	err := db.QueryRow(`SELECT language FROM files WHERE path = ?;`, path).Scan(&lang)
+	err := db.QueryRowContext(context.Background(), `SELECT language FROM files WHERE path = ?;`, path).Scan(&lang)
 	return lang, err
 }
 
@@ -596,7 +598,7 @@ func truncateSnippet(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-// GetImpact returns the impact analysis for a file or symbol
+// ImpactResult contains the impact analysis for a file or symbol.
 type ImpactResult struct {
 	Target       string       `json:"target"`
 	Dependents   []string     `json:"dependents"`
@@ -611,7 +613,7 @@ func GetImpact(db *sql.DB, target string) (*ImpactResult, error) {
 	}
 
 	// Find files that import this target
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT DISTINCT source_file
 		FROM relationships
 		WHERE target_file LIKE ? AND kind = 'import';
@@ -630,7 +632,7 @@ func GetImpact(db *sql.DB, target string) (*ImpactResult, error) {
 	}
 
 	// Find files that this target imports
-	rows2, err := db.Query(`
+	rows2, err := db.QueryContext(context.Background(), `
 		SELECT DISTINCT target_file
 		FROM relationships
 		WHERE source_file = ? AND kind = 'import';
@@ -663,7 +665,7 @@ func SearchSymbolsByKind(db *sql.DB, kind string, limit int) ([]SymbolInfo, erro
 		limit = 50
 	}
 
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT name, kind, file_path, line_start, line_end, signature, doc_comment, exported
 		FROM symbols
 		WHERE kind = ?
@@ -689,7 +691,7 @@ func SearchSymbolsByKind(db *sql.DB, kind string, limit int) ([]SymbolInfo, erro
 }
 
 // GetSymbol returns a specific symbol by name and file
-func GetSymbol(db *sql.DB, name string, filePath string) (*SymbolInfo, error) {
+func GetSymbol(db *sql.DB, name, filePath string) (*SymbolInfo, error) {
 	var sym SymbolInfo
 	var exported int
 
@@ -705,7 +707,7 @@ func GetSymbol(db *sql.DB, name string, filePath string) (*SymbolInfo, error) {
 	}
 	query += ` LIMIT 1;`
 
-	err := db.QueryRow(query, args...).Scan(&sym.Name, &sym.Kind, &sym.FilePath, &sym.LineStart, &sym.LineEnd, &sym.Signature, &sym.DocComment, &exported)
+	err := db.QueryRowContext(context.Background(), query, args...).Scan(&sym.Name, &sym.Kind, &sym.FilePath, &sym.LineStart, &sym.LineEnd, &sym.Signature, &sym.DocComment, &exported)
 	if err != nil {
 		return nil, err
 	}
@@ -715,7 +717,7 @@ func GetSymbol(db *sql.DB, name string, filePath string) (*SymbolInfo, error) {
 
 // ListExportedSymbols returns all exported symbols for a file
 func ListExportedSymbols(db *sql.DB, filePath string) ([]SymbolInfo, error) {
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT name, kind, file_path, line_start, line_end, signature, doc_comment, exported
 		FROM symbols
 		WHERE file_path = ? AND exported = 1
@@ -739,7 +741,7 @@ func ListExportedSymbols(db *sql.DB, filePath string) ([]SymbolInfo, error) {
 	return symbols, rows.Err()
 }
 
-// GetDependencyGraph returns the import graph for a set of files
+// DependencyNode represents a node in the import dependency graph.
 type DependencyNode struct {
 	File     string   `json:"file"`
 	Language string   `json:"language"`
@@ -750,8 +752,7 @@ func GetDependencyGraph(db *sql.DB, rootFiles []string) ([]DependencyNode, error
 	visited := make(map[string]bool)
 	var nodes []DependencyNode
 
-	var visit func(file string) error
-	visit = func(file string) error {
+	visit := func(file string) error {
 		if visited[file] {
 			return nil
 		}
@@ -787,7 +788,7 @@ func GetDependencyGraph(db *sql.DB, rootFiles []string) ([]DependencyNode, error
 
 // RecordDecision stores an architectural decision
 func RecordDecision(db *sql.DB, decision Decision) error {
-	_, err := db.Exec(`
+	_, err := db.ExecContext(context.Background(), `
 		INSERT OR REPLACE INTO decisions (id, room, title, summary, rationale, affected_files, created_at, created_by)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 	`, decision.ID, decision.Room, decision.Title, decision.Summary, decision.Rationale, strings.Join(decision.AffectedFiles, ","), decision.CreatedAt, "")

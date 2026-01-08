@@ -338,10 +338,10 @@ func (s *MCPServer) toolEmbeddingSync(id any, args map[string]interface{}) jsonR
 
 	// Format output
 	var output strings.Builder
-	output.WriteString(fmt.Sprintf("Embedding Sync Complete\n\n"))
+	output.WriteString("Embedding Sync Complete\n\n")
 	output.WriteString(fmt.Sprintf("Processed: %d records\n", processed))
 	output.WriteString(fmt.Sprintf("Total embeddings: %d\n", stats.TotalEmbeddings))
-	output.WriteString(fmt.Sprintf("\nBy kind:\n"))
+	fmt.Fprintf(&output, "\nBy kind:\n")
 	for kind, count := range stats.ByKind {
 		pending := stats.PendingByKind[kind]
 		output.WriteString(fmt.Sprintf("  %s: %d embedded, %d pending\n", kind, count, pending))
@@ -371,7 +371,7 @@ func (s *MCPServer) toolEmbeddingSync(id any, args map[string]interface{}) jsonR
 }
 
 // toolEmbeddingStats returns statistics about the embedding system.
-func (s *MCPServer) toolEmbeddingStats(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolEmbeddingStats(id any, _ map[string]interface{}) jsonRPCResponse {
 	mem := s.butler.Memory()
 	if mem == nil {
 		return s.toolError(id, "memory not initialized")
@@ -386,7 +386,7 @@ func (s *MCPServer) toolEmbeddingStats(id any, args map[string]interface{}) json
 	var output strings.Builder
 	output.WriteString("Embedding Statistics\n\n")
 	output.WriteString(fmt.Sprintf("Total embeddings: %d\n", stats.TotalEmbeddings))
-	output.WriteString(fmt.Sprintf("\nBy kind:\n"))
+	output.WriteString("\nBy kind:\n")
 	for kind, count := range stats.ByKind {
 		pending := stats.PendingByKind[kind]
 		output.WriteString(fmt.Sprintf("  %s: %d embedded, %d pending\n", kind, count, pending))

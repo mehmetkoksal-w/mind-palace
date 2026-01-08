@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -70,7 +71,7 @@ func repoRoot(t *testing.T) string {
 
 func buildPalace(t *testing.T, repoRoot, binPath string) {
 	t.Helper()
-	cmd := exec.Command("go", "build", "-o", binPath, "./apps/cli")
+	cmd := exec.CommandContext(context.Background(), "go", "build", "-o", binPath, "./apps/cli")
 	cmd.Dir = repoRoot
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -101,15 +102,9 @@ func runPalaceExpectFail(t *testing.T, binPath, dir string, args ...string) stri
 }
 
 func runCommand(binPath, dir string, args ...string) ([]byte, error) {
-	cmd := exec.Command(binPath, args...)
+	cmd := exec.CommandContext(context.Background(), binPath, args...)
 	cmd.Dir = dir
 	return cmd.CombinedOutput()
-}
-
-func runPalaceWithError(t *testing.T, binPath, dir string, args ...string) (string, error) {
-	t.Helper()
-	out, err := runCommand(binPath, dir, args...)
-	return string(out), err
 }
 
 func assertSQLiteFile(t *testing.T, path string) {

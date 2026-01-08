@@ -124,7 +124,8 @@ func recallLearnings(mem *memory.Memory, query, scope, scopePath string, limit i
 	fmt.Printf("\n📝 Learnings\n")
 	fmt.Println(strings.Repeat("─", 60))
 
-	for _, l := range learnings {
+	for i := range learnings {
+		l := &learnings[i]
 		confidenceBar := strings.Repeat("█", int(l.Confidence*10)) + strings.Repeat("░", 10-int(l.Confidence*10))
 		scopeInfo := l.Scope
 		if l.ScopePath != "" {
@@ -162,7 +163,8 @@ func recallDecisions(mem *memory.Memory, query, scope, scopePath string, limit i
 	fmt.Printf("\n🔨 Decisions\n")
 	fmt.Println(strings.Repeat("─", 60))
 
-	for _, d := range decisions {
+	for i := range decisions {
+		d := &decisions[i]
 		statusIcon := "🔵"
 		switch d.Status {
 		case memory.DecisionStatusSuperseded:
@@ -220,7 +222,8 @@ func recallIdeas(mem *memory.Memory, query, scope, scopePath string, limit int) 
 	fmt.Printf("\n💡 Ideas\n")
 	fmt.Println(strings.Repeat("─", 60))
 
-	for _, i := range ideas {
+	for j := range ideas {
+		i := &ideas[j]
 		statusIcon := "💡"
 		switch i.Status {
 		case memory.IdeaStatusExploring:
@@ -260,9 +263,10 @@ func recallPending(mem *memory.Memory, since int, all bool, limit int) error {
 		decisions, err = mem.GetDecisionsSince(cutoff, limit)
 		// Filter to only those with unknown outcome
 		var filtered []memory.Decision
-		for _, d := range decisions {
+		for k := range decisions {
+			d := &decisions[k]
 			if d.Outcome == memory.DecisionOutcomeUnknown {
-				filtered = append(filtered, d)
+				filtered = append(filtered, *d)
 			}
 		}
 		decisions = filtered
@@ -279,19 +283,20 @@ func recallPending(mem *memory.Memory, since int, all bool, limit int) error {
 	fmt.Printf("\n📋 Decisions Awaiting Review\n")
 	fmt.Println(strings.Repeat("─", 60))
 
-	for _, d := range decisions {
-		age := time.Since(d.CreatedAt)
-		ageStr := fmt.Sprintf("%.0f days", age.Hours()/24)
-		if age.Hours() < 24 {
-			ageStr = fmt.Sprintf("%.0f hours", age.Hours())
-		}
-
+	for m := range decisions {
+		d := &decisions[m]
 		statusIcon := "🔵"
 		switch d.Status {
 		case memory.DecisionStatusSuperseded:
 			statusIcon = "🔄"
 		case memory.DecisionStatusReversed:
 			statusIcon = "↩️"
+		}
+
+		age := time.Since(d.CreatedAt)
+		ageStr := fmt.Sprintf("%.0f days", age.Hours()/24)
+		if age.Hours() < 24 {
+			ageStr = fmt.Sprintf("%.0f hours", age.Hours())
 		}
 
 		fmt.Printf("\n%s [%s] (%s ago)\n", statusIcon, d.ID, ageStr)
@@ -434,7 +439,8 @@ func runRecallLink(args []string) error {
 		}
 		fmt.Printf("\n⚠️  Stale Links (%d found)\n", len(links))
 		fmt.Println(strings.Repeat("─", 60))
-		for _, l := range links {
+		for i := range links {
+			l := &links[i]
 			fmt.Printf("\n[%s] %s → %s\n", l.ID, l.SourceID, l.TargetID)
 			fmt.Printf("  Relation: %s\n", l.Relation)
 			fmt.Printf("  Created: %s\n", l.CreatedAt.Format("2006-01-02 15:04"))
@@ -452,11 +458,12 @@ func runRecallLink(args []string) error {
 		recordID := remaining[0]
 
 		var links []memory.Link
-		if *listAll {
+		switch {
+		case *listAll:
 			links, err = mem.GetAllLinksFor(recordID)
-		} else if *listSource {
+		case *listSource:
 			links, err = mem.GetLinksForSource(recordID)
-		} else {
+		default:
 			links, err = mem.GetLinksForTarget(recordID)
 		}
 		if err != nil {
@@ -470,7 +477,8 @@ func runRecallLink(args []string) error {
 
 		fmt.Printf("\n🔗 Links for %s (%d found)\n", recordID, len(links))
 		fmt.Println(strings.Repeat("─", 60))
-		for _, l := range links {
+		for i := range links {
+			l := &links[i]
 			direction := "→"
 			other := l.TargetID
 			if l.TargetID == recordID {

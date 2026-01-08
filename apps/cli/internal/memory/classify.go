@@ -9,6 +9,7 @@ import (
 type RecordKind string
 
 const (
+	// RecordKindIdea represents an idea record.
 	RecordKindIdea     RecordKind = "idea"
 	RecordKindDecision RecordKind = "decision"
 	RecordKindLearning RecordKind = "learning"
@@ -181,7 +182,7 @@ func ExtractTags(text string) []string {
 
 // ClassifyAndStore classifies text and stores it as the appropriate record type.
 // Returns the record ID, kind, classification, and any error.
-func (m *Memory) ClassifyAndStore(text string, source string, sessionID string) (string, RecordKind, Classification, error) {
+func (m *Memory) ClassifyAndStore(text, source, sessionID string) (string, RecordKind, Classification, error) {
 	classification := Classify(text)
 	tags := ExtractTags(text)
 
@@ -224,12 +225,4 @@ func (m *Memory) ClassifyAndStore(text string, source string, sessionID string) 
 	}
 
 	return id, classification.Kind, classification, err
-}
-
-// min returns the minimum of two float64 values.
-func min(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
 }

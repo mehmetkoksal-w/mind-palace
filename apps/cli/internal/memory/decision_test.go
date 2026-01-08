@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -334,7 +335,7 @@ func TestGetDecisionsAwaitingReview(t *testing.T) {
 	// Add a decision and manually backdate it
 	id, _ := mem.AddDecision(Decision{Content: "Old decision"})
 	oldDate := time.Now().AddDate(0, 0, -45).Format(time.RFC3339)
-	mem.db.Exec("UPDATE decisions SET created_at = ? WHERE id = ?", oldDate, id)
+	mem.db.ExecContext(context.Background(), "UPDATE decisions SET created_at = ? WHERE id = ?", oldDate, id)
 
 	// Add a recent decision
 	mem.AddDecision(Decision{Content: "Recent decision"})

@@ -45,11 +45,11 @@ run_test() {
     echo -n "Testing: $name... "
     if eval "$cmd" > /dev/null 2>&1; then
         echo -e "${GREEN}PASSED${NC}"
-        ((TESTS_PASSED++))
+        ((TESTS_PASSED++)) || true
         return 0
     else
         echo -e "${RED}FAILED${NC}"
-        ((TESTS_FAILED++))
+        ((TESTS_FAILED++)) || true
         return 1
     fi
 }
@@ -66,13 +66,13 @@ run_test_output() {
 
     if echo "$output" | grep -q "$expected"; then
         echo -e "${GREEN}PASSED${NC}"
-        ((TESTS_PASSED++))
+        ((TESTS_PASSED++)) || true
         return 0
     else
         echo -e "${RED}FAILED${NC}"
         echo "  Expected to contain: $expected"
         echo "  Got: $output"
-        ((TESTS_FAILED++))
+        ((TESTS_FAILED++)) || true
         return 1
     fi
 }

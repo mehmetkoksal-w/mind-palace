@@ -187,7 +187,8 @@ func (s *MCPServer) toolRecallDecisions(id any, args map[string]interface{}) jso
 	if len(decisions) == 0 {
 		output.WriteString("No decisions found.\n")
 	} else {
-		for _, d := range decisions {
+		for i := range decisions {
+			d := &decisions[i]
 			statusIcon := "🔵"
 			switch d.Status {
 			case memory.DecisionStatusSuperseded:
@@ -261,9 +262,10 @@ func (s *MCPServer) toolRecallIdeas(id any, args map[string]interface{}) jsonRPC
 	if len(ideas) == 0 {
 		output.WriteString("No ideas found.\n")
 	} else {
-		for _, i := range ideas {
+		for i := range ideas {
+			idea := &ideas[i]
 			statusIcon := "💡"
-			switch i.Status {
+			switch idea.Status {
 			case memory.IdeaStatusExploring:
 				statusIcon = "🔍"
 			case memory.IdeaStatusImplemented:
@@ -272,17 +274,17 @@ func (s *MCPServer) toolRecallIdeas(id any, args map[string]interface{}) jsonRPC
 				statusIcon = "❌"
 			}
 
-			fmt.Fprintf(&output, "## %s `%s` (%s)\n\n", statusIcon, i.ID, i.Status)
-			scopeInfo := i.Scope
-			if i.ScopePath != "" {
-				scopeInfo = fmt.Sprintf("%s:%s", i.Scope, i.ScopePath)
+			fmt.Fprintf(&output, "## %s `%s` (%s)\n\n", statusIcon, idea.ID, idea.Status)
+			scopeInfo := idea.Scope
+			if idea.ScopePath != "" {
+				scopeInfo = fmt.Sprintf("%s:%s", idea.Scope, idea.ScopePath)
 			}
 			fmt.Fprintf(&output, "**Scope:** %s\n", scopeInfo)
-			fmt.Fprintf(&output, "**Content:** %s\n", i.Content)
-			if i.Context != "" {
-				fmt.Fprintf(&output, "**Context:** %s\n", i.Context)
+			fmt.Fprintf(&output, "**Content:** %s\n", idea.Content)
+			if idea.Context != "" {
+				fmt.Fprintf(&output, "**Context:** %s\n", idea.Context)
 			}
-			fmt.Fprintf(&output, "**Created:** %s\n\n", i.CreatedAt.Format(time.RFC3339))
+			fmt.Fprintf(&output, "**Created:** %s\n\n", idea.CreatedAt.Format(time.RFC3339))
 		}
 	}
 
@@ -450,7 +452,8 @@ func (s *MCPServer) toolRecallLinks(id any, args map[string]interface{}) jsonRPC
 	if len(links) == 0 {
 		output.WriteString("No links found.\n")
 	} else {
-		for _, l := range links {
+		for i := range links {
+			l := &links[i]
 			direction := "→"
 			other := l.TargetID
 			if l.TargetID == recordID {
@@ -648,7 +651,8 @@ func (s *MCPServer) toolRecallLearningsByStatus(id any, args map[string]interfac
 	output.WriteString(fmt.Sprintf("# %s Learnings\n\n", statusTitle))
 	fmt.Fprintf(&output, "Found %d learnings with status '%s'\n\n", len(learnings), status)
 
-	for i, l := range learnings {
+	for i := range learnings {
+		l := &learnings[i]
 		confidenceIcon := "🟢"
 		if l.Confidence < 0.3 {
 			confidenceIcon = "🔴"
@@ -865,7 +869,8 @@ func (s *MCPServer) toolRecallContradictionSummary(id any, args map[string]inter
 
 	if len(summary.TopContradictions) > 0 {
 		output.WriteString("## Top Contradictions\n\n")
-		for i, pair := range summary.TopContradictions {
+		for i := range summary.TopContradictions {
+			pair := &summary.TopContradictions[i]
 			fmt.Fprintf(&output, "### %d. `%s` ⚔️ `%s`\n\n", i+1, pair.Record1.ID, pair.Record2.ID)
 			fmt.Fprintf(&output, "**Record 1 (%s):** %s\n", pair.Record1.Kind, truncate(pair.Record1.Content, 100))
 			fmt.Fprintf(&output, "**Record 2 (%s):** %s\n", pair.Record2.Kind, truncate(pair.Record2.Content, 100))

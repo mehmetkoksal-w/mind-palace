@@ -93,11 +93,12 @@ func (p *CSSParser) parseRuleSet(node *sitter.Node, content []byte, analysis *Fi
 
 	for _, selector := range selectors {
 		kind := KindType
-		if strings.HasPrefix(selector, "#") {
+		switch {
+		case strings.HasPrefix(selector, "#"):
 			kind = KindVariable
-		} else if strings.HasPrefix(selector, ".") {
+		case strings.HasPrefix(selector, "."):
 			kind = KindType
-		} else if strings.HasPrefix(selector, "@") {
+		case strings.HasPrefix(selector, "@"):
 			kind = KindFunction
 		}
 

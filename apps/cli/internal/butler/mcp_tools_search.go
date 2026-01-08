@@ -72,7 +72,8 @@ func (s *MCPServer) toolExploreRooms(id any) jsonRPCResponse {
 	var output strings.Builder
 	output.WriteString("# Mind Palace Rooms\n\n")
 
-	for _, room := range rooms {
+	for i := range rooms {
+		room := &rooms[i]
 		fmt.Fprintf(&output, "## %s\n", room.Name)
 		fmt.Fprintf(&output, "%s\n\n", room.Summary)
 		output.WriteString("**Entry Points:**\n")

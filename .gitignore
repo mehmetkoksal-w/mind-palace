@@ -70,8 +70,8 @@ node_modules/
 npm-debug.log*
 .pnpm-store/
 pnpm-lock.yaml
-package-lock.json
 yarn.lock
+# Note: package-lock.json files are committed for CI reproducibility
 
 
 # OS files

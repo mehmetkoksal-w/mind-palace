@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -28,6 +29,7 @@ const (
 	checksumTimeout = 15 * time.Second
 )
 
+// Release represents a GitHub release.
 type Release struct {
 	TagName string  `json:"tag_name"`
 	Name    string  `json:"name"`
@@ -36,12 +38,14 @@ type Release struct {
 	Assets  []Asset `json:"assets"`
 }
 
+// Asset represents a release asset.
 type Asset struct {
 	Name               string `json:"name"`
 	Size               int64  `json:"size"`
 	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
+// CheckResult contains information about an update check.
 type CheckResult struct {
 	CurrentVersion  string
 	LatestVersion   string
@@ -57,6 +61,7 @@ type cacheEntry struct {
 	CheckedAt     time.Time `json:"checked_at"`
 }
 
+// Check compares the current version with the latest release on GitHub.
 func Check(currentVersion string) (*CheckResult, error) {
 	release, err := fetchLatestRelease()
 	if err != nil {
@@ -88,7 +93,8 @@ func Check(currentVersion string) (*CheckResult, error) {
 	return result, nil
 }
 
-func CheckCached(currentVersion string, cacheDir string) (*CheckResult, error) {
+// CheckCached performs an update check, using a local cache if it's still valid.
+func CheckCached(currentVersion, cacheDir string) (*CheckResult, error) {
 	cachePath := filepath.Join(cacheDir, cacheFileName)
 	if cached, ok := loadCache(cachePath); ok {
 		currentClean := strings.TrimPrefix(currentVersion, "v")
@@ -114,6 +120,7 @@ func CheckCached(currentVersion string, cacheDir string) (*CheckResult, error) {
 	return result, nil
 }
 
+// Update updates the palace binary to the latest version.
 func Update(currentVersion string, progressFn func(string)) error {
 	if progressFn == nil {
 		progressFn = func(string) {}
@@ -138,7 +145,7 @@ func Update(currentVersion string, progressFn func(string)) error {
 	if err != nil {
 		return fmt.Errorf("download: %w", err)
 	}
-	defer os.Remove(archivePath)
+	defer func() { _ = os.Remove(archivePath) }()
 
 	// Extract binary from archive
 	progressFn("Extracting...")
@@ -146,7 +153,7 @@ func Update(currentVersion string, progressFn func(string)) error {
 	if err != nil {
 		return fmt.Errorf("extract: %w", err)
 	}
-	defer os.Remove(binaryPath)
+	defer func() { _ = os.Remove(binaryPath) }()
 
 	execPath, err := os.Executable()
 	if err != nil {
@@ -169,7 +176,7 @@ func Update(currentVersion string, progressFn func(string)) error {
 func fetchLatestRelease() (*Release, error) {
 	url := fmt.Sprintf(releasesAPIURL, GitHubOwner, GitHubRepo)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -260,18 +267,19 @@ func extractFromTarGz(archivePath, binaryName string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			defer tmpFile.Close()
-
 			if _, err := io.Copy(tmpFile, tr); err != nil {
+				tmpFile.Close()
 				os.Remove(tmpFile.Name())
 				return "", err
 			}
 
-			if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
+			if err := os.Chmod(tmpFile.Name(), 0o755); err != nil { //nolint:gosec // G302: executable requires 0755 permissions
+				tmpFile.Close()
 				os.Remove(tmpFile.Name())
 				return "", err
 			}
 
+			tmpFile.Close()
 			return tmpFile.Name(), nil
 		}
 	}
@@ -288,38 +296,46 @@ func extractFromZip(archivePath, binaryName string) (string, error) {
 
 	for _, f := range r.File {
 		if filepath.Base(f.Name) == binaryName {
-			rc, err := f.Open()
-			if err != nil {
-				return "", err
-			}
-			defer rc.Close()
-
-			tmpFile, err := os.CreateTemp("", "palace-binary-*")
-			if err != nil {
-				return "", err
-			}
-			defer tmpFile.Close()
-
-			if _, err := io.Copy(tmpFile, rc); err != nil {
-				os.Remove(tmpFile.Name())
-				return "", err
-			}
-
-			if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
-				os.Remove(tmpFile.Name())
-				return "", err
-			}
-
-			return tmpFile.Name(), nil
+			return extractZipFile(f)
 		}
 	}
 
 	return "", fmt.Errorf("binary %s not found in archive", binaryName)
 }
 
+func extractZipFile(f *zip.File) (string, error) {
+	rc, err := f.Open()
+	if err != nil {
+		return "", err
+	}
+	defer rc.Close()
+
+	tmpFile, err := os.CreateTemp("", "palace-binary-*")
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+
+	if _, err := io.Copy(tmpFile, rc); err != nil {
+		os.Remove(tmpFile.Name())
+		return "", err
+	}
+
+	if err := os.Chmod(tmpFile.Name(), 0o755); err != nil { //nolint:gosec // G302: executable requires 0755 permissions
+		os.Remove(tmpFile.Name())
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
+}
+
 func downloadToTemp(url string) (string, error) {
 	client := &http.Client{Timeout: downloadTimeout}
-	resp, err := client.Get(url)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	if err != nil {
+		return "", err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -345,7 +361,11 @@ func downloadToTemp(url string) (string, error) {
 
 func verifyChecksum(filePath, checksumURL string) error {
 	client := &http.Client{Timeout: checksumTimeout}
-	resp, err := client.Get(checksumURL)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", checksumURL, http.NoBody)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -399,7 +419,7 @@ func replaceExecutable(currentPath, newPath string) error {
 	}
 	defer newFile.Close()
 
-	destFile, err := os.OpenFile(currentPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	destFile, err := os.OpenFile(currentPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755) //nolint:gosec // G302: executable requires 0755 permissions
 	if err != nil {
 		os.Rename(backupPath, currentPath)
 		return err
@@ -408,12 +428,12 @@ func replaceExecutable(currentPath, newPath string) error {
 
 	if _, err := io.Copy(destFile, newFile); err != nil {
 		destFile.Close()
-		os.Remove(currentPath)
-		os.Rename(backupPath, currentPath)
+		_ = os.Remove(currentPath)
+		_ = os.Rename(backupPath, currentPath)
 		return err
 	}
 
-	os.Remove(backupPath)
+	_ = os.Remove(backupPath)
 	return nil
 }
 
@@ -436,7 +456,7 @@ func loadCache(path string) (cacheEntry, bool) {
 }
 
 func saveCache(path string, entry cacheEntry) {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return
 	}
 
@@ -445,7 +465,7 @@ func saveCache(path string, entry cacheEntry) {
 		return
 	}
 
-	os.WriteFile(path, data, 0644)
+	os.WriteFile(path, data, 0o644)
 }
 
 func compareVersions(a, b string) int {
@@ -485,7 +505,7 @@ func parseVersion(v string) []int {
 
 	for _, p := range parts {
 		var n int
-		fmt.Sscanf(p, "%d", &n)
+		_, _ = fmt.Sscanf(p, "%d", &n)
 		result = append(result, n)
 	}
 
@@ -496,6 +516,7 @@ func parseVersion(v string) []int {
 	return result
 }
 
+// GetCacheDir returns the directory used for caching update information.
 func GetCacheDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {

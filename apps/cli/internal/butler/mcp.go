@@ -379,7 +379,9 @@ func (s *MCPServer) handleResourcesList(req jsonRPCRequest) jsonRPCResponse {
 	}
 
 	// Add specific room resources
-	for _, room := range s.butler.ListRooms() {
+	rooms := s.butler.ListRooms()
+	for i := range rooms {
+		room := &rooms[i]
 		resources = append(resources, mcpResource{
 			URI:         fmt.Sprintf("palace://rooms/%s", room.Name),
 			Name:        fmt.Sprintf("Room: %s", room.Name),

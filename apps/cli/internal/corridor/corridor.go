@@ -1,6 +1,7 @@
 package corridor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -85,7 +86,7 @@ func fetchNeighbor(root, name string, neighbor config.NeighborConfig, cacheDir s
 	return ctx
 }
 
-func fetchFromLocal(root, name, localPath string, cacheDir string) CorridorContext {
+func fetchFromLocal(root, name, localPath, cacheDir string) CorridorContext {
 	ctx := CorridorContext{
 		Name:      name,
 		FetchedAt: time.Now().UTC(),
@@ -147,7 +148,7 @@ func fetchFromURL(name string, neighbor config.NeighborConfig, cacheDir string) 
 		}
 	}
 
-	req, err := http.NewRequest("GET", neighbor.URL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", neighbor.URL, http.NoBody)
 	if err != nil {
 		return fallbackToCache(ctx, cacheDir, fmt.Sprintf("create request: %v", err))
 	}
@@ -268,7 +269,8 @@ func cacheRooms(cacheDir string, rooms []model.Room) error {
 
 	var successCount int
 	var lastErr error
-	for _, room := range rooms {
+	for i := range rooms {
+		room := &rooms[i]
 		data, err := json.MarshalIndent(room, "", "  ")
 		if err != nil {
 			lastErr = err

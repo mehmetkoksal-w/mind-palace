@@ -1,7 +1,9 @@
 package analysis
 
+// SymbolKind represents the type of a symbol (e.g., class, function).
 type SymbolKind string
 
+// Predefined symbol kinds.
 const (
 	KindClass       SymbolKind = "class"
 	KindInterface   SymbolKind = "interface"
@@ -15,8 +17,10 @@ const (
 	KindConstructor SymbolKind = "constructor"
 )
 
+// RelationshipKind represents the type of relationship between symbols.
 type RelationshipKind string
 
+// Predefined relationship kinds.
 const (
 	RelImport     RelationshipKind = "import"
 	RelCall       RelationshipKind = "call"
@@ -26,6 +30,7 @@ const (
 	RelUses       RelationshipKind = "uses"
 )
 
+// Symbol represents a programming construct found in a file.
 type Symbol struct {
 	Name       string
 	Kind       SymbolKind
@@ -37,6 +42,7 @@ type Symbol struct {
 	Children   []Symbol
 }
 
+// Relationship represents a semantic link between symbols.
 type Relationship struct {
 	SourceSymbol string
 	TargetFile   string
@@ -46,6 +52,7 @@ type Relationship struct {
 	Column       int
 }
 
+// FileAnalysis stores the results of analyzing a single file.
 type FileAnalysis struct {
 	Path          string
 	Language      string
@@ -53,8 +60,10 @@ type FileAnalysis struct {
 	Relationships []Relationship
 }
 
+// Language represents a programming or markup language.
 type Language string
 
+// Supported languages.
 const (
 	LangGo         Language = "go"
 	LangJavaScript Language = "javascript"

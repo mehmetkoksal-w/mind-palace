@@ -11,7 +11,7 @@ import (
 )
 
 // JSONC validates a JSONC file against an embedded schema.
-func JSONC(path string, schemaName string) error {
+func JSONC(path, schemaName string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read %s: %w", path, err)
@@ -32,7 +32,7 @@ func JSONC(path string, schemaName string) error {
 }
 
 // JSON validates a standard JSON file.
-func JSON(path string, schemaName string) error {
+func JSON(path, schemaName string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read %s: %w", path, err)

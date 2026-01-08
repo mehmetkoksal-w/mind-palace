@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -49,7 +50,7 @@ func (m *Memory) AddIdea(idea Idea) (string, error) {
 		idea.UpdatedAt = now
 	}
 
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT INTO ideas (id, content, context, status, scope, scope_path, session_id, source, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, idea.ID, idea.Content, idea.Context, idea.Status, idea.Scope, idea.ScopePath, idea.SessionID, idea.Source,
@@ -66,7 +67,7 @@ func (m *Memory) AddIdea(idea Idea) (string, error) {
 
 // GetIdea retrieves an idea by ID.
 func (m *Memory) GetIdea(id string) (*Idea, error) {
-	row := m.db.QueryRow(`
+	row := m.db.QueryRowContext(context.Background(), `
 		SELECT id, content, context, status, scope, scope_path, session_id, source, created_at, updated_at
 		FROM ideas WHERE id = ?
 	`, id)
@@ -107,7 +108,7 @@ func (m *Memory) GetIdeas(status, scope, scopePath string, limit int) ([]Idea, e
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query ideas: %w", err)
 	}
@@ -124,6 +125,9 @@ func (m *Memory) GetIdeas(status, scope, scopePath string, limit int) ([]Idea, e
 		idea.CreatedAt = parseTimeOrZero(createdAt)
 		idea.UpdatedAt = parseTimeOrZero(updatedAt)
 		ideas = append(ideas, idea)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ideas: %w", err)
 	}
 	return ideas, nil
 }
@@ -143,7 +147,7 @@ func (m *Memory) SearchIdeas(query string, limit int) ([]Idea, error) {
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(sqlQuery, args...)
+	rows, err := m.db.QueryContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		// Fall back to LIKE search if FTS fails
 		return m.searchIdeasLike(query, limit)
@@ -161,6 +165,9 @@ func (m *Memory) SearchIdeas(query string, limit int) ([]Idea, error) {
 		idea.CreatedAt = parseTimeOrZero(createdAt)
 		idea.UpdatedAt = parseTimeOrZero(updatedAt)
 		ideas = append(ideas, idea)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ideas: %w", err)
 	}
 	return ideas, nil
 }
@@ -180,7 +187,7 @@ func (m *Memory) searchIdeasLike(query string, limit int) ([]Idea, error) {
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(sqlQuery, args...)
+	rows, err := m.db.QueryContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		return nil, fmt.Errorf("search ideas: %w", err)
 	}
@@ -198,13 +205,16 @@ func (m *Memory) searchIdeasLike(query string, limit int) ([]Idea, error) {
 		idea.UpdatedAt = parseTimeOrZero(updatedAt)
 		ideas = append(ideas, idea)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ideas: %w", err)
+	}
 	return ideas, nil
 }
 
 // UpdateIdeaStatus updates the status of an idea.
 func (m *Memory) UpdateIdeaStatus(id, status string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	result, err := m.db.Exec(`UPDATE ideas SET status = ?, updated_at = ? WHERE id = ?`, status, now, id)
+	result, err := m.db.ExecContext(context.Background(), `UPDATE ideas SET status = ?, updated_at = ? WHERE id = ?`, status, now, id)
 	if err != nil {
 		return fmt.Errorf("update idea status: %w", err)
 	}
@@ -215,11 +225,11 @@ func (m *Memory) UpdateIdeaStatus(id, status string) error {
 	return nil
 }
 
-// UpdateIdea updates an idea's content and context.
-func (m *Memory) UpdateIdea(id, content, context string) error {
+// UpdateIdea updates an idea's content and contextInfo.
+func (m *Memory) UpdateIdea(id, content, contextInfo string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	result, err := m.db.Exec(`UPDATE ideas SET content = ?, context = ?, updated_at = ? WHERE id = ?`,
-		content, context, now, id)
+	result, err := m.db.ExecContext(context.Background(), `UPDATE ideas SET content = ?, context = ?, updated_at = ? WHERE id = ?`,
+		content, contextInfo, now, id)
 	if err != nil {
 		return fmt.Errorf("update idea: %w", err)
 	}
@@ -239,7 +249,7 @@ func (m *Memory) DeleteIdea(id string) error {
 	// Delete associated embedding
 	m.DeleteEmbedding(id)
 	// Delete the idea
-	_, err := m.db.Exec(`DELETE FROM ideas WHERE id = ?`, id)
+	_, err := m.db.ExecContext(context.Background(), `DELETE FROM ideas WHERE id = ?`, id)
 	return err
 }
 
@@ -252,6 +262,6 @@ func (m *Memory) CountIdeas(status string) (int, error) {
 		args = append(args, status)
 	}
 	var count int
-	err := m.db.QueryRow(query, args...).Scan(&count)
+	err := m.db.QueryRowContext(context.Background(), query, args...).Scan(&count)
 	return count, err
 }

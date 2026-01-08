@@ -2,9 +2,9 @@ name: Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: ["*"]
   pull_request:
-    branches: ["main"]
+    branches: ["*"]
   workflow_dispatch:
 
 permissions:
@@ -35,6 +35,7 @@ jobs:
         run: |
           npm install
           npm run lint 2>/dev/null || echo "No lint configured"
+          npm run test
           npm run build
 
       - uses: actions/upload-artifact@v4
@@ -74,6 +75,24 @@ jobs:
           fi
           echo "Version: $VER"
 
+      - name: Verify Version Sync
+        run: |
+          ROOT_VER=$(cat VERSION)
+          DASH_VER=$(jq -r '.version' apps/dashboard/package.json)
+          VSCODE_VER=$(jq -r '.version' apps/vscode/package.json)
+          DOCS_VER=$(jq -r '.version' apps/docs/package.json)
+          
+          echo "Root VERSION: $ROOT_VER"
+          echo "Dashboard: $DASH_VER"
+          echo "VS Code: $VSCODE_VER"
+          echo "Docs: $DOCS_VER"
+          
+          if [ "$ROOT_VER" != "$DASH_VER" ] || [ "$ROOT_VER" != "$VSCODE_VER" ] || [ "$ROOT_VER" != "$DOCS_VER" ]; then
+            echo "[ERROR] Version mismatch detected!"
+            exit 1
+          fi
+          echo "[OK] All versions synchronized"
+
       - name: Build
         run: go build -v ./apps/cli
 
@@ -105,6 +124,16 @@ jobs:
           npm install
           npm run lint 2>/dev/null || echo "No lint configured"
           npm run compile
+
+      - name: Test
+        working-directory: apps/vscode
+        run: |
+          # Install xvfb for headless VS Code testing
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          
+          # Run tests in virtual framebuffer
+          xvfb-run -a npm test
 
   # ============================================================
   # STAGE 2: Check Changes (Automatic)
@@ -158,7 +187,7 @@ jobs:
   deploy-docs:
     name: "Deploy: Docs"
     needs: check
-    if: github.event_name != 'pull_request' && (needs.check.outputs.docs_changed == 'true' || needs.check.outputs.release_needed == 'true')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.check.outputs.docs_changed == 'true' || needs.check.outputs.release_needed == 'true')
     runs-on: ubuntu-latest
     environment:
       name: production-docs
@@ -194,7 +223,8 @@ jobs:
     needs: [check, deploy-docs]
     if: |
       always() &&
-      github.event_name != 'pull_request' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
       needs.check.result == 'success' &&
       needs.check.outputs.release_needed == 'true' &&
       (needs.deploy-docs.result == 'success' || needs.deploy-docs.result == 'skipped')
@@ -227,7 +257,8 @@ jobs:
     needs: [check, deploy-docs]
     if: |
       always() &&
-      github.event_name != 'pull_request' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
       needs.check.result == 'success' &&
       needs.check.outputs.release_needed == 'true' &&
       (needs.deploy-docs.result == 'success' || needs.deploy-docs.result == 'skipped')
@@ -258,7 +289,8 @@ jobs:
     needs: [check, deploy-docs, release-dashboard]
     if: |
       always() &&
-      github.event_name != 'pull_request' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
       needs.check.result == 'success' &&
       needs.check.outputs.release_needed == 'true' &&
       needs.release-dashboard.result == 'success'
@@ -294,6 +326,21 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      # MinGW is required for Windows builds because CGO_ENABLED=1 needs a C compiler.
+      # Linux/macOS runners have gcc pre-installed. Only Windows MSI builds need this setup.
+      - name: Setup MinGW (Windows)
+        if: matrix.installer == 'msi'
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-binutils
+
+      - name: Add MinGW to PATH (Windows)
+        if: matrix.installer == 'msi'
+        run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - uses: actions/download-artifact@v4
         with:

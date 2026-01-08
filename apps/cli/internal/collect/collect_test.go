@@ -1,6 +1,7 @@
 package collect
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +15,7 @@ import (
 func TestCollectEntryPoints(t *testing.T) {
 	root := t.TempDir()
 	roomDir := filepath.Join(root, ".palace", "rooms")
-	if err := os.MkdirAll(roomDir, 0755); err != nil {
+	if err := os.MkdirAll(roomDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll() error = %v", err)
 	}
 
@@ -26,7 +27,7 @@ func TestCollectEntryPoints(t *testing.T) {
   "entryPoints":["src/main.go","lib/util.go"],
   "provenance":{"createdBy":"test","createdAt":"2024-01-01T00:00:00Z"}
 }`
-	if err := os.WriteFile(filepath.Join(roomDir, "core.jsonc"), []byte(room), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(roomDir, "core.jsonc"), []byte(room), 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -89,7 +90,7 @@ func TestRunFullScopeAllowStale(t *testing.T) {
 	}
 
 	mainPath := filepath.Join(root, "main.go")
-	if err := os.WriteFile(mainPath, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(mainPath, []byte("package main\n"), 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
@@ -101,11 +102,11 @@ func TestRunFullScopeAllowStale(t *testing.T) {
 	t.Cleanup(func() { _ = db.Close() })
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	if _, err := db.Exec(`INSERT INTO files (path, hash, size, mod_time, indexed_at, language) VALUES (?, ?, ?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO files (path, hash, size, mod_time, indexed_at, language) VALUES (?, ?, ?, ?, ?, ?)`,
 		"main.go", "hash", 1, now, now, "go"); err != nil {
 		t.Fatalf("insert file error = %v", err)
 	}
-	if _, err := db.Exec(`INSERT INTO scans (root, scan_hash, started_at, completed_at) VALUES (?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO scans (root, scan_hash, started_at, completed_at) VALUES (?, ?, ?, ?)`,
 		root, "scanhash", now, now); err != nil {
 		t.Fatalf("insert scan error = %v", err)
 	}
@@ -146,14 +147,14 @@ func TestRunDiffScopeFromSignalWithCorridorWarning(t *testing.T) {
     "createdAt": "2024-01-01T00:00:00Z"
   }
 }`
-	if err := os.WriteFile(filepath.Join(root, ".palace", "palace.jsonc"), []byte(palaceConfig), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".palace", "palace.jsonc"), []byte(palaceConfig), 0o644); err != nil {
 		t.Fatalf("WriteFile(palace.jsonc) error = %v", err)
 	}
 	if err := config.WriteTemplate(filepath.Join(root, ".palace", "rooms", "project-overview.jsonc"), "rooms/project-overview.jsonc", map[string]string{}, true); err != nil {
 		t.Fatalf("WriteTemplate(room) error = %v", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("hello"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("hello"), 0o644); err != nil {
 		t.Fatalf("WriteFile(README) error = %v", err)
 	}
 
@@ -165,11 +166,11 @@ func TestRunDiffScopeFromSignalWithCorridorWarning(t *testing.T) {
 	t.Cleanup(func() { _ = db.Close() })
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	if _, err := db.Exec(`INSERT INTO files (path, hash, size, mod_time, indexed_at, language) VALUES (?, ?, ?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO files (path, hash, size, mod_time, indexed_at, language) VALUES (?, ?, ?, ?, ?, ?)`,
 		"README.md", "hash", 1, now, now, "md"); err != nil {
 		t.Fatalf("insert file error = %v", err)
 	}
-	if _, err := db.Exec(`INSERT INTO scans (root, scan_hash, started_at, completed_at) VALUES (?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO scans (root, scan_hash, started_at, completed_at) VALUES (?, ?, ?, ?)`,
 		root, "scanhash", now, now); err != nil {
 		t.Fatalf("insert scan error = %v", err)
 	}

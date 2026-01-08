@@ -6,11 +6,8 @@ import (
 
 func TestNew(t *testing.T) {
 	cfg := Config{
-		Butler:   nil,
-		Memory:   nil,
-		Corridor: nil,
-		Port:     8080,
-		Root:     "/test/root",
+		Port: 8080,
+		Root: "/test/root",
 	}
 
 	server := New(cfg)
@@ -71,11 +68,8 @@ func TestConfig(t *testing.T) {
 
 func TestServerFields(t *testing.T) {
 	server := &Server{
-		butler:   nil,
-		memory:   nil,
-		corridor: nil,
-		port:     9000,
-		root:     "/my/workspace",
+		port: 9000,
+		root: "/my/workspace",
 	}
 
 	if server.port != 9000 {

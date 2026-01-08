@@ -222,7 +222,7 @@ func (p *DockerfileParser) parseExposeInstruction(node *sitter.Node, content []b
 	}
 }
 
-func (p *DockerfileParser) parseEntrypoint(node *sitter.Node, content []byte) *Symbol {
+func (p *DockerfileParser) parseEntrypoint(node *sitter.Node, _ []byte) *Symbol {
 	name := "entrypoint"
 	if node.Type() == "cmd_instruction" {
 		name = "cmd"

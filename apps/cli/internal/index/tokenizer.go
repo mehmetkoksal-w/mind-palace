@@ -30,7 +30,8 @@ func EstimateTokens(text string) int {
 	wordLen := 0
 
 	for _, r := range text {
-		if unicode.IsSpace(r) {
+		switch {
+		case unicode.IsSpace(r):
 			if inWord {
 				// End of word - estimate tokens for it
 				tokens += estimateWordTokens(wordLen)
@@ -42,14 +43,14 @@ func EstimateTokens(text string) int {
 			if r == '\n' {
 				tokens++ // Newlines are usually separate tokens
 			}
-		} else if unicode.IsPunct(r) || unicode.IsSymbol(r) {
+		case unicode.IsPunct(r) || unicode.IsSymbol(r):
 			if inWord {
 				tokens += estimateWordTokens(wordLen)
 				inWord = false
 				wordLen = 0
 			}
 			tokens++ // Punctuation/symbols are usually individual tokens
-		} else {
+		default:
 			inWord = true
 			wordLen++
 		}
@@ -128,7 +129,8 @@ func TruncateSymbols(symbols []SymbolInfo, budget int) []SymbolInfo {
 	}
 
 	budgeted := make([]BudgetedItem, len(symbols))
-	for i, sym := range symbols {
+	for i := range symbols {
+		sym := &symbols[i]
 		// Estimate tokens for symbol representation
 		symText := sym.Name + " " + sym.Kind + " " + sym.FilePath
 		if sym.Signature != "" {
@@ -149,11 +151,7 @@ func TruncateSymbols(symbols []SymbolInfo, budget int) []SymbolInfo {
 			priority = 1.5
 		}
 
-		budgeted[i] = BudgetedItem{
-			Item:       sym,
-			TokenCount: tokenCount,
-			Priority:   priority,
-		}
+		budgeted[i] = BudgetedItem{Item: *sym, Priority: priority, TokenCount: tokenCount}
 	}
 
 	truncated := TruncateToTokenBudget(budgeted, budget)

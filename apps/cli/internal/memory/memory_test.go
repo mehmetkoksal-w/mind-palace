@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -341,10 +342,8 @@ func TestConflictDetection(t *testing.T) {
 	}
 	if conflict == nil {
 		t.Error("Expected conflict but got nil")
-	} else {
-		if conflict.Path != "main.go" {
-			t.Errorf("Expected conflict path 'main.go', got '%s'", conflict.Path)
-		}
+	} else if conflict.Path != "main.go" {
+		t.Errorf("Expected conflict path 'main.go', got '%s'", conflict.Path)
 	}
 }
 
@@ -457,7 +456,7 @@ func TestAgentHeartbeatAndCurrentFile(t *testing.T) {
 	// Heartbeat
 	oldHeartbeat := agent.Heartbeat
 	newTime := time.Now().UTC().Add(1 * time.Minute)
-	_, err = mem.db.Exec("UPDATE active_agents SET last_heartbeat = ? WHERE agent_id = ?", newTime.Format(time.RFC3339), agentID)
+	_, err = mem.db.ExecContext(context.Background(), "UPDATE active_agents SET last_heartbeat = ? WHERE agent_id = ?", newTime.Format(time.RFC3339), agentID)
 	if err != nil {
 		t.Fatalf("Manual heartbeat update failed: %v", err)
 	}
@@ -485,7 +484,7 @@ func TestCleanupStaleAgents(t *testing.T) {
 
 	// Manually backdate the heartbeat in DB - MUST BE UTC for string comparison
 	staleTime := time.Now().UTC().Add(-10 * time.Minute).Format(time.RFC3339)
-	mem.db.Exec("UPDATE active_agents SET last_heartbeat = ?", staleTime)
+	mem.db.ExecContext(context.Background(), "UPDATE active_agents SET last_heartbeat = ?", staleTime)
 
 	count, _ := mem.CleanupStaleAgents(5 * time.Minute)
 	if count != 1 {
@@ -531,7 +530,7 @@ func TestHighConfidenceLearningsAndDecay(t *testing.T) {
 	// Decay
 	// Backdate last_used
 	oldTime := time.Now().UTC().Add(-10 * 24 * time.Hour).Format(time.RFC3339)
-	mem.db.Exec("UPDATE learnings SET last_used = ?", oldTime)
+	mem.db.ExecContext(context.Background(), "UPDATE learnings SET last_used = ?", oldTime)
 
 	decayed, _ := mem.DecayUnusedLearnings(5, 0.1)
 	if decayed != 2 {

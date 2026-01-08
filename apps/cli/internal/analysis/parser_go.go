@@ -36,13 +36,13 @@ func (p *GoParser) Parse(content []byte, filePath string) (*FileAnalysis, error)
 	}
 
 	root := tree.RootNode()
-	p.extractSymbols(root, content, analysis, nil)
+	p.extractSymbols(root, content, analysis)
 	p.extractRelationships(root, content, analysis)
 
 	return analysis, nil
 }
 
-func (p *GoParser) extractSymbols(node *sitter.Node, content []byte, analysis *FileAnalysis, parent *Symbol) {
+func (p *GoParser) extractSymbols(node *sitter.Node, content []byte, analysis *FileAnalysis) {
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
 		if child == nil {
@@ -69,7 +69,7 @@ func (p *GoParser) extractSymbols(node *sitter.Node, content []byte, analysis *F
 			p.parseVarDecl(child, content, analysis, child.Type() == "const_declaration")
 		}
 
-		p.extractSymbols(child, content, analysis, parent)
+		p.extractSymbols(child, content, analysis)
 	}
 }
 
@@ -400,7 +400,7 @@ func (p *GoParser) extractPrecedingComment(node *sitter.Node, content []byte) st
 }
 
 func isExported(name string) bool {
-	if len(name) == 0 {
+	if name == "" {
 		return false
 	}
 	return unicode.IsUpper(rune(name[0]))

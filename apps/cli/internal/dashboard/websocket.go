@@ -132,15 +132,29 @@ func (h *WSHub) ClientCount() int {
 	return len(h.clients)
 }
 
-// WebSocket upgrader configuration
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		// Allow all origins for development
-		// TODO: Restrict in production
-		return true
-	},
+// createUpgrader creates a WebSocket upgrader with origin checking.
+func createUpgrader(allowedOrigins []string) websocket.Upgrader {
+	return websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			origin := r.Header.Get("Origin")
+
+			// Allow requests with no Origin header (e.g., non-browser clients, tests)
+			// This is safe because non-browser clients are not subject to CORS
+			if origin == "" {
+				return true
+			}
+
+			// Check if origin is in allowed list
+			for _, allowed := range allowedOrigins {
+				if origin == allowed {
+					return true
+				}
+			}
+			return false
+		},
+	}
 }
 
 // writePump handles writing messages to the WebSocket connection
@@ -215,7 +229,8 @@ func (c *WSClient) readPump() {
 }
 
 // ServeWS handles WebSocket upgrade requests
-func ServeWS(hub *WSHub, w http.ResponseWriter, r *http.Request) {
+func ServeWS(hub *WSHub, allowedOrigins []string, w http.ResponseWriter, r *http.Request) {
+	upgrader := createUpgrader(allowedOrigins)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("[WS] Upgrade error: %v", err)
@@ -308,10 +323,10 @@ type ActivityEventPayload struct {
 
 // ContradictionEventPayload is the payload for contradiction detection events
 type ContradictionEventPayload struct {
-	RecordID       string                   `json:"recordId"`
-	RecordKind     string                   `json:"recordKind"`
-	RecordContent  string                   `json:"recordContent"`
-	Contradictions []ContradictionDetail    `json:"contradictions"`
+	RecordID       string                `json:"recordId"`
+	RecordKind     string                `json:"recordKind"`
+	RecordContent  string                `json:"recordContent"`
+	Contradictions []ContradictionDetail `json:"contradictions"`
 }
 
 // ContradictionDetail contains details about a single contradiction

@@ -197,7 +197,7 @@ func TestApplyAuth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "http://example.com", nil)
+			req := httptest.NewRequest("GET", "http://example.com", http.NoBody)
 			applyAuth(req, tt.auth)
 
 			if tt.wantHeader == "" {
@@ -217,7 +217,7 @@ func TestApplyAuthBasic(t *testing.T) {
 	t.Setenv("AUTH_USER", "testuser")
 	t.Setenv("AUTH_PASS", "testpass")
 
-	req := httptest.NewRequest("GET", "http://example.com", nil)
+	req := httptest.NewRequest("GET", "http://example.com", http.NoBody)
 	auth := &config.AuthConfig{
 		Type: "basic",
 		User: "$AUTH_USER",

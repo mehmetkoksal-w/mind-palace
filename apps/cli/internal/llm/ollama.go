@@ -134,7 +134,7 @@ func (c *OllamaClient) Backend() string {
 
 // Ping checks if the Ollama server is reachable.
 func (c *OllamaClient) Ping(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.url+"/api/tags", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", c.url+"/api/tags", http.NoBody)
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (c *OllamaClient) Ping(ctx context.Context) error {
 
 // ListModels returns the available models from Ollama.
 func (c *OllamaClient) ListModels(ctx context.Context) ([]string, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.url+"/api/tags", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", c.url+"/api/tags", http.NoBody)
 	if err != nil {
 		return nil, err
 	}

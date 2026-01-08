@@ -264,7 +264,7 @@ func (p *RustParser) parseTypeItem(node *sitter.Node, content []byte) *Symbol {
 	}
 }
 
-func (p *RustParser) hasVisibility(node *sitter.Node, content []byte) bool {
+func (p *RustParser) hasVisibility(node *sitter.Node, _ []byte) bool {
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
 		if child != nil && child.Type() == "visibility_modifier" {

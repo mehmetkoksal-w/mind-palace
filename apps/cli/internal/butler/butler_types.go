@@ -108,7 +108,7 @@ type FileFailure struct {
 
 // ContextWarning represents a warning to show in context.
 type ContextWarning struct {
-	Type    string `json:"type"`    // "contradiction", "decay_risk", "stale", "unreviewed_decision"
+	Type    string `json:"type"` // "contradiction", "decay_risk", "stale", "unreviewed_decision"
 	Message string `json:"message"`
 	ID      string `json:"id,omitempty"`      // Related record ID
 	Details string `json:"details,omitempty"` // Additional details
@@ -116,17 +116,17 @@ type ContextWarning struct {
 
 // ScopeExplanation explains the scope inheritance for a file.
 type ScopeExplanation struct {
-	FilePath         string           `json:"filePath"`
-	ResolvedRoom     string           `json:"resolvedRoom"`
-	InheritanceChain []ScopeLevel     `json:"inheritanceChain"`
-	TotalRecords     map[string]int   `json:"totalRecords"` // Per scope level
+	FilePath         string            `json:"filePath"`
+	ResolvedRoom     string            `json:"resolvedRoom"`
+	InheritanceChain []ScopeLevel      `json:"inheritanceChain"`
+	TotalRecords     map[string]int    `json:"totalRecords"` // Per scope level
 	EffectiveRules   []InheritanceRule `json:"effectiveRules"`
 }
 
 // ScopeLevel represents one level in the scope hierarchy.
 type ScopeLevel struct {
-	Scope       string `json:"scope"`       // "file", "room", "palace", "corridor"
-	Path        string `json:"path"`        // Scope path
+	Scope       string `json:"scope"` // "file", "room", "palace", "corridor"
+	Path        string `json:"path"`  // Scope path
 	RecordCount int    `json:"recordCount"`
 	Active      bool   `json:"active"` // Whether inheritance is enabled
 }

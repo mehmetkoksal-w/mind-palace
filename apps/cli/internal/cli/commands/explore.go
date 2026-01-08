@@ -507,7 +507,8 @@ func runExploreListRooms(root string) error {
 	fmt.Printf("\n🏠 Configured Rooms (%d)\n", len(rooms))
 	fmt.Println(strings.Repeat("─", 60))
 
-	for _, room := range rooms {
+	for i := range rooms {
+		room := &rooms[i]
 		fmt.Printf("\n📁 %s\n", room.Name)
 		if room.Summary != "" {
 			fmt.Printf("   %s\n", room.Summary)

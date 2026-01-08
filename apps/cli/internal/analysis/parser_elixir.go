@@ -48,8 +48,7 @@ func (p *ElixirParser) extractSymbols(node *sitter.Node, content []byte, analysi
 			continue
 		}
 
-		switch child.Type() {
-		case "call":
+		if child.Type() == "call" {
 			p.parseCall(child, content, analysis)
 		}
 
@@ -191,7 +190,7 @@ func (p *ElixirParser) parseMacro(node, args *sitter.Node, content []byte, analy
 	})
 }
 
-func (p *ElixirParser) parseStruct(node, args *sitter.Node, content []byte, analysis *FileAnalysis) {
+func (p *ElixirParser) parseStruct(node, _ *sitter.Node, _ []byte, analysis *FileAnalysis) {
 	analysis.Symbols = append(analysis.Symbols, Symbol{
 		Name:      "__struct__",
 		Kind:      KindType,
@@ -330,7 +329,7 @@ func (p *ElixirParser) parseImportCall(node *sitter.Node, content []byte, analys
 	}
 }
 
-func (p *ElixirParser) extractModuledoc(node *sitter.Node, content []byte) string {
+func (p *ElixirParser) extractModuledoc(_ *sitter.Node, _ []byte) string {
 	return ""
 }
 

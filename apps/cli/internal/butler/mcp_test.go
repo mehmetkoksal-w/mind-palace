@@ -3,6 +3,7 @@ package butler
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"os"
@@ -23,13 +24,13 @@ func setupMCPServer(t *testing.T) (*MCPServer, *Butler) {
 		SetJSONCDecoder(jsonc.DecodeFile)
 	}
 	roomsDir := filepath.Join(root, ".palace", "rooms")
-	if err := os.MkdirAll(roomsDir, 0755); err != nil {
+	if err := os.MkdirAll(roomsDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll() error = %v", err)
 	}
 
 	room := `{"name":"core","summary":"Core room","entryPoints":["main.go"]}`
 	roomPath := filepath.Join(roomsDir, "core.jsonc")
-	if err := os.WriteFile(roomPath, []byte(room), 0644); err != nil {
+	if err := os.WriteFile(roomPath, []byte(room), 0o644); err != nil {
 		t.Fatalf("WriteFile(room) error = %v", err)
 	}
 
@@ -72,27 +73,27 @@ func seedIndex(db *sql.DB) error {
 	}
 
 	for _, f := range files {
-		if _, err := db.Exec(`INSERT INTO files (path, hash, size, mod_time, indexed_at, language) VALUES (?, ?, ?, ?, ?, ?)`,
+		if _, err := db.ExecContext(context.Background(), `INSERT INTO files (path, hash, size, mod_time, indexed_at, language) VALUES (?, ?, ?, ?, ?, ?)`,
 			f.path, "hash", 1, now, now, f.lang); err != nil {
 			return err
 		}
 	}
 
 	content := "package main\nfunc DoWork() {}\n"
-	if _, err := db.Exec(`INSERT INTO chunks (path, chunk_index, start_line, end_line, content) VALUES (?, ?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO chunks (path, chunk_index, start_line, end_line, content) VALUES (?, ?, ?, ?, ?)`,
 		"main.go", 0, 1, 2, content); err != nil {
 		return err
 	}
-	if _, err := db.Exec(`INSERT INTO chunks_fts (path, content, chunk_index) VALUES (?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO chunks_fts (path, content, chunk_index) VALUES (?, ?, ?)`,
 		"main.go", content, 0); err != nil {
 		return err
 	}
 
-	if _, err := db.Exec(`INSERT INTO symbols (file_path, name, kind, line_start, line_end, signature, doc_comment, exported) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO symbols (file_path, name, kind, line_start, line_end, signature, doc_comment, exported) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		"main.go", "DoWork", "function", 1, 20, "func DoWork()", "", 1); err != nil {
 		return err
 	}
-	if _, err := db.Exec(`INSERT INTO symbols (file_path, name, kind, line_start, line_end, signature, doc_comment, exported) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO symbols (file_path, name, kind, line_start, line_end, signature, doc_comment, exported) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		"caller.go", "Caller", "function", 1, 20, "func Caller()", "", 1); err != nil {
 		return err
 	}
@@ -111,7 +112,7 @@ func seedIndex(db *sql.DB) error {
 	}
 
 	for _, r := range relationships {
-		if _, err := db.Exec(`INSERT INTO relationships (source_file, target_file, target_symbol, kind, line) VALUES (?, ?, ?, ?, ?)`,
+		if _, err := db.ExecContext(context.Background(), `INSERT INTO relationships (source_file, target_file, target_symbol, kind, line) VALUES (?, ?, ?, ?, ?)`,
 			r.source, r.target, r.symbol, r.kind, r.line); err != nil {
 			return err
 		}
@@ -277,13 +278,13 @@ func TestMCPToolHandlersMemory(t *testing.T) {
 		t.Fatalf("log activity output unexpected: %s", text)
 	}
 
-	resp = server.toolAddLearning(3, map[string]interface{}{
-		"content":    "Remember to test",
-		"scope":      "palace",
-		"confidence": float64(0.8),
+	resp = server.toolStore(3, map[string]interface{}{
+		"content": "Remember to test",
+		"scope":   "palace",
+		"as":      "learning",
 	})
-	if text := toolText(t, resp); !strings.Contains(text, "Learning Stored") {
-		t.Fatalf("add learning output unexpected: %s", text)
+	if text := toolText(t, resp); !strings.Contains(text, "Remembered") {
+		t.Fatalf("store learning output unexpected: %s", text)
 	}
 
 	resp = server.toolRecall(4, map[string]interface{}{"limit": float64(5)})
@@ -323,8 +324,9 @@ func TestSanitizePath(t *testing.T) {
 	if sanitizePath("/abs/path") != "" {
 		t.Fatal("sanitizePath should reject absolute paths")
 	}
-	if got := sanitizePath("safe/file.txt"); got != "safe/file.txt" {
-		t.Fatalf("sanitizePath() = %q, want safe/file.txt", got)
+	want := filepath.FromSlash("safe/file.txt")
+	if got := sanitizePath("safe/file.txt"); got != want {
+		t.Fatalf("sanitizePath() = %q, want %q", got, want)
 	}
 }
 

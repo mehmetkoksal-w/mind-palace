@@ -274,6 +274,15 @@ func TestRecordForAnalysis(t *testing.T) {
 	if record.Kind != "idea" {
 		t.Error("Kind mismatch")
 	}
+	if record.Content != "Test content" {
+		t.Error("Content mismatch")
+	}
+	if record.Context != "Test context" {
+		t.Error("Context mismatch")
+	}
+	if record.Status != "active" {
+		t.Error("Status mismatch")
+	}
 }
 
 func TestContradictionResult(t *testing.T) {
@@ -291,5 +300,17 @@ func TestContradictionResult(t *testing.T) {
 	}
 	if result.Confidence != 0.9 {
 		t.Errorf("Expected confidence 0.9, got %f", result.Confidence)
+	}
+	if result.ContradictType != "direct" {
+		t.Errorf("Expected type 'direct', got %s", result.ContradictType)
+	}
+	if result.Record1ID != "i_1" {
+		t.Errorf("Expected Record1ID 'i_1', got %s", result.Record1ID)
+	}
+	if result.Record2ID != "i_2" {
+		t.Errorf("Expected Record2ID 'i_2', got %s", result.Record2ID)
+	}
+	if result.Explanation != "Direct conflict" {
+		t.Errorf("Expected explanation 'Direct conflict', got %s", result.Explanation)
 	}
 }

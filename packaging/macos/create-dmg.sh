@@ -45,14 +45,14 @@ sudo chmod +x /usr/local/bin/palace
 # Verify installation
 if command -v palace &> /dev/null; then
     echo ""
-    echo "✅ Installation successful!"
+    echo "[OK] Installation successful!"
     echo ""
     palace version
     echo ""
     echo "You can now use 'palace' from any terminal."
 else
     echo ""
-    echo "⚠️  Installation completed, but 'palace' is not in PATH."
+    echo "[WARNING]  Installation completed, but 'palace' is not in PATH."
     echo "   You may need to restart your terminal or add /usr/local/bin to PATH."
 fi
 

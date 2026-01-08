@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.1-alpha] - 2026-01-01
 
-### 🔭 Introducing The Observer
+### Introducing The Observer
 
 The Mind Palace Observer is your IDE's "Head-Up Display" for the Mind Palace ecosystem. It bridges the gap between your local source code and your digital second brain.
 
-### ✨ Key Features
+### Key Features
 
 #### The Traffic Light (Status HUD)
 

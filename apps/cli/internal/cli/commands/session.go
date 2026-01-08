@@ -219,7 +219,8 @@ func ExecuteSessionList(opts SessionListOptions) error {
 	fmt.Printf("\n📋 Sessions\n")
 	fmt.Println(strings.Repeat("─", 60))
 
-	for _, s := range sessions {
+	for i := range sessions {
+		s := &sessions[i]
 		stateIcon := "✅"
 		switch s.State {
 		case "active":

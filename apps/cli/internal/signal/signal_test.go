@@ -1,6 +1,7 @@
 package signal
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 func TestGenerateChangeSignal(t *testing.T) {
 	dir := t.TempDir()
 	run := func(args ...string) {
-		cmd := exec.Command("git", args...)
+		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = dir
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v failed: %v output: %s", args, err, string(out))
@@ -101,7 +102,7 @@ func TestGenerateRequiresDiffRange(t *testing.T) {
 func TestGenerateWithAddedFile(t *testing.T) {
 	dir := t.TempDir()
 	run := func(args ...string) {
-		cmd := exec.Command("git", args...)
+		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = dir
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v failed: %v output: %s", args, err, string(out))
@@ -149,7 +150,7 @@ func TestGenerateWithAddedFile(t *testing.T) {
 func TestGenerateWithDeletedFile(t *testing.T) {
 	dir := t.TempDir()
 	run := func(args ...string) {
-		cmd := exec.Command("git", args...)
+		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = dir
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v failed: %v output: %s", args, err, string(out))
@@ -201,7 +202,7 @@ func TestGenerateWithDeletedFile(t *testing.T) {
 func TestGenerateWithMultipleChanges(t *testing.T) {
 	dir := t.TempDir()
 	run := func(args ...string) {
-		cmd := exec.Command("git", args...)
+		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = dir
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v failed: %v output: %s", args, err, string(out))
@@ -257,7 +258,7 @@ func TestGenerateWithMultipleChanges(t *testing.T) {
 func TestChangeSignalMetadata(t *testing.T) {
 	dir := t.TempDir()
 	run := func(args ...string) {
-		cmd := exec.Command("git", args...)
+		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = dir
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v failed: %v output: %s", args, err, string(out))
@@ -308,7 +309,7 @@ func TestPathsFromSignal(t *testing.T) {
 
 	// Setup git repo
 	run := func(args ...string) {
-		cmd := exec.Command("git", args...)
+		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = dir
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v failed: %v output: %s", args, err, string(out))
@@ -319,10 +320,10 @@ func TestPathsFromSignal(t *testing.T) {
 	run("config", "user.name", "tester")
 
 	path := filepath.Join(dir, "file.txt")
-	os.WriteFile(path, []byte("v1"), 0644)
+	os.WriteFile(path, []byte("v1"), 0o644)
 	run("add", ".")
 	run("commit", "-m", "init")
-	os.WriteFile(path, []byte("v2"), 0644)
+	os.WriteFile(path, []byte("v2"), 0o644)
 	run("add", ".")
 	run("commit", "-m", "mod")
 
@@ -346,7 +347,7 @@ func TestPathsFromSignal(t *testing.T) {
 	}
 
 	// Test with mismatching diff range (should fallback to git diff)
-	paths, fromSignal, err = Paths(dir, "HEAD", config.Guardrails{})
+	_, fromSignal, err = Paths(dir, "HEAD", config.Guardrails{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,11 +367,11 @@ func TestGenerateErrors(t *testing.T) {
 func TestPathsFromSignalErrors(t *testing.T) {
 	dir := t.TempDir()
 	outDir := filepath.Join(dir, ".palace", "outputs")
-	os.MkdirAll(outDir, 0755)
+	os.MkdirAll(outDir, 0o755)
 
 	// Create invalid signal file
 	sigPath := filepath.Join(outDir, "change-signal.json")
-	os.WriteFile(sigPath, []byte("not valid json"), 0644)
+	os.WriteFile(sigPath, []byte("not valid json"), 0o644)
 
 	_, fromSignal, err := Paths(dir, "HEAD", config.Guardrails{})
 	if err == nil {
@@ -384,7 +385,7 @@ func TestPathsFromSignalErrors(t *testing.T) {
 func TestPathsWithGuardrails(t *testing.T) {
 	dir := t.TempDir()
 	run := func(args ...string) {
-		cmd := exec.Command("git", args...)
+		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = dir
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v failed: %v output: %s", args, err, string(out))
@@ -395,12 +396,12 @@ func TestPathsWithGuardrails(t *testing.T) {
 	run("config", "user.name", "t")
 
 	// Create an initial commit so HEAD is valid
-	os.WriteFile(filepath.Join(dir, "root"), []byte("root"), 0644)
+	os.WriteFile(filepath.Join(dir, "root"), []byte("root"), 0o644)
 	run("add", ".")
 	run("commit", "-m", "root")
 
 	// Add secret file and commit it
-	os.WriteFile(filepath.Join(dir, "secret.key"), []byte("key"), 0644)
+	os.WriteFile(filepath.Join(dir, "secret.key"), []byte("key"), 0o644)
 	run("add", ".")
 	run("commit", "-m", "secret")
 
@@ -418,7 +419,7 @@ func TestPathsWithGuardrails(t *testing.T) {
 func TestGenerateWithInvalidDiffRange(t *testing.T) {
 	dir := t.TempDir()
 	// Initialize repo so it's a valid git root
-	exec.Command("git", "-C", dir, "init").Run()
+	exec.CommandContext(context.Background(), "git", "-C", dir, "init").Run()
 
 	// Pass invalid range that git will reject
 	_, err := Generate(dir, "INVALID..RANGE")

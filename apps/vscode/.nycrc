@@ -1,0 +1,32 @@
+{
+  "all": true,
+  "check-coverage": true,
+  "report-dir": "coverage",
+  "temp-dir": ".nyc_output",
+  "extension": [".ts"],
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "**/*.d.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/test/**",
+    "src/webviews/webview-scripts/**",
+    "out/**",
+    "dist/**",
+    "node_modules/**",
+    ".vscode-test/**",
+    "esbuild.config.js"
+  ],
+  "require": ["ts-node/register"],
+  "sourceMap": true,
+  "instrument": true,
+  "produce-source-map": true,
+  "reporter": ["text", "text-summary", "html", "lcov", "json"],
+  "branches": 70,
+  "lines": 75,
+  "functions": 70,
+  "statements": 75,
+  "per-file": false,
+  "cache": true,
+  "cacheDir": ".nyc_output"
+}

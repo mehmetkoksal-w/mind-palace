@@ -76,7 +76,7 @@ func TestDetectNewFile(t *testing.T) {
 
 	// Create a file that's not in stored metadata
 	testFile := filepath.Join(tmpDir, "new.go")
-	if err := os.WriteFile(testFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -98,7 +98,7 @@ func TestDetectChangedFileFastMode(t *testing.T) {
 	// Create a file
 	testFile := filepath.Join(tmpDir, "changed.go")
 	content := []byte("package main\nfunc main() {}\n")
-	if err := os.WriteFile(testFile, content, 0644); err != nil {
+	if err := os.WriteFile(testFile, content, 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -134,7 +134,7 @@ func TestDetectChangedFileStrictMode(t *testing.T) {
 	// Create a file
 	testFile := filepath.Join(tmpDir, "strict.go")
 	content := []byte("package main\n")
-	if err := os.WriteFile(testFile, content, 0644); err != nil {
+	if err := os.WriteFile(testFile, content, 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -165,7 +165,7 @@ func TestDetectUnchangedFileFastMode(t *testing.T) {
 	// Create a file
 	testFile := filepath.Join(tmpDir, "unchanged.go")
 	content := []byte("package main\n")
-	if err := os.WriteFile(testFile, content, 0644); err != nil {
+	if err := os.WriteFile(testFile, content, 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -194,7 +194,7 @@ func TestDetectUnchangedFileStrictMode(t *testing.T) {
 	// Create a file
 	testFile := filepath.Join(tmpDir, "unchanged.go")
 	content := []byte("package main\n")
-	if err := os.WriteFile(testFile, content, 0644); err != nil {
+	if err := os.WriteFile(testFile, content, 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -219,7 +219,7 @@ func TestDetectIncludeMissing(t *testing.T) {
 
 	// Create only one file
 	testFile := filepath.Join(tmpDir, "exists.go")
-	if err := os.WriteFile(testFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -261,10 +261,10 @@ func TestDetectGuardrailsFilter(t *testing.T) {
 	// Create files
 	for _, name := range []string{"main.go", "node_modules/lib.js", "vendor/dep.go"} {
 		path := filepath.Join(tmpDir, name)
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatalf("failed to create dir: %v", err)
 		}
-		if err := os.WriteFile(path, []byte("content"), 0644); err != nil {
+		if err := os.WriteFile(path, []byte("content"), 0o644); err != nil {
 			t.Fatalf("failed to write file: %v", err)
 		}
 	}
@@ -292,10 +292,10 @@ func TestDetectPathNormalization(t *testing.T) {
 
 	// Create a file
 	testFile := filepath.Join(tmpDir, "src", "main.go")
-	if err := os.MkdirAll(filepath.Dir(testFile), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(testFile), 0o755); err != nil {
 		t.Fatalf("failed to create dir: %v", err)
 	}
-	if err := os.WriteFile(testFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
 
@@ -320,7 +320,7 @@ func TestDetectResultsSorted(t *testing.T) {
 	// Create files
 	for _, name := range []string{"z.go", "a.go", "m.go"} {
 		path := filepath.Join(tmpDir, name)
-		if err := os.WriteFile(path, []byte("package main\n"), 0644); err != nil {
+		if err := os.WriteFile(path, []byte("package main\n"), 0o644); err != nil {
 			t.Fatalf("failed to write file: %v", err)
 		}
 	}
@@ -349,7 +349,7 @@ func TestDetectFastModeSkipsHashWhenSizeAndModTimeMatch(t *testing.T) {
 	// Create a file
 	testFile := filepath.Join(tmpDir, "fast.go")
 	content := []byte("package main\n")
-	if err := os.WriteFile(testFile, content, 0644); err != nil {
+	if err := os.WriteFile(testFile, content, 0o644); err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
 
@@ -382,12 +382,12 @@ func TestDetectMultipleIssues(t *testing.T) {
 
 	// Create some files
 	existingFile := filepath.Join(tmpDir, "existing.go")
-	if err := os.WriteFile(existingFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(existingFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
 
 	newFile := filepath.Join(tmpDir, "new.go")
-	if err := os.WriteFile(newFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(newFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
 
@@ -438,7 +438,7 @@ func TestDetectDuplicateCandidates(t *testing.T) {
 
 	// Create a file
 	testFile := filepath.Join(tmpDir, "dup.go")
-	if err := os.WriteFile(testFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
 
@@ -464,9 +464,9 @@ func BenchmarkDetectFastMode(b *testing.B) {
 	for i := 0; i < 100; i++ {
 		name := filepath.Join("src", "file"+string(rune('a'+i%26))+".go")
 		path := filepath.Join(tmpDir, name)
-		os.MkdirAll(filepath.Dir(path), 0755)
+		os.MkdirAll(filepath.Dir(path), 0o755)
 		content := []byte("package main\n// file " + string(rune('a'+i%26)) + "\n")
-		os.WriteFile(path, content, 0644)
+		os.WriteFile(path, content, 0o644)
 		stat, _ := os.Stat(path)
 		hash, _ := fsutil.HashFile(path)
 		stored[filepath.ToSlash(name)] = index.FileMetadata{
@@ -491,9 +491,9 @@ func BenchmarkDetectStrictMode(b *testing.B) {
 	for i := 0; i < 100; i++ {
 		name := filepath.Join("src", "file"+string(rune('a'+i%26))+".go")
 		path := filepath.Join(tmpDir, name)
-		os.MkdirAll(filepath.Dir(path), 0755)
+		os.MkdirAll(filepath.Dir(path), 0o755)
 		content := []byte("package main\n// file " + string(rune('a'+i%26)) + "\n")
-		os.WriteFile(path, content, 0644)
+		os.WriteFile(path, content, 0o644)
 		hash, _ := fsutil.HashFile(path)
 		stored[filepath.ToSlash(name)] = index.FileMetadata{Hash: hash}
 		candidates[i] = name

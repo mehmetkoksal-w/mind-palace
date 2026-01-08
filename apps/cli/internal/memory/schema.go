@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -104,7 +105,7 @@ CREATE TABLE IF NOT EXISTS active_agents (
 );
 CREATE INDEX IF NOT EXISTS idx_active_agents_file ON active_agents(current_file);
 `
-	_, err := tx.Exec(schema)
+	_, err := tx.ExecContext(context.Background(), schema)
 	return err
 }
 
@@ -245,20 +246,20 @@ CREATE TRIGGER IF NOT EXISTS conversations_au AFTER UPDATE ON conversations BEGI
     INSERT INTO conversations_fts(rowid, summary) VALUES (new.rowid, new.summary);
 END;
 `
-	_, err := tx.Exec(schema)
+	_, err := tx.ExecContext(context.Background(), schema)
 	return err
 }
 
 // ensureSchema creates the schema version table and runs any pending migrations
 func (m *Memory) ensureSchema() error {
 	// Create schema version table first
-	if _, err := m.db.Exec(schemaVersionTable); err != nil {
+	if _, err := m.db.ExecContext(context.Background(), schemaVersionTable); err != nil {
 		return fmt.Errorf("create schema_version table: %w", err)
 	}
 
 	// Get current schema version
 	var currentVersion int
-	row := m.db.QueryRow("SELECT COALESCE(MAX(version), -1) FROM schema_version")
+	row := m.db.QueryRowContext(context.Background(), "SELECT COALESCE(MAX(version), -1) FROM schema_version")
 	if err := row.Scan(&currentVersion); err != nil {
 		return fmt.Errorf("get schema version: %w", err)
 	}
@@ -275,7 +276,7 @@ func (m *Memory) ensureSchema() error {
 
 // runMigration executes a single migration in a transaction
 func (m *Memory) runMigration(version int) error {
-	tx, err := m.db.Begin()
+	tx, err := m.db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
@@ -288,7 +289,7 @@ func (m *Memory) runMigration(version int) error {
 
 	// Record the migration
 	now := time.Now().UTC().Format(time.RFC3339)
-	if _, err := tx.Exec("INSERT INTO schema_version (version, applied_at) VALUES (?, ?)", version, now); err != nil {
+	if _, err := tx.ExecContext(context.Background(), "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)", version, now); err != nil {
 		return fmt.Errorf("record migration: %w", err)
 	}
 
@@ -298,7 +299,7 @@ func (m *Memory) runMigration(version int) error {
 // GetSchemaVersion returns the current schema version
 func (m *Memory) GetSchemaVersion() (int, error) {
 	var version int
-	row := m.db.QueryRow("SELECT COALESCE(MAX(version), -1) FROM schema_version")
+	row := m.db.QueryRowContext(context.Background(), "SELECT COALESCE(MAX(version), -1) FROM schema_version")
 	err := row.Scan(&version)
 	return version, err
 }
@@ -318,7 +319,7 @@ func migrateV2(tx *sql.Tx) error {
 	for _, stmt := range alterStatements {
 		// SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so we ignore errors
 		// if the column already exists
-		_, _ = tx.Exec(stmt)
+		_, _ = tx.ExecContext(context.Background(), stmt)
 	}
 
 	// Create decision-learning relationship table
@@ -339,7 +340,7 @@ CREATE INDEX IF NOT EXISTS idx_decision_learnings_learning ON decision_learnings
 -- Index for learning status queries
 CREATE INDEX IF NOT EXISTS idx_learnings_status ON learnings(status);
 `
-	_, err := tx.Exec(schema)
+	_, err := tx.ExecContext(context.Background(), schema)
 	return err
 }
 
@@ -389,7 +390,6 @@ CREATE TRIGGER IF NOT EXISTS postmortems_au AFTER UPDATE ON postmortems BEGIN
     VALUES (new.rowid, new.title, new.what_happened, new.root_cause, new.lessons_learned);
 END;
 `
-	_, err := tx.Exec(schema)
+	_, err := tx.ExecContext(context.Background(), schema)
 	return err
 }
-

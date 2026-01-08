@@ -155,7 +155,8 @@ func (s *MCPServer) toolConversationSearch(id any, args map[string]interface{}) 
 		output.WriteString("No conversations found.\n")
 	} else {
 		fmt.Fprintf(&output, "Found %d conversation(s):\n\n", len(conversations))
-		for _, c := range conversations {
+		for i := range conversations {
+			c := &conversations[i]
 			fmt.Fprintf(&output, "## `%s`\n", c.ID)
 			fmt.Fprintf(&output, "**Summary:** %s\n", c.Summary)
 			fmt.Fprintf(&output, "**Agent:** %s\n", c.AgentType)

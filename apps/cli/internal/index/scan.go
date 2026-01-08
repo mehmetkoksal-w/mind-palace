@@ -1,6 +1,7 @@
 package index
 
 import (
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"fmt"
@@ -36,7 +37,7 @@ type IncrementalScanSummary struct {
 func DetectChanges(db *sql.DB, root string, guardrails config.Guardrails) ([]FileChange, error) {
 	// Get all indexed files with their hashes
 	indexed := make(map[string]string) // path -> hash
-	rows, err := db.Query("SELECT path, hash FROM files")
+	rows, err := db.QueryContext(context.Background(), "SELECT path, hash FROM files")
 	if err != nil {
 		return nil, fmt.Errorf("query indexed files: %w", err)
 	}
@@ -121,7 +122,7 @@ func IncrementalScan(db *sql.DB, root string, changes []FileChange) (Incremental
 		return summary, nil
 	}
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return summary, fmt.Errorf("begin transaction: %w", err)
 	}
@@ -143,7 +144,7 @@ func IncrementalScan(db *sql.DB, root string, changes []FileChange) (Incremental
 
 			// Read and index the file
 			absPath := filepath.Join(root, change.Path)
-			if err := indexSingleFile(tx, root, change.Path, absPath); err != nil {
+			if err := indexSingleFile(tx, change.Path, absPath); err != nil {
 				return summary, fmt.Errorf("index %s: %w", change.Path, err)
 			}
 
@@ -166,15 +167,15 @@ func IncrementalScan(db *sql.DB, root string, changes []FileChange) (Incremental
 // deleteFileFromIndex removes a file and all associated data from the index
 func deleteFileFromIndex(tx *sql.Tx, relPath string) error {
 	// FTS tables need to be cleaned first
-	if _, err := tx.Exec("DELETE FROM chunks_fts WHERE path = ?", relPath); err != nil {
+	if _, err := tx.ExecContext(context.Background(), "DELETE FROM chunks_fts WHERE path = ?", relPath); err != nil {
 		return fmt.Errorf("delete from chunks_fts: %w", err)
 	}
-	if _, err := tx.Exec("DELETE FROM symbols_fts WHERE file_path = ?", relPath); err != nil {
+	if _, err := tx.ExecContext(context.Background(), "DELETE FROM symbols_fts WHERE file_path = ?", relPath); err != nil {
 		return fmt.Errorf("delete from symbols_fts: %w", err)
 	}
 
 	// Regular tables (CASCADE handles relationships)
-	if _, err := tx.Exec("DELETE FROM files WHERE path = ?", relPath); err != nil {
+	if _, err := tx.ExecContext(context.Background(), "DELETE FROM files WHERE path = ?", relPath); err != nil {
 		return fmt.Errorf("delete from files: %w", err)
 	}
 
@@ -182,7 +183,7 @@ func deleteFileFromIndex(tx *sql.Tx, relPath string) error {
 }
 
 // indexSingleFile indexes a single file into the database
-func indexSingleFile(tx *sql.Tx, root, relPath, absPath string) error {
+func indexSingleFile(tx *sql.Tx, relPath, absPath string) error {
 	// Read file info and content
 	info, err := os.Stat(absPath)
 	if err != nil {
@@ -209,7 +210,7 @@ func indexSingleFile(tx *sql.Tx, root, relPath, absPath string) error {
 	}
 
 	// Insert file record
-	_, err = tx.Exec(`INSERT INTO files(path, hash, size, mod_time, indexed_at, language) VALUES(?, ?, ?, ?, ?, ?);`,
+	_, err = tx.ExecContext(context.Background(), `INSERT INTO files(path, hash, size, mod_time, indexed_at, language) VALUES(?, ?, ?, ?, ?, ?);`,
 		relPath, hash, info.Size(), fsutil.NormalizeModTime(info.ModTime()).Format(time.RFC3339), now, string(lang))
 	if err != nil {
 		return fmt.Errorf("insert file: %w", err)
@@ -218,12 +219,12 @@ func indexSingleFile(tx *sql.Tx, root, relPath, absPath string) error {
 	// Insert chunks
 	chunks := fsutil.ChunkContent(string(data), 120, 8*1024)
 	for i, chunk := range chunks {
-		_, err = tx.Exec(`INSERT INTO chunks(path, chunk_index, start_line, end_line, content) VALUES(?, ?, ?, ?, ?);`,
+		_, err = tx.ExecContext(context.Background(), `INSERT INTO chunks(path, chunk_index, start_line, end_line, content) VALUES(?, ?, ?, ?, ?);`,
 			relPath, i, chunk.StartLine, chunk.EndLine, chunk.Content)
 		if err != nil {
 			return fmt.Errorf("insert chunk: %w", err)
 		}
-		_, err = tx.Exec(`INSERT INTO chunks_fts(path, content, chunk_index) VALUES(?, ?, ?);`,
+		_, err = tx.ExecContext(context.Background(), `INSERT INTO chunks_fts(path, content, chunk_index) VALUES(?, ?, ?);`,
 			relPath, chunk.Content, i)
 		if err != nil {
 			return fmt.Errorf("insert chunk_fts: %w", err)
@@ -238,7 +239,7 @@ func indexSingleFile(tx *sql.Tx, root, relPath, absPath string) error {
 
 		// Insert relationships
 		for _, rel := range fileAnalysis.Relationships {
-			_, err = tx.Exec(`INSERT INTO relationships(source_file, source_symbol_id, target_file, target_symbol, kind, line, column) VALUES(?, ?, ?, ?, ?, ?, ?);`,
+			_, err = tx.ExecContext(context.Background(), `INSERT INTO relationships(source_file, source_symbol_id, target_file, target_symbol, kind, line, column) VALUES(?, ?, ?, ?, ?, ?, ?);`,
 				relPath, nil, rel.TargetFile, rel.TargetSymbol, string(rel.Kind), rel.Line, rel.Column)
 			if err != nil {
 				return fmt.Errorf("insert relationship: %w", err)
@@ -257,14 +258,14 @@ func insertSymbolsRecursive(tx *sql.Tx, filePath string, symbols []analysis.Symb
 			exported = 1
 		}
 
-		result, err := tx.Exec(`INSERT INTO symbols(file_path, name, kind, line_start, line_end, signature, doc_comment, parent_id, exported) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+		result, err := tx.ExecContext(context.Background(), `INSERT INTO symbols(file_path, name, kind, line_start, line_end, signature, doc_comment, parent_id, exported) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`,
 			filePath, sym.Name, string(sym.Kind), sym.LineStart, sym.LineEnd, sym.Signature, sym.DocComment, parentID, exported)
 		if err != nil {
 			return fmt.Errorf("insert symbol %s: %w", sym.Name, err)
 		}
 
 		// Insert into FTS
-		_, err = tx.Exec(`INSERT INTO symbols_fts(name, file_path, kind, doc_comment) VALUES(?, ?, ?, ?);`,
+		_, err = tx.ExecContext(context.Background(), `INSERT INTO symbols_fts(name, file_path, kind, doc_comment) VALUES(?, ?, ?, ?);`,
 			sym.Name, filePath, string(sym.Kind), sym.DocComment)
 		if err != nil {
 			return fmt.Errorf("insert symbol_fts %s: %w", sym.Name, err)

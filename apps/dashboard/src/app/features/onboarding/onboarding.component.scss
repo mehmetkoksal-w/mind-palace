@@ -1,0 +1,254 @@
+/* Onboarding shared styles */
+:host {
+    display: block;
+}
+
+.onboarding-wrapper {
+    max-width: 960px;
+    margin: 2rem auto;
+    padding: 1.5rem;
+    background: #1a1a2e;
+    border: 1px solid #2d2d44;
+    border-radius: 16px;
+    color: #e2e8f0;
+}
+
+.progress-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #64748b;
+}
+
+.step .number {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #2d2d44;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.step.active .number {
+    background: rgba(157, 78, 221, 0.2);
+    color: #9d4edd;
+}
+
+.step.complete .number {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.step .label {
+    font-weight: 600;
+}
+
+.step-content {
+    background: #0f0f1a;
+    border-radius: 12px;
+    border: 1px solid #2d2d44;
+    padding: 1.5rem;
+}
+
+/* Welcome */
+.welcome-container .hero {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.welcome-container .logo {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 0.5rem;
+}
+
+.welcome-container .tagline {
+    color: #94a3b8;
+}
+
+.features {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.feature {
+    background: #1a1a2e;
+    border: 1px solid #2d2d44;
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.feature .icon {
+    font-size: 1.25rem;
+}
+
+/* Init */
+.init-container h2,
+.sample-container h2 {
+    margin-top: 0;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 520px;
+}
+
+label {
+    font-weight: 600;
+}
+
+input[type='text'] {
+    background: #1a1a2e;
+    border: 1px solid #2d2d44;
+    border-radius: 8px;
+    padding: 0.75rem 0.875rem;
+    color: #e2e8f0;
+}
+
+input.invalid {
+    border-color: #ef4444;
+}
+
+.error {
+    color: #ef4444;
+    font-size: 0.875rem;
+}
+
+.error-message {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.15);
+    color: #fecaca;
+}
+
+.actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+button.primary,
+button.secondary,
+button.tertiary {
+    padding: 0.625rem 1rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+button.primary {
+    background: #9d4edd;
+    color: #fff;
+}
+
+button.secondary {
+    background: #2d2d44;
+    color: #e2e8f0;
+}
+
+button.tertiary {
+    background: transparent;
+    color: #94a3b8;
+    border-color: #2d2d44;
+}
+
+button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #3d3d54;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.preview ul {
+    list-style: none;
+    padding: 0;
+}
+
+.preview li {
+    padding: 0.25rem 0;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .features {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .onboarding-wrapper {
+        margin: 1rem;
+        padding: 1rem;
+    }
+
+    .features {
+        grid-template-columns: 1fr;
+    }
+
+    .actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* Light theme support (based on prefers-color-scheme) */
+@media (prefers-color-scheme: light) {
+    .onboarding-wrapper {
+        background: #ffffff;
+        border-color: #e5e7eb;
+        color: #111827;
+    }
+
+    .step-content {
+        background: #f9fafb;
+        border-color: #e5e7eb;
+    }
+
+    .feature {
+        background: #ffffff;
+        border-color: #e5e7eb;
+    }
+
+    input[type='text'] {
+        background: #ffffff;
+        border-color: #e5e7eb;
+        color: #111827;
+    }
+
+    .error-message {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+}

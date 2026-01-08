@@ -1,6 +1,7 @@
 package corridor
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -122,7 +123,7 @@ func (g *GlobalCorridor) AddPersonalLearning(l PersonalLearning) error {
 
 	tagsJSON, _ := json.Marshal(l.Tags)
 
-	_, err := g.db.Exec(`
+	_, err := g.db.ExecContext(context.Background(), `
 		INSERT INTO learnings (id, origin_workspace, content, confidence, source, created_at, last_used, use_count, tags)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
@@ -146,14 +147,14 @@ func (g *GlobalCorridor) GetPersonalLearnings(query string, limit int) ([]Person
 	var err error
 
 	if query == "" {
-		rows, err = g.db.Query(`
+		rows, err = g.db.QueryContext(context.Background(), `
 			SELECT id, origin_workspace, content, confidence, source, created_at, last_used, use_count, tags
 			FROM learnings
 			ORDER BY confidence DESC, use_count DESC
 			LIMIT ?
 		`, limit)
 	} else {
-		rows, err = g.db.Query(`
+		rows, err = g.db.QueryContext(context.Background(), `
 			SELECT id, origin_workspace, content, confidence, source, created_at, last_used, use_count, tags
 			FROM learnings
 			WHERE content LIKE ?
@@ -172,7 +173,7 @@ func (g *GlobalCorridor) GetPersonalLearnings(query string, limit int) ([]Person
 // ReinforceLearning increases confidence for a learning.
 func (g *GlobalCorridor) ReinforceLearning(id string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := g.db.Exec(`
+	_, err := g.db.ExecContext(context.Background(), `
 		UPDATE learnings
 		SET confidence = MIN(1.0, confidence + 0.1),
 		    use_count = use_count + 1,
@@ -184,7 +185,7 @@ func (g *GlobalCorridor) ReinforceLearning(id string) error {
 
 // DeleteLearning removes a learning from the personal corridor.
 func (g *GlobalCorridor) DeleteLearning(id string) error {
-	_, err := g.db.Exec(`DELETE FROM learnings WHERE id = ?`, id)
+	_, err := g.db.ExecContext(context.Background(), `DELETE FROM learnings WHERE id = ?`, id)
 	return err
 }
 
@@ -202,7 +203,7 @@ func (g *GlobalCorridor) Link(name, localPath string) error {
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err = g.db.Exec(`
+	_, err = g.db.ExecContext(context.Background(), `
 		INSERT INTO links (name, path, added_at, last_accessed)
 		VALUES (?, ?, ?, ?)
 		ON CONFLICT(name) DO UPDATE SET
@@ -214,7 +215,7 @@ func (g *GlobalCorridor) Link(name, localPath string) error {
 
 // Unlink removes a workspace link.
 func (g *GlobalCorridor) Unlink(name string) error {
-	result, err := g.db.Exec(`DELETE FROM links WHERE name = ?`, name)
+	result, err := g.db.ExecContext(context.Background(), `DELETE FROM links WHERE name = ?`, name)
 	if err != nil {
 		return err
 	}
@@ -227,7 +228,7 @@ func (g *GlobalCorridor) Unlink(name string) error {
 
 // GetLinks returns all linked workspaces.
 func (g *GlobalCorridor) GetLinks() ([]LinkedWorkspace, error) {
-	rows, err := g.db.Query(`
+	rows, err := g.db.QueryContext(context.Background(), `
 		SELECT name, path, added_at, last_accessed
 		FROM links
 		ORDER BY name
@@ -263,7 +264,7 @@ func (g *GlobalCorridor) GetLinkedLearnings(name string, limit int) ([]memory.Le
 
 	// Get the link path
 	var path string
-	err := g.db.QueryRow(`SELECT path FROM links WHERE name = ?`, name).Scan(&path)
+	err := g.db.QueryRowContext(context.Background(), `SELECT path FROM links WHERE name = ?`, name).Scan(&path)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("no link named %q", name)
 	}
@@ -273,7 +274,7 @@ func (g *GlobalCorridor) GetLinkedLearnings(name string, limit int) ([]memory.Le
 
 	// Update last accessed (non-critical, ok to fail)
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, _ = g.db.Exec(`UPDATE links SET last_accessed = ? WHERE name = ?`, now, name)
+	_, _ = g.db.ExecContext(context.Background(), `UPDATE links SET last_accessed = ? WHERE name = ?`, now, name)
 
 	// Open the linked workspace memory
 	memoryPath := filepath.Join(path, ".palace", "memory.db")
@@ -343,30 +344,33 @@ func (g *GlobalCorridor) AutoPromote(workspaceName string, mem *memory.Memory) (
 	}
 
 	var promoted []PersonalLearning
-	for _, l := range learnings {
+	for i := range learnings {
+		l := &learnings[i]
 		// Promote if confidence >= 0.8 and use_count >= 3
-		if l.Confidence >= 0.8 && l.UseCount >= 3 {
-			// Check if already promoted
-			var exists int
-			err := g.db.QueryRow(`SELECT 1 FROM learnings WHERE id = ?`, l.ID).Scan(&exists)
-			if err != nil && err != sql.ErrNoRows {
-				// DB error - skip this learning
-				continue
-			}
-			if exists == 1 {
-				continue
-			}
-
-			if err := g.PromoteFromWorkspace(workspaceName, l); err != nil {
-				continue
-			}
-			promoted = append(promoted, PersonalLearning{
-				ID:              l.ID,
-				OriginWorkspace: workspaceName,
-				Content:         l.Content,
-				Confidence:      l.Confidence,
-			})
+		if l.Confidence < 0.8 || l.UseCount < 3 {
+			continue
 		}
+
+		// Check if already promoted
+		var exists int
+		err := g.db.QueryRowContext(context.Background(), `SELECT 1 FROM learnings WHERE id = ?`, l.ID).Scan(&exists)
+		if err != nil && err != sql.ErrNoRows {
+			// DB error - skip this learning
+			continue
+		}
+		if exists == 1 {
+			continue
+		}
+
+		if err := g.PromoteFromWorkspace(workspaceName, *l); err != nil {
+			continue
+		}
+		promoted = append(promoted, PersonalLearning{
+			ID:              l.ID,
+			OriginWorkspace: workspaceName,
+			Content:         l.Content,
+			Confidence:      l.Confidence,
+		})
 	}
 	return promoted, nil
 }
@@ -374,13 +378,13 @@ func (g *GlobalCorridor) AutoPromote(workspaceName string, mem *memory.Memory) (
 // Stats returns statistics about the personal corridor.
 func (g *GlobalCorridor) Stats() (map[string]any, error) {
 	var learningCount int
-	g.db.QueryRow(`SELECT COUNT(*) FROM learnings`).Scan(&learningCount)
+	g.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM learnings`).Scan(&learningCount)
 
 	var linkCount int
-	g.db.QueryRow(`SELECT COUNT(*) FROM links`).Scan(&linkCount)
+	g.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM links`).Scan(&linkCount)
 
 	var avgConfidence float64
-	g.db.QueryRow(`SELECT AVG(confidence) FROM learnings`).Scan(&avgConfidence)
+	g.db.QueryRowContext(context.Background(), `SELECT AVG(confidence) FROM learnings`).Scan(&avgConfidence)
 
 	return map[string]any{
 		"learningCount":     learningCount,
@@ -432,11 +436,4 @@ func (g *GlobalCorridor) PruneStaleLinks() ([]string, error) {
 		g.Unlink(name)
 	}
 	return stale, nil
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

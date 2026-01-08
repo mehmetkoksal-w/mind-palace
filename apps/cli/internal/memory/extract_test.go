@@ -73,4 +73,7 @@ func TestExtractedRecordStruct(t *testing.T) {
 	if record.Content == "" {
 		t.Error("Expected non-empty content")
 	}
+	if record.Context != "Discussed in authentication planning session" {
+		t.Error("Context mismatch")
+	}
 }

@@ -1,7 +1,6 @@
 package butler
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -20,8 +19,7 @@ func preprocessQueryWithFuzzy(query string) string {
 	// First expand tokens (CamelCase, snake_case)
 	tokens := expandQueryTokens(trimmed)
 	if len(tokens) == 0 {
-		escaped := strings.ReplaceAll(trimmed, "\"", "\"\"")
-		return fmt.Sprintf("\"%s\"", escaped)
+		return "\"" + strings.ReplaceAll(trimmed, "\"", "\"\"") + "\""
 	}
 
 	// Expand with synonyms
@@ -35,24 +33,21 @@ func preprocessQueryWithFuzzy(query string) string {
 		}
 
 		// Add the original token
-		escaped := strings.ReplaceAll(token, "\"", "\"\"")
-		allTerms = append(allTerms, fmt.Sprintf("\"%s\"*", escaped))
+		allTerms = append(allTerms, "\""+strings.ReplaceAll(token, "\"", "\"\"")+"\"*")
 
 		// Add fuzzy variants for longer words
 		if len(token) >= 5 {
 			fuzzyVariants := ExpandWithFuzzyVariants(token, CommonProgrammingTerms)
 			for _, variant := range fuzzyVariants {
 				if variant != token {
-					escaped := strings.ReplaceAll(variant, "\"", "\"\"")
-					allTerms = append(allTerms, fmt.Sprintf("\"%s\"*", escaped))
+					allTerms = append(allTerms, "\""+strings.ReplaceAll(variant, "\"", "\"\"")+"\"*")
 				}
 			}
 		}
 	}
 
 	if len(allTerms) == 0 {
-		escaped := strings.ReplaceAll(trimmed, "\"", "\"\"")
-		return fmt.Sprintf("\"%s\"", escaped)
+		return "\"" + strings.ReplaceAll(trimmed, "\"", "\"\"") + "\""
 	}
 
 	return strings.Join(allTerms, " OR ")
@@ -72,15 +67,13 @@ func preprocessQueryWithOptions(query string, useSynonyms bool) string {
 
 	if isExactCodeQuery {
 		// Exact phrase search with quote escaping
-		escaped := strings.ReplaceAll(trimmed, "\"", "\"\"")
-		return fmt.Sprintf("\"%s\"", escaped)
+		return "\"" + strings.ReplaceAll(trimmed, "\"", "\"\"") + "\""
 	}
 
 	// Expand code identifiers (CamelCase, snake_case) into their parts
 	expandedTokens := expandQueryTokens(trimmed)
 	if len(expandedTokens) == 0 {
-		escaped := strings.ReplaceAll(trimmed, "\"", "\"\"")
-		return fmt.Sprintf("\"%s\"", escaped)
+		return "\"" + strings.ReplaceAll(trimmed, "\"", "\"\"") + "\""
 	}
 
 	// Optionally expand with programming synonyms
@@ -94,13 +87,11 @@ func preprocessQueryWithOptions(query string, useSynonyms bool) string {
 			continue
 		}
 		// Escape and add prefix operator
-		escaped := strings.ReplaceAll(word, "\"", "\"\"")
-		terms = append(terms, fmt.Sprintf("\"%s\"*", escaped))
+		terms = append(terms, "\""+strings.ReplaceAll(word, "\"", "\"\"")+"\"*")
 	}
 
 	if len(terms) == 0 {
-		escaped := strings.ReplaceAll(trimmed, "\"", "\"\"")
-		return fmt.Sprintf("\"%s\"", escaped)
+		return "\"" + strings.ReplaceAll(trimmed, "\"", "\"\"") + "\""
 	}
 
 	return strings.Join(terms, " OR ")

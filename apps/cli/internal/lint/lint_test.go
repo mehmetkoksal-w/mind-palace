@@ -11,7 +11,7 @@ func TestRun(t *testing.T) {
 	t.Run("returns nil for valid palace structure", func(t *testing.T) {
 		dir := t.TempDir()
 		palaceDir := filepath.Join(dir, ".palace")
-		if err := os.MkdirAll(palaceDir, 0755); err != nil {
+		if err := os.MkdirAll(palaceDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
 
@@ -22,7 +22,7 @@ func TestRun(t *testing.T) {
 			"project": {"name": "test"},
 			"provenance": {"createdBy": "test", "createdAt": "2024-01-01T00:00:00Z"}
 		}`
-		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -34,7 +34,7 @@ func TestRun(t *testing.T) {
 			"capabilities": {},
 			"provenance": {"createdBy": "test", "createdAt": "2024-01-01T00:00:00Z"}
 		}`
-		if err := os.WriteFile(filepath.Join(palaceDir, "project-profile.json"), []byte(profile), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(palaceDir, "project-profile.json"), []byte(profile), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -47,12 +47,12 @@ func TestRun(t *testing.T) {
 	t.Run("returns error for invalid palace config", func(t *testing.T) {
 		dir := t.TempDir()
 		palaceDir := filepath.Join(dir, ".palace")
-		if err := os.MkdirAll(palaceDir, 0755); err != nil {
+		if err := os.MkdirAll(palaceDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
 
 		// Create invalid palace.jsonc
-		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(`{"invalid": true}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(`{"invalid": true}`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -75,7 +75,7 @@ func TestRun(t *testing.T) {
 		dir := t.TempDir()
 		palaceDir := filepath.Join(dir, ".palace")
 		roomsDir := filepath.Join(palaceDir, "rooms")
-		if err := os.MkdirAll(roomsDir, 0755); err != nil {
+		if err := os.MkdirAll(roomsDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
 
@@ -86,7 +86,7 @@ func TestRun(t *testing.T) {
 			"project": {"name": "test"},
 			"provenance": {"createdBy": "test", "createdAt": "2024-01-01T00:00:00Z"}
 		}`
-		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -98,7 +98,7 @@ func TestRun(t *testing.T) {
 			"capabilities": {},
 			"provenance": {"createdBy": "test", "createdAt": "2024-01-01T00:00:00Z"}
 		}`
-		if err := os.WriteFile(filepath.Join(palaceDir, "project-profile.json"), []byte(profile), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(palaceDir, "project-profile.json"), []byte(profile), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -111,7 +111,7 @@ func TestRun(t *testing.T) {
 			"entryPoints": ["main.go"],
 			"provenance": {"createdBy": "test", "createdAt": "2024-01-01T00:00:00Z"}
 		}`
-		if err := os.WriteFile(filepath.Join(roomsDir, "test.jsonc"), []byte(room), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(roomsDir, "test.jsonc"), []byte(room), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -125,7 +125,7 @@ func TestRun(t *testing.T) {
 		dir := t.TempDir()
 		palaceDir := filepath.Join(dir, ".palace")
 		roomsDir := filepath.Join(palaceDir, "rooms")
-		if err := os.MkdirAll(roomsDir, 0755); err != nil {
+		if err := os.MkdirAll(roomsDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
 
@@ -136,12 +136,12 @@ func TestRun(t *testing.T) {
 			"project": {"name": "test"},
 			"provenance": {"createdBy": "test", "createdAt": "2024-01-01T00:00:00Z"}
 		}`
-		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
 		// Create invalid room (missing required fields)
-		if err := os.WriteFile(filepath.Join(roomsDir, "bad.jsonc"), []byte(`{"name": "only-name"}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(roomsDir, "bad.jsonc"), []byte(`{"name": "only-name"}`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -155,7 +155,7 @@ func TestRun(t *testing.T) {
 		dir := t.TempDir()
 		palaceDir := filepath.Join(dir, ".palace")
 		playbooksDir := filepath.Join(palaceDir, "playbooks")
-		if err := os.MkdirAll(playbooksDir, 0755); err != nil {
+		if err := os.MkdirAll(playbooksDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
 
@@ -166,7 +166,7 @@ func TestRun(t *testing.T) {
 			"project": {"name": "test"},
 			"provenance": {"createdBy": "test", "createdAt": "2024-01-01T00:00:00Z"}
 		}`
-		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -178,7 +178,7 @@ func TestRun(t *testing.T) {
 			"capabilities": {},
 			"provenance": {"createdBy": "test", "createdAt": "2024-01-01T00:00:00Z"}
 		}`
-		if err := os.WriteFile(filepath.Join(palaceDir, "project-profile.json"), []byte(profile), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(palaceDir, "project-profile.json"), []byte(profile), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -191,7 +191,7 @@ func TestRun(t *testing.T) {
 			"rooms": ["room1"],
 			"provenance": {"createdBy": "test", "createdAt": "2024-01-01T00:00:00Z"}
 		}`
-		if err := os.WriteFile(filepath.Join(playbooksDir, "test.jsonc"), []byte(playbook), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(playbooksDir, "test.jsonc"), []byte(playbook), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -205,7 +205,7 @@ func TestRun(t *testing.T) {
 		dir := t.TempDir()
 		palaceDir := filepath.Join(dir, ".palace")
 		playbooksDir := filepath.Join(palaceDir, "playbooks")
-		if err := os.MkdirAll(playbooksDir, 0755); err != nil {
+		if err := os.MkdirAll(playbooksDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
 
@@ -216,12 +216,12 @@ func TestRun(t *testing.T) {
 			"project": {"name": "test"},
 			"provenance": {"createdBy": "test", "createdAt": "2024-01-01T00:00:00Z"}
 		}`
-		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(palaceConfig), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
 		// Create invalid playbook (missing required fields)
-		if err := os.WriteFile(filepath.Join(playbooksDir, "bad.jsonc"), []byte(`{"name": "only-name"}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(playbooksDir, "bad.jsonc"), []byte(`{"name": "only-name"}`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -236,25 +236,25 @@ func TestRun(t *testing.T) {
 		palaceDir := filepath.Join(dir, ".palace")
 		roomsDir := filepath.Join(palaceDir, "rooms")
 		playbooksDir := filepath.Join(palaceDir, "playbooks")
-		if err := os.MkdirAll(roomsDir, 0755); err != nil {
+		if err := os.MkdirAll(roomsDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.MkdirAll(playbooksDir, 0755); err != nil {
+		if err := os.MkdirAll(playbooksDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
 
 		// Create invalid palace.jsonc
-		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(`{"bad": true}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(palaceDir, "palace.jsonc"), []byte(`{"bad": true}`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
 		// Create invalid room
-		if err := os.WriteFile(filepath.Join(roomsDir, "bad.jsonc"), []byte(`{"bad": true}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(roomsDir, "bad.jsonc"), []byte(`{"bad": true}`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
 		// Create invalid playbook
-		if err := os.WriteFile(filepath.Join(playbooksDir, "bad.jsonc"), []byte(`{"bad": true}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(playbooksDir, "bad.jsonc"), []byte(`{"bad": true}`), 0o644); err != nil {
 			t.Fatal(err)
 		}
 

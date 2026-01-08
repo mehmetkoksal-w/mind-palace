@@ -92,9 +92,10 @@ func (p *YAMLParser) parseBlockMapping(node *sitter.Node, content []byte, analys
 	kind := KindProperty
 	if valueNode != nil {
 		valueType := p.getValueType(valueNode)
-		if valueType == "mapping" {
+		switch valueType {
+		case "mapping":
 			kind = KindClass
-		} else if valueType == "sequence" {
+		case "sequence":
 			kind = KindVariable
 		}
 	}

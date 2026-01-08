@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -68,7 +69,7 @@ func (m *Memory) AddDecision(dec Decision) (string, error) {
 		outcomeAt = dec.OutcomeAt.Format(time.RFC3339)
 	}
 
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT INTO decisions (id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, dec.ID, dec.Content, dec.Rationale, dec.Context, dec.Status, dec.Outcome, dec.OutcomeNote, outcomeAt,
@@ -86,7 +87,7 @@ func (m *Memory) AddDecision(dec Decision) (string, error) {
 
 // GetDecision retrieves a decision by ID.
 func (m *Memory) GetDecision(id string) (*Decision, error) {
-	row := m.db.QueryRow(`
+	row := m.db.QueryRowContext(context.Background(), `
 		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, created_at, updated_at
 		FROM decisions WHERE id = ?
 	`, id)
@@ -132,7 +133,7 @@ func (m *Memory) GetDecisions(status, outcome, scope, scopePath string, limit in
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query decisions: %w", err)
 	}
@@ -169,7 +170,7 @@ func (m *Memory) SearchDecisions(query string, limit int) ([]Decision, error) {
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(sqlQuery, args...)
+	rows, err := m.db.QueryContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		// Fall back to LIKE search if FTS fails
 		return m.searchDecisionsLike(query, limit)
@@ -207,7 +208,7 @@ func (m *Memory) searchDecisionsLike(query string, limit int) ([]Decision, error
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(sqlQuery, args...)
+	rows, err := m.db.QueryContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		return nil, fmt.Errorf("search decisions: %w", err)
 	}
@@ -236,7 +237,7 @@ func (m *Memory) RecordDecisionOutcome(id, outcome, note string) error {
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	result, err := m.db.Exec(`
+	result, err := m.db.ExecContext(context.Background(), `
 		UPDATE decisions
 		SET outcome = ?, outcome_note = ?, outcome_at = ?, updated_at = ?
 		WHERE id = ?
@@ -252,7 +253,8 @@ func (m *Memory) RecordDecisionOutcome(id, outcome, note string) error {
 	// Feedback to linked learnings - adjust their confidence based on outcome
 	learnings, err := m.GetLearningsForDecision(id)
 	if err == nil && len(learnings) > 0 {
-		for _, l := range learnings {
+		for i := range learnings {
+			l := &learnings[i]
 			switch outcome {
 			case DecisionOutcomeSuccessful:
 				// Successful outcome reinforces the learning
@@ -260,7 +262,7 @@ func (m *Memory) RecordDecisionOutcome(id, outcome, note string) error {
 			case DecisionOutcomeFailed:
 				// Failed outcome weakens the learning
 				_ = m.WeakenLearning(l.ID)
-			// Mixed outcome: no change to confidence
+				// Mixed outcome: no change to confidence
 			}
 		}
 	}
@@ -271,7 +273,7 @@ func (m *Memory) RecordDecisionOutcome(id, outcome, note string) error {
 // UpdateDecisionStatus updates the status of a decision.
 func (m *Memory) UpdateDecisionStatus(id, status string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	result, err := m.db.Exec(`UPDATE decisions SET status = ?, updated_at = ? WHERE id = ?`, status, now, id)
+	result, err := m.db.ExecContext(context.Background(), `UPDATE decisions SET status = ?, updated_at = ? WHERE id = ?`, status, now, id)
 	if err != nil {
 		return fmt.Errorf("update decision status: %w", err)
 	}
@@ -282,14 +284,14 @@ func (m *Memory) UpdateDecisionStatus(id, status string) error {
 	return nil
 }
 
-// UpdateDecision updates a decision's content, rationale, and context.
-func (m *Memory) UpdateDecision(id, content, rationale, context string) error {
+// UpdateDecision updates a decision's content, rationale, and contextInfo.
+func (m *Memory) UpdateDecision(id, content, rationale, contextInfo string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	result, err := m.db.Exec(`
+	result, err := m.db.ExecContext(context.Background(), `
 		UPDATE decisions
 		SET content = ?, rationale = ?, context = ?, updated_at = ?
 		WHERE id = ?
-	`, content, rationale, context, now, id)
+	`, content, rationale, contextInfo, now, id)
 	if err != nil {
 		return fmt.Errorf("update decision: %w", err)
 	}
@@ -309,7 +311,7 @@ func (m *Memory) DeleteDecision(id string) error {
 	// Delete associated embedding
 	m.DeleteEmbedding(id)
 	// Delete the decision
-	_, err := m.db.Exec(`DELETE FROM decisions WHERE id = ?`, id)
+	_, err := m.db.ExecContext(context.Background(), `DELETE FROM decisions WHERE id = ?`, id)
 	return err
 }
 
@@ -326,12 +328,12 @@ func (m *Memory) CountDecisions(status, outcome string) (int, error) {
 		args = append(args, outcome)
 	}
 	var count int
-	err := m.db.QueryRow(query, args...).Scan(&count)
+	err := m.db.QueryRowContext(context.Background(), query, args...).Scan(&count)
 	return count, err
 }
 
 // GetDecisionsAwaitingReview returns decisions older than the given age with unknown outcome.
-func (m *Memory) GetDecisionsAwaitingReview(olderThanDays int, limit int) ([]Decision, error) {
+func (m *Memory) GetDecisionsAwaitingReview(olderThanDays, limit int) ([]Decision, error) {
 	cutoff := time.Now().AddDate(0, 0, -olderThanDays).Format(time.RFC3339)
 	query := `
 		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, created_at, updated_at
@@ -345,7 +347,7 @@ func (m *Memory) GetDecisionsAwaitingReview(olderThanDays int, limit int) ([]Dec
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query decisions awaiting review: %w", err)
 	}
@@ -381,7 +383,7 @@ func (m *Memory) GetDecisionsSince(since time.Time, limit int) ([]Decision, erro
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query decisions since: %w", err)
 	}
@@ -418,7 +420,8 @@ func (m *Memory) CheckDecisionConflicts(decisionID string) ([]DecisionConflict, 
 	// 1. Check for contradicting links
 	links, err := m.GetAllLinksFor(decisionID)
 	if err == nil {
-		for _, link := range links {
+		for i := range links {
+			link := &links[i]
 			if link.Relation == RelationContradicts {
 				// Get the contradicting decision
 				otherID := link.TargetID
@@ -438,7 +441,8 @@ func (m *Memory) CheckDecisionConflicts(decisionID string) ([]DecisionConflict, 
 	}
 
 	// 2. Check if this decision superseded another (and that one had bad outcome)
-	for _, link := range links {
+	for i := range links {
+		link := &links[i]
 		if link.Relation == RelationSupersedes && link.SourceID == decisionID {
 			if superseded, err := m.GetDecision(link.TargetID); err == nil {
 				if superseded.Outcome == "failed" {
@@ -457,7 +461,7 @@ func (m *Memory) CheckDecisionConflicts(decisionID string) ([]DecisionConflict, 
 }
 
 // FindSimilarDecisions finds decisions with similar content that may conflict.
-func (m *Memory) FindSimilarDecisions(content string, excludeID string, limit int) ([]Decision, error) {
+func (m *Memory) FindSimilarDecisions(content, excludeID string, limit int) ([]Decision, error) {
 	// Use FTS to find similar decisions
 	if limit <= 0 {
 		limit = 5
@@ -470,9 +474,10 @@ func (m *Memory) FindSimilarDecisions(content string, excludeID string, limit in
 
 	// Filter out the excluded ID and return
 	var filtered []Decision
-	for _, d := range decisions {
+	for i := range decisions {
+		d := &decisions[i]
 		if d.ID != excludeID {
-			filtered = append(filtered, d)
+			filtered = append(filtered, *d)
 		}
 		if len(filtered) >= limit {
 			break
@@ -520,7 +525,8 @@ func (m *Memory) GetDecisionChain(id string) (*DecisionChain, error) {
 	// Get all links for this decision
 	links, err := m.GetAllLinksFor(id)
 	if err == nil {
-		for _, link := range links {
+		for i := range links {
+			link := &links[i]
 			// Skip non-decision relations
 			if link.Relation != RelationSupersedes && link.Relation != RelationContradicts {
 				continue
@@ -581,7 +587,7 @@ func (m *Memory) GetDecisionTimeline(scope, scopePath string, limit int) ([]Deci
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query decision timeline: %w", err)
 	}

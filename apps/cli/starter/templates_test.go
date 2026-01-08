@@ -149,7 +149,7 @@ func TestGetPlaybookTemplates(t *testing.T) {
 		t.Logf("playbooks/playbook.jsonc not found (may have different name): %v", err)
 		return
 	}
-	if len(content) == 0 {
+	if content == "" {
 		t.Error("playbook template should not be empty")
 	}
 }
@@ -161,7 +161,7 @@ func TestGetOutputTemplates(t *testing.T) {
 		t.Logf("outputs/context-pack.json not found (may have different name): %v", err)
 		return
 	}
-	if len(content) == 0 {
+	if content == "" {
 		t.Error("output template should not be empty")
 	}
 }

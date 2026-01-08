@@ -35,7 +35,7 @@ func (s *MCPServer) getDecayConfig() memory.DecayConfig {
 }
 
 // toolDecayStats returns statistics about confidence decay.
-func (s *MCPServer) toolDecayStats(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolDecayStats(id any, _ map[string]interface{}) jsonRPCResponse {
 	mem := s.butler.Memory()
 	if mem == nil {
 		return s.toolError(id, "memory not available")
@@ -149,7 +149,7 @@ func (s *MCPServer) toolDecayPreview(id any, args map[string]interface{}) jsonRP
 }
 
 // toolDecayApply applies confidence decay to inactive learnings.
-func (s *MCPServer) toolDecayApply(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolDecayApply(id any, _ map[string]interface{}) jsonRPCResponse {
 	mem := s.butler.Memory()
 	if mem == nil {
 		return s.toolError(id, "memory not available")

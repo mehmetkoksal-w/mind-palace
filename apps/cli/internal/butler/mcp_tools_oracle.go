@@ -77,7 +77,8 @@ func (s *MCPServer) toolExploreContext(id any, args map[string]interface{}) json
 	if len(result.Learnings) > 0 {
 		output.WriteString("## 💡 Relevant Learnings\n\n")
 		output.WriteString("_Knowledge accumulated from previous sessions:_\n\n")
-		for _, l := range result.Learnings {
+		for i := range result.Learnings {
+			l := &result.Learnings[i]
 			scopeInfo := ""
 			if l.Scope != "palace" {
 				scopeInfo = fmt.Sprintf(" [%s]", l.Scope)
@@ -91,7 +92,8 @@ func (s *MCPServer) toolExploreContext(id any, args map[string]interface{}) json
 	if len(result.BrainIdeas) > 0 {
 		output.WriteString("## 💭 Relevant Ideas\n\n")
 		output.WriteString("_Exploratory thoughts that may be useful:_\n\n")
-		for _, idea := range result.BrainIdeas {
+		for i := range result.BrainIdeas {
+			idea := &result.BrainIdeas[i]
 			statusIcon := "🔵"
 			switch idea.Status {
 			case "exploring":
@@ -110,7 +112,8 @@ func (s *MCPServer) toolExploreContext(id any, args map[string]interface{}) json
 	if len(result.BrainDecisions) > 0 {
 		output.WriteString("## 📋 Relevant Brain Decisions\n\n")
 		output.WriteString("_Past architectural choices from the brain:_\n\n")
-		for _, d := range result.BrainDecisions {
+		for i := range result.BrainDecisions {
+			d := &result.BrainDecisions[i]
 			statusIcon := "🟢"
 			switch d.Status {
 			case "superseded":
@@ -139,7 +142,8 @@ func (s *MCPServer) toolExploreContext(id any, args map[string]interface{}) json
 	if len(result.RelatedLinks) > 0 {
 		output.WriteString("## 🔗 Related Links\n\n")
 		output.WriteString("_Relationships between ideas, decisions, and code:_\n\n")
-		for _, link := range result.RelatedLinks {
+		for i := range result.RelatedLinks {
+			link := &result.RelatedLinks[i]
 			staleWarning := ""
 			if link.IsStale {
 				staleWarning = " ⚠️ stale"
@@ -154,7 +158,8 @@ func (s *MCPServer) toolExploreContext(id any, args map[string]interface{}) json
 	if len(result.DecisionConflicts) > 0 {
 		output.WriteString("## ⚠️ Decision Conflicts\n\n")
 		output.WriteString("_Potential conflicts with existing decisions:_\n\n")
-		for _, conflict := range result.DecisionConflicts {
+		for i := range result.DecisionConflicts {
+			conflict := &result.DecisionConflicts[i]
 			conflictIcon := "⚠️"
 			if conflict.ConflictType == "contradicts" {
 				conflictIcon = "❌"
@@ -171,7 +176,8 @@ func (s *MCPServer) toolExploreContext(id any, args map[string]interface{}) json
 
 	if len(result.Symbols) > 0 {
 		output.WriteString("## Relevant Symbols\n\n")
-		for _, sym := range result.Symbols {
+		for i := range result.Symbols {
+			sym := &result.Symbols[i]
 			exportMark := ""
 			if sym.Exported {
 				exportMark = " (exported)"
@@ -209,7 +215,8 @@ func (s *MCPServer) toolExploreContext(id any, args map[string]interface{}) json
 			}
 			if len(f.Symbols) > 0 {
 				output.WriteString("**Symbols in file:**\n")
-				for _, sym := range f.Symbols {
+				for j := range f.Symbols {
+					sym := &f.Symbols[j]
 					fmt.Fprintf(&output, "- `%s` (%s)\n", sym.Name, sym.Kind)
 				}
 			}
@@ -325,7 +332,8 @@ func (s *MCPServer) toolExploreImpact(id any, args map[string]interface{}) jsonR
 
 	if len(result.Symbols) > 0 {
 		output.WriteString("## Symbols in this file\n\n")
-		for _, sym := range result.Symbols {
+		for i := range result.Symbols {
+			sym := &result.Symbols[i]
 			fmt.Fprintf(&output, "- **%s** `%s`", sym.Kind, sym.Name)
 			if sym.Signature != "" {
 				fmt.Fprintf(&output, " - `%s`", sym.Signature)
@@ -364,7 +372,8 @@ func (s *MCPServer) toolExploreSymbols(id any, args map[string]interface{}) json
 	fmt.Fprintf(&output, "# Symbols of kind: %s\n\n", kind)
 	fmt.Fprintf(&output, "Found %d symbols:\n\n", len(symbols))
 
-	for _, sym := range symbols {
+	for i := range symbols {
+		sym := &symbols[i]
 		exportMark := ""
 		if sym.Exported {
 			exportMark = " ✓"
@@ -440,7 +449,8 @@ func (s *MCPServer) toolExploreFile(id any, args map[string]interface{}) jsonRPC
 	if len(symbols) == 0 {
 		output.WriteString("No exported symbols found in this file.\n")
 	} else {
-		for _, sym := range symbols {
+		for i := range symbols {
+			sym := &symbols[i]
 			fmt.Fprintf(&output, "## %s `%s`\n", sym.Kind, sym.Name)
 			fmt.Fprintf(&output, "- Lines: %d-%d\n", sym.LineStart, sym.LineEnd)
 			if sym.Signature != "" {
@@ -535,8 +545,8 @@ func (s *MCPServer) toolContextAutoInject(id any, args map[string]interface{}) j
 	if id, ok := args["includeDecisions"].(bool); ok {
 		cfg.IncludeDecisions = id
 	}
-	if if_, ok := args["includeFailures"].(bool); ok {
-		cfg.IncludeFailures = if_
+	if includeFailures, ok := args["includeFailures"].(bool); ok {
+		cfg.IncludeFailures = includeFailures
 	}
 
 	ctx, err := s.butler.GetAutoInjectionContext(filePath, cfg)
@@ -577,8 +587,9 @@ func (s *MCPServer) toolContextAutoInject(id any, args map[string]interface{}) j
 	// Show learnings
 	if len(ctx.Learnings) > 0 {
 		output.WriteString("## 💡 Relevant Learnings\n\n")
-		for _, pl := range ctx.Learnings {
-			l := pl.Learning
+		for i := range ctx.Learnings {
+			pl := &ctx.Learnings[i]
+			l := &pl.Learning
 			priorityIcon := "📌"
 			if pl.Priority >= 1.0 {
 				priorityIcon = "⭐"
@@ -594,11 +605,13 @@ func (s *MCPServer) toolContextAutoInject(id any, args map[string]interface{}) j
 	// Show decisions
 	if len(ctx.Decisions) > 0 {
 		output.WriteString("## 📋 Active Decisions\n\n")
-		for _, d := range ctx.Decisions {
+		for i := range ctx.Decisions {
+			d := &ctx.Decisions[i]
 			statusIcon := "🟢"
-			if d.Outcome == "failed" {
+			switch d.Outcome {
+			case "failed":
 				statusIcon = "❌"
-			} else if d.Outcome == "mixed" {
+			case "mixed":
 				statusIcon = "⚖️"
 			}
 			fmt.Fprintf(&output, "- %s **%s**\n", statusIcon, d.Content)
@@ -613,11 +626,13 @@ func (s *MCPServer) toolContextAutoInject(id any, args map[string]interface{}) j
 	// Show failures
 	if len(ctx.Failures) > 0 {
 		output.WriteString("## 🔥 File Failures\n\n")
-		for _, f := range ctx.Failures {
+		for i := range ctx.Failures {
+			f := &ctx.Failures[i]
 			severityIcon := "🟡"
-			if f.Severity == "high" {
+			switch f.Severity {
+			case "high":
 				severityIcon = "🔴"
-			} else if f.Severity == "low" {
+			case "low":
 				severityIcon = "⚪"
 			}
 			fmt.Fprintf(&output, "- %s `%s`: %d failures\n", severityIcon, f.Path, f.FailureCount)

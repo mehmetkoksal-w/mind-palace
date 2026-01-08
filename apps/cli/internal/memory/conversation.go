@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"time"
@@ -10,12 +11,12 @@ import (
 
 // Conversation stores full AI conversation transcripts for context replay.
 type Conversation struct {
-	ID        string    `json:"id"`                    // Prefix: "c_"
-	AgentType string    `json:"agentType"`             // "claude-code", "cursor", etc.
-	Summary   string    `json:"summary"`               // AI-generated summary
-	Messages  []Message `json:"messages"`              // Full transcript
-	Extracted []string  `json:"extracted,omitempty"`   // IDs of records extracted
-	SessionID string    `json:"sessionId,omitempty"`   // Link to session
+	ID        string    `json:"id"`                  // Prefix: "c_"
+	AgentType string    `json:"agentType"`           // "claude-code", "cursor", etc.
+	Summary   string    `json:"summary"`             // AI-generated summary
+	Messages  []Message `json:"messages"`            // Full transcript
+	Extracted []string  `json:"extracted,omitempty"` // IDs of records extracted
+	SessionID string    `json:"sessionId,omitempty"` // Link to session
 	CreatedAt time.Time `json:"createdAt"`
 }
 
@@ -47,7 +48,7 @@ func (m *Memory) AddConversation(c Conversation) (string, error) {
 		return "", err
 	}
 
-	_, err = m.db.Exec(`
+	_, err = m.db.ExecContext(context.Background(), `
 		INSERT INTO conversations (id, agent_type, summary, messages, extracted, session_id, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		c.ID, c.AgentType, c.Summary, string(messagesJSON), string(extractedJSON), c.SessionID, c.CreatedAt.Format(time.RFC3339))
@@ -57,7 +58,7 @@ func (m *Memory) AddConversation(c Conversation) (string, error) {
 
 // GetConversation retrieves a conversation by ID.
 func (m *Memory) GetConversation(id string) (*Conversation, error) {
-	row := m.db.QueryRow(`
+	row := m.db.QueryRowContext(context.Background(), `
 		SELECT id, agent_type, summary, messages, extracted, session_id, created_at
 		FROM conversations WHERE id = ?`, id)
 
@@ -93,7 +94,7 @@ func (m *Memory) GetConversation(id string) (*Conversation, error) {
 }
 
 // GetConversations retrieves conversations with optional filters.
-func (m *Memory) GetConversations(sessionID string, agentType string, limit int) ([]Conversation, error) {
+func (m *Memory) GetConversations(sessionID, agentType string, limit int) ([]Conversation, error) {
 	query := `SELECT id, agent_type, summary, messages, extracted, session_id, created_at FROM conversations WHERE 1=1`
 	args := []interface{}{}
 
@@ -112,7 +113,7 @@ func (m *Memory) GetConversations(sessionID string, agentType string, limit int)
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +161,7 @@ func (m *Memory) SearchConversations(query string, limit int) ([]Conversation, e
 		ORDER BY rank
 		LIMIT ?`
 
-	rows, err := m.db.Query(sqlQuery, query, limit)
+	rows, err := m.db.QueryContext(context.Background(), sqlQuery, query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +197,7 @@ func (m *Memory) SearchConversations(query string, limit int) ([]Conversation, e
 
 // DeleteConversation removes a conversation.
 func (m *Memory) DeleteConversation(id string) error {
-	result, err := m.db.Exec(`DELETE FROM conversations WHERE id = ?`, id)
+	result, err := m.db.ExecContext(context.Background(), `DELETE FROM conversations WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -209,7 +210,7 @@ func (m *Memory) DeleteConversation(id string) error {
 
 // GetConversationForSession retrieves the conversation for a specific session.
 func (m *Memory) GetConversationForSession(sessionID string) (*Conversation, error) {
-	row := m.db.QueryRow(`
+	row := m.db.QueryRowContext(context.Background(), `
 		SELECT id, agent_type, summary, messages, extracted, session_id, created_at
 		FROM conversations WHERE session_id = ?`, sessionID)
 
@@ -245,12 +246,12 @@ func (m *Memory) UpdateConversationExtracted(id string, extracted []string) erro
 	if err != nil {
 		return err
 	}
-	_, err = m.db.Exec(`UPDATE conversations SET extracted = ? WHERE id = ?`, string(extractedJSON), id)
+	_, err = m.db.ExecContext(context.Background(), `UPDATE conversations SET extracted = ? WHERE id = ?`, string(extractedJSON), id)
 	return err
 }
 
 // EndSessionWithConversation ends a session and stores the conversation.
-func (m *Memory) EndSessionWithConversation(sessionID string, summary string, messages []Message, agentType string) error {
+func (m *Memory) EndSessionWithConversation(sessionID, summary string, messages []Message, agentType string) error {
 	// End the session (existing functionality)
 	if err := m.EndSession(sessionID, "completed", summary); err != nil {
 		return err
@@ -271,7 +272,7 @@ func (m *Memory) EndSessionWithConversation(sessionID string, summary string, me
 // CountConversations returns the total number of conversations.
 func (m *Memory) CountConversations() (int, error) {
 	var count int
-	err := m.db.QueryRow(`SELECT COUNT(*) FROM conversations`).Scan(&count)
+	err := m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM conversations`).Scan(&count)
 	return count, err
 }
 

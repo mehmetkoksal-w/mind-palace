@@ -239,7 +239,8 @@ func convertSession(s *memory.Session) *Session {
 
 func convertSessions(sessions []memory.Session) []Session {
 	result := make([]Session, len(sessions))
-	for i, s := range sessions {
+	for i := range sessions {
+		s := &sessions[i]
 		result[i] = Session{
 			ID:           s.ID,
 			AgentType:    s.AgentType,
@@ -256,7 +257,8 @@ func convertSessions(sessions []memory.Session) []Session {
 
 func convertActivities(activities []memory.Activity) []Activity {
 	result := make([]Activity, len(activities))
-	for i, a := range activities {
+	for i := range activities {
+		a := &activities[i]
 		result[i] = Activity{
 			ID:        a.ID,
 			SessionID: a.SessionID,
@@ -272,7 +274,8 @@ func convertActivities(activities []memory.Activity) []Activity {
 
 func convertLearnings(learnings []memory.Learning) []Learning {
 	result := make([]Learning, len(learnings))
-	for i, l := range learnings {
+	for i := range learnings {
+		l := &learnings[i]
 		result[i] = Learning{
 			ID:         l.ID,
 			SessionID:  l.SessionID,
@@ -305,7 +308,8 @@ func convertFileIntel(fi *memory.FileIntel) *FileIntel {
 
 func convertFileIntels(fis []memory.FileIntel) []FileIntel {
 	result := make([]FileIntel, len(fis))
-	for i, fi := range fis {
+	for i := range fis {
+		fi := &fis[i]
 		result[i] = FileIntel{
 			Path:         fi.Path,
 			EditCount:    fi.EditCount,

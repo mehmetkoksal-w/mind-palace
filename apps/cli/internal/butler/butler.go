@@ -1,6 +1,9 @@
+// Package butler provides automated assistance for workspace management,
+// including searching, session tracking, and MCP tool integration.
 package butler
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"path/filepath"
@@ -149,8 +152,8 @@ func (b *Butler) loadRooms() error {
 // ListRooms returns all configured rooms sorted by name.
 func (b *Butler) ListRooms() []model.Room {
 	rooms := make([]model.Room, 0, len(b.rooms))
-	for _, room := range b.rooms {
-		rooms = append(rooms, room)
+	for name := range b.rooms {
+		rooms = append(rooms, b.rooms[name])
 	}
 	sort.Slice(rooms, func(i, j int) bool {
 		return rooms[i].Name < rooms[j].Name
@@ -161,7 +164,8 @@ func (b *Butler) ListRooms() []model.Room {
 // ReadFile reads indexed content for a file path.
 func (b *Butler) ReadFile(path string) (string, error) {
 	// First, try to read from the chunks table for indexed content
-	rows, err := b.db.Query(
+	rows, err := b.db.QueryContext(
+		context.Background(),
 		`SELECT content FROM chunks WHERE path = ? ORDER BY chunk_index ASC;`,
 		path,
 	)

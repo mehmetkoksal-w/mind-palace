@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -12,7 +13,7 @@ func (m *Memory) StartSession(agentType, agentID, goal string) (*Session, error)
 	id := generateID("ses")
 	now := time.Now().UTC()
 
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT INTO sessions (id, agent_type, agent_id, goal, started_at, last_activity, state)
 		VALUES (?, ?, ?, ?, ?, ?, 'active')
 	`, id, agentType, agentID, goal, now.Format(time.RFC3339), now.Format(time.RFC3339))
@@ -33,7 +34,7 @@ func (m *Memory) StartSession(agentType, agentID, goal string) (*Session, error)
 
 // GetSession retrieves a session by ID.
 func (m *Memory) GetSession(id string) (*Session, error) {
-	row := m.db.QueryRow(`
+	row := m.db.QueryRowContext(context.Background(), `
 		SELECT id, agent_type, agent_id, goal, started_at, last_activity, state, summary
 		FROM sessions WHERE id = ?
 	`, id)
@@ -64,7 +65,7 @@ func (m *Memory) ListSessions(activeOnly bool, limit int) ([]Session, error) {
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query sessions: %w", err)
 	}
@@ -81,13 +82,16 @@ func (m *Memory) ListSessions(activeOnly bool, limit int) ([]Session, error) {
 		s.LastActivity = parseTimeOrZero(lastActivity)
 		sessions = append(sessions, s)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate sessions: %w", err)
+	}
 	return sessions, nil
 }
 
 // UpdateSessionActivity updates the last activity time for a session.
 func (m *Memory) UpdateSessionActivity(sessionID string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := m.db.Exec(`UPDATE sessions SET last_activity = ? WHERE id = ?`, now, sessionID)
+	_, err := m.db.ExecContext(context.Background(), `UPDATE sessions SET last_activity = ? WHERE id = ?`, now, sessionID)
 	return err
 }
 
@@ -97,7 +101,7 @@ func (m *Memory) EndSession(sessionID, state, summary string) error {
 		state = "completed"
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		UPDATE sessions SET state = ?, summary = ?, last_activity = ? WHERE id = ?
 	`, state, summary, now, sessionID)
 	return err
@@ -118,7 +122,7 @@ func (m *Memory) LogActivity(sessionID string, act Activity) error {
 		act.Details = "{}"
 	}
 
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		INSERT INTO activities (id, session_id, kind, target, details, timestamp, outcome)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`, act.ID, sessionID, act.Kind, act.Target, act.Details, act.Timestamp.Format(time.RFC3339), act.Outcome)
@@ -149,7 +153,7 @@ func (m *Memory) GetActivities(sessionID, filePath string, limit int) ([]Activit
 		args = append(args, limit)
 	}
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query activities: %w", err)
 	}
@@ -165,6 +169,9 @@ func (m *Memory) GetActivities(sessionID, filePath string, limit int) ([]Activit
 		a.Timestamp = parseTimeOrZero(ts)
 		activities = append(activities, a)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate activities: %w", err)
+	}
 	return activities, nil
 }
 
@@ -178,7 +185,7 @@ func (m *Memory) RecordOutcome(sessionID, outcome, summary string) error {
 		SessionID: sessionID,
 		Kind:      "outcome",
 		Target:    "",
-		Details:   fmt.Sprintf(`{"outcome":"%s"}`, outcome),
+		Details:   fmt.Sprintf(`{"outcome":%q}`, outcome),
 		Outcome:   outcome,
 	}
 	if err := m.LogActivity(sessionID, act); err != nil {
@@ -186,7 +193,7 @@ func (m *Memory) RecordOutcome(sessionID, outcome, summary string) error {
 	}
 
 	// Update session
-	_, err := m.db.Exec(`
+	_, err := m.db.ExecContext(context.Background(), `
 		UPDATE sessions SET summary = ?, last_activity = ? WHERE id = ?
 	`, summary, now, sessionID)
 	return err
@@ -195,7 +202,7 @@ func (m *Memory) RecordOutcome(sessionID, outcome, summary string) error {
 // CleanupAbandonedSessions marks old active sessions as abandoned.
 func (m *Memory) CleanupAbandonedSessions(maxAge time.Duration) (int64, error) {
 	cutoff := time.Now().Add(-maxAge).Format(time.RFC3339)
-	result, err := m.db.Exec(`
+	result, err := m.db.ExecContext(context.Background(), `
 		UPDATE sessions SET state = 'abandoned'
 		WHERE state = 'active' AND last_activity < ?
 	`, cutoff)
@@ -208,7 +215,7 @@ func (m *Memory) CleanupAbandonedSessions(maxAge time.Duration) (int64, error) {
 // PurgeOldSessions deletes sessions older than maxAge.
 func (m *Memory) PurgeOldSessions(maxAge time.Duration) (int64, error) {
 	cutoff := time.Now().Add(-maxAge).Format(time.RFC3339)
-	result, err := m.db.Exec(`DELETE FROM sessions WHERE started_at < ?`, cutoff)
+	result, err := m.db.ExecContext(context.Background(), `DELETE FROM sessions WHERE started_at < ?`, cutoff)
 	if err != nil {
 		return 0, err
 	}

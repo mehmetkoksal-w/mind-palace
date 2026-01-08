@@ -63,7 +63,7 @@ func TestExecuteInitWithDetect(t *testing.T) {
 
 	// Create a Go file to detect
 	goFile := filepath.Join(root, "main.go")
-	os.WriteFile(goFile, []byte("package main\n"), 0644)
+	os.WriteFile(goFile, []byte("package main\n"), 0o644)
 
 	err := ExecuteInit(InitOptions{
 		Root:   root,
