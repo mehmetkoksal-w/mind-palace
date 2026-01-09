@@ -24,7 +24,14 @@ func TestRunMCPConfig_InvalidTarget(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid target")
 	}
-	if !strings.Contains(err.Error(), "invalid target") {
+	if !strings.Contains(err.Error(), "unknown tool") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestRunMCPConfig_List(t *testing.T) {
+	err := RunMCPConfig([]string{"--list"})
+	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
@@ -198,5 +205,106 @@ func TestInstallConfig_MergeExisting(t *testing.T) {
 	// Verify other config is preserved
 	if result["otherConfig"] != "value" {
 		t.Fatal("expected otherConfig to be preserved")
+	}
+}
+
+func TestGenerateJSONConfig_VSCode(t *testing.T) {
+	tool := supportedTools["vscode"]
+	config := generateJSONConfig("vscode", tool, "/usr/local/bin/palace", "/workspace")
+
+	servers, ok := config["servers"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected servers key")
+	}
+
+	server, ok := servers["mind-palace"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected mind-palace server")
+	}
+
+	if server["type"] != "stdio" {
+		t.Error("expected type=stdio for VS Code")
+	}
+}
+
+func TestGenerateJSONConfig_Zed(t *testing.T) {
+	tool := supportedTools["zed"]
+	config := generateJSONConfig("zed", tool, "/usr/local/bin/palace", "/workspace")
+
+	servers, ok := config["context_servers"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected context_servers key")
+	}
+
+	server, ok := servers["mind-palace"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected mind-palace server")
+	}
+
+	if server["source"] != "custom" {
+		t.Error("expected source=custom for Zed")
+	}
+}
+
+func TestGenerateJSONConfig_OpenCode(t *testing.T) {
+	tool := supportedTools["opencode"]
+	config := generateJSONConfig("opencode", tool, "/usr/local/bin/palace", "/workspace")
+
+	servers, ok := config["mcp"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected mcp key")
+	}
+
+	server, ok := servers["mind-palace"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected mind-palace server")
+	}
+
+	if server["type"] != "local" {
+		t.Error("expected type=local for OpenCode")
+	}
+
+	if server["enabled"] != true {
+		t.Error("expected enabled=true for OpenCode")
+	}
+}
+
+func TestGenerateTOMLConfig(t *testing.T) {
+	toml := generateTOMLConfig("/usr/local/bin/palace", "/workspace")
+
+	if !strings.Contains(toml, "[mcp_servers.mind-palace]") {
+		t.Error("expected TOML table header")
+	}
+
+	if !strings.Contains(toml, `command = "/usr/local/bin/palace"`) {
+		t.Error("expected command in TOML")
+	}
+
+	if !strings.Contains(toml, `args = ["serve", "--root", "/workspace"]`) {
+		t.Error("expected args in TOML")
+	}
+}
+
+func TestGetConfigPath_AllTools(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("cannot get home directory")
+	}
+
+	// Test that all supported tools have config paths
+	for target := range supportedTools {
+		t.Run(target, func(t *testing.T) {
+			path, err := getConfigPath(target, "/workspace")
+			if err != nil {
+				t.Fatalf("unexpected error for %s: %v", target, err)
+			}
+			if path == "" {
+				t.Errorf("expected non-empty path for %s", target)
+			}
+			// Verify path contains home or workspace
+			if !strings.Contains(path, home) && !strings.Contains(path, "/workspace") {
+				t.Errorf("path %q doesn't contain home or workspace", path)
+			}
+		})
 	}
 }
