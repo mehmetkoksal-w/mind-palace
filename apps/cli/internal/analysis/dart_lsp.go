@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/logger"
 )
 
 // DartLSPClient communicates with the Dart Analysis Server via LSP protocol
@@ -86,10 +88,14 @@ func NewDartLSPClient(rootPath string) (*DartLSPClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("dart not found in PATH: %w", err)
 	}
+	logger.Info("Found Dart at: %s", dartPath)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	cmd := exec.CommandContext(ctx, dartPath, "language-server", "--client-id=mind-palace", "--client-version=1.0.0") //nolint:gosec // G204: dartPath comes from exec.LookPath which is trusted
+	cmdArgs := []string{"language-server", "--client-id=mind-palace", "--client-version=1.0.0"}
+	logger.Debug("Starting Dart LSP: %s %s", dartPath, strings.Join(cmdArgs, " "))
+
+	cmd := exec.CommandContext(ctx, dartPath, cmdArgs...) //nolint:gosec // G204: dartPath comes from exec.LookPath which is trusted
 	cmd.Dir = rootPath
 
 	stdin, err := cmd.StdinPipe()
@@ -121,15 +127,18 @@ func NewDartLSPClient(rootPath string) (*DartLSPClient, error) {
 		cancel()
 		return nil, fmt.Errorf("start dart language-server: %w", err)
 	}
+	logger.Debug("Dart LSP process started (PID: %d)", cmd.Process.Pid)
 
 	// Start response reader
 	go client.readResponses()
 
 	// Initialize the server
+	logger.Debug("Initializing LSP connection...")
 	if err := client.initialize(); err != nil {
 		client.Close()
 		return nil, fmt.Errorf("initialize LSP: %w", err)
 	}
+	logger.Info("Dart LSP initialized successfully")
 
 	return client, nil
 }

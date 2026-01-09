@@ -1,8 +1,10 @@
 package commands
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -10,6 +12,14 @@ import (
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/util"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
 )
+
+// ScanInfo represents the scan.json structure for reading index stats.
+type ScanInfo struct {
+	FileCount         int       `json:"fileCount"`
+	SymbolCount       int       `json:"symbolCount"`
+	RelationshipCount int       `json:"relationshipCount"`
+	CompletedAt       time.Time `json:"completedAt"`
+}
 
 func init() {
 	Register(&Command{
@@ -67,6 +77,36 @@ func ExecuteBrief(opts BriefOptions) error {
 	}
 	fmt.Println()
 	fmt.Println(strings.Repeat("═", 60))
+
+	// Show index statistics from scan.json
+	scanPath := filepath.Join(rootPath, ".palace", "index", "scan.json")
+	if scanData, err := os.ReadFile(scanPath); err == nil {
+		var scanInfo ScanInfo
+		if json.Unmarshal(scanData, &scanInfo) == nil && scanInfo.FileCount > 0 {
+			fmt.Printf("\n📊 Index Statistics:\n")
+			fmt.Printf("  Files:         %d\n", scanInfo.FileCount)
+			fmt.Printf("  Symbols:       %d\n", scanInfo.SymbolCount)
+			fmt.Printf("  Relationships: %d\n", scanInfo.RelationshipCount)
+			if !scanInfo.CompletedAt.IsZero() {
+				fmt.Printf("  Last Scan:     %s\n", scanInfo.CompletedAt.Format("2006-01-02 15:04:05"))
+			}
+		}
+	} else {
+		fmt.Printf("\n⚠️  No index found. Run 'palace scan' to index the codebase.\n")
+	}
+
+	// Show memory statistics summary
+	totalSessions, _ := mem.CountSessions(false)
+	activeSessions, _ := mem.CountSessions(true)
+	learningCount, _ := mem.CountLearnings()
+	filesTracked, _ := mem.CountFilesTracked()
+
+	if totalSessions > 0 || learningCount > 0 || filesTracked > 0 {
+		fmt.Printf("\n🧠 Memory Statistics:\n")
+		fmt.Printf("  Sessions:      %d total, %d active\n", totalSessions, activeSessions)
+		fmt.Printf("  Learnings:     %d\n", learningCount)
+		fmt.Printf("  Files Tracked: %d\n", filesTracked)
+	}
 
 	// Show active agents
 	agents, err := mem.GetActiveAgents(5 * time.Minute)

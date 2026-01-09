@@ -20,7 +20,7 @@ func TestExecuteInitCreatesLayout(t *testing.T) {
 		Root:        root,
 		Force:       false,
 		WithOutputs: false,
-		Detect:      false,
+		SkipDetect:  true,
 	})
 	if err != nil {
 		t.Fatalf("ExecuteInit() error: %v", err)
@@ -46,7 +46,7 @@ func TestExecuteInitWithOutputs(t *testing.T) {
 		Root:        root,
 		Force:       false,
 		WithOutputs: true,
-		Detect:      false,
+		SkipDetect:  true,
 	})
 	if err != nil {
 		t.Fatalf("ExecuteInit() error: %v", err)
@@ -64,10 +64,12 @@ func TestExecuteInitWithDetect(t *testing.T) {
 	// Create a Go file to detect
 	goFile := filepath.Join(root, "main.go")
 	os.WriteFile(goFile, []byte("package main\n"), 0o644)
+	goMod := filepath.Join(root, "go.mod")
+	os.WriteFile(goMod, []byte("module test\n"), 0o644)
 
+	// Detection is now the default behavior (SkipDetect: false)
 	err := ExecuteInit(InitOptions{
-		Root:   root,
-		Detect: true,
+		Root: root,
 	})
 	if err != nil {
 		t.Fatalf("ExecuteInit() error: %v", err)
