@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/corridor"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
 )
@@ -30,7 +31,7 @@ type CleanOptions struct {
 // RunClean executes the clean command with parsed arguments.
 func RunClean(args []string) error {
 	fs := flag.NewFlagSet("clean", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	dryRun := fs.Bool("dry-run", false, "show what would be done without making changes")
 	if err := fs.Parse(args); err != nil {
 		return err

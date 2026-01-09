@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis"
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/logger"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/scan"
@@ -36,11 +37,10 @@ type ScanOptions struct {
 // RunScan executes the scan command with parsed arguments.
 func RunScan(args []string) error {
 	fs := flag.NewFlagSet("scan", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	full := fs.Bool("full", false, "force full rescan (default: incremental)")
 	deep := fs.Bool("deep", false, "enable deep analysis (LSP-based call tracking for Dart/Flutter)")
-	verbose := fs.Bool("verbose", false, "show detailed progress")
-	verboseShort := fs.Bool("v", false, "show detailed progress (shorthand)")
+	verbose := flags.AddVerboseFlag(fs)
 	debug := fs.Bool("debug", false, "show debug information")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -50,7 +50,7 @@ func RunScan(args []string) error {
 		Root:    *root,
 		Full:    *full,
 		Deep:    *deep,
-		Verbose: *verbose || *verboseShort,
+		Verbose: *verbose,
 		Debug:   *debug,
 	})
 }

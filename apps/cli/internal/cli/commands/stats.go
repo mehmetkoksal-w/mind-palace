@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
 )
@@ -51,7 +52,7 @@ type KnowledgeStats struct {
 // RunStats executes the stats command with parsed arguments.
 func RunStats(args []string) error {
 	fs := flag.NewFlagSet("stats", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
