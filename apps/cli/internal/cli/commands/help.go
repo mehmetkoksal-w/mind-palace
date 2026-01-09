@@ -232,26 +232,43 @@ Options:
 
 Usage: palace mcp-config --for <target> [options]
 
-Targets:
-  claude-code       Generate config for Claude Code CLI
-  claude-desktop    Generate config for Claude Desktop app
-  cursor            Generate config for Cursor editor
+Supported Tools:
+  claude-code       Anthropic's Claude Code CLI
+  claude-desktop    Anthropic's Claude Desktop app
+  cursor            Cursor AI editor
+  vscode            GitHub Copilot in VS Code
+  windsurf          Codeium's Windsurf IDE
+  cline             Cline VS Code extension
+  zed               Zed editor
+  codex             OpenAI's Codex CLI
+  antigravity       Google's Antigravity IDE
+  opencode          OpenCode terminal AI assistant
+  jetbrains         JetBrains IDEs (IntelliJ, PyCharm, etc.)
+  gemini-cli        Google's Gemini CLI
 
 Options:
   --for <target>    Target tool (required)
   --root <path>     Workspace root (default: current directory)
   --install         Install config to target's config file
+  --list            List all supported tools
 
 Examples:
+  palace mcp-config --list                         # List all supported tools
   palace mcp-config --for claude-code              # Print config to stdout
-  palace mcp-config --for claude-desktop           # Config for Claude Desktop
-  palace mcp-config --for cursor --install         # Install to Cursor config
-  palace mcp-config --for claude-code --install    # Install to .mcp.json
+  palace mcp-config --for vscode --install         # Install to .vscode/mcp.json
+  palace mcp-config --for codex                    # Print TOML config for Codex
+  palace mcp-config --for windsurf --install       # Install to Windsurf config
 
-Config file locations:
-  claude-code:    .mcp.json (in workspace root)
-  claude-desktop: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS)
+Config file locations (macOS):
+  claude-code:    .mcp.json (workspace)
+  claude-desktop: ~/Library/Application Support/Claude/claude_desktop_config.json
   cursor:         ~/.cursor/mcp.json
+  vscode:         .vscode/mcp.json (workspace)
+  windsurf:       ~/.codeium/windsurf/mcp_config.json
+  cline:          ~/Library/Application Support/Code/User/globalStorage/.../cline_mcp_settings.json
+  zed:            ~/Library/Application Support/Zed/settings.json
+  codex:          ~/.codex/config.toml
+  opencode:       ~/.config/opencode/opencode.json
 `)
 	case "stats":
 		fmt.Print(`palace stats - Show index and knowledge statistics
