@@ -11,6 +11,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  workflows: write
 
 concurrency:
   group: "pipeline-${{ github.ref }}"
