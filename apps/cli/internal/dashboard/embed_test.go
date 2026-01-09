@@ -20,7 +20,13 @@ func TestEmbeddedAngularDashboard(t *testing.T) {
 
 	content := string(data)
 
-	// Verify it's an Angular app
+	// Check for placeholder (go install support) - this is valid
+	if strings.Contains(content, "go install") {
+		t.Log("using placeholder dashboard (for go install support)")
+		return
+	}
+
+	// Verify it's an Angular app (full build)
 	if !strings.Contains(content, "<app-root>") {
 		t.Error("expected Angular app-root element")
 	}

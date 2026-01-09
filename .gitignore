@@ -44,8 +44,6 @@ go.work.sum
 *.db-wal
 *.db-shm
 
-# Release / dist artifacts
-dist/
 # Ignore built binaries only at repo root (not cmd/palace/)
 /palace
 /palace-*
@@ -57,7 +55,11 @@ apps/vscode/node_modules/
 apps/dashboard/dist/
 apps/dashboard/node_modules/
 apps/dashboard/.angular/
-apps/cli/internal/dashboard/dist/
+# Ignore built dashboard files but keep placeholder for go install
+apps/cli/internal/dashboard/dist/*
+!apps/cli/internal/dashboard/dist/browser/
+apps/cli/internal/dashboard/dist/browser/*
+!apps/cli/internal/dashboard/dist/browser/index.html
 apps/cli/palace
 
 # Next.js (apps/docs)
