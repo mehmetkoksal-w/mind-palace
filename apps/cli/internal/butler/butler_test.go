@@ -684,7 +684,7 @@ func TestGetIndexInfoStale(t *testing.T) {
 
 	stmts := []string{
 		`CREATE TABLE files (path TEXT PRIMARY KEY, hash TEXT, size INTEGER, mod_time TEXT, indexed_at TEXT, language TEXT);`,
-		`CREATE TABLE scans (id INTEGER PRIMARY KEY, root TEXT, scan_hash TEXT, started_at TEXT, completed_at TEXT);`,
+		`CREATE TABLE scans (id INTEGER PRIMARY KEY, root TEXT, scan_hash TEXT, started_at TEXT, completed_at TEXT, commit_hash TEXT);`,
 	}
 	for _, s := range stmts {
 		if _, err := db.ExecContext(context.Background(), s); err != nil {
