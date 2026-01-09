@@ -51,10 +51,11 @@ CROSS-WORKSPACE
   corridor  Cross-workspace knowledge sharing
 
 HOUSEKEEPING
-  clean     Clean up stale data
-  update    Update palace to latest version
-  help      Show help for a command or topic
-  version   Show version information
+  clean      Clean up stale data
+  mcp-config Generate MCP configuration for AI tools
+  update     Update palace to latest version
+  help       Show help for a command or topic
+  version    Show version information
 
 EXPLORE EXAMPLES
   palace explore "auth logic"              # Search for code
@@ -226,6 +227,32 @@ Usage: palace clean [options]
 Options:
   --dry-run         Show what would be done
 `)
+	case "mcp-config":
+		fmt.Print(`palace mcp-config - Generate MCP configuration for AI tools
+
+Usage: palace mcp-config --for <target> [options]
+
+Targets:
+  claude-code       Generate config for Claude Code CLI
+  claude-desktop    Generate config for Claude Desktop app
+  cursor            Generate config for Cursor editor
+
+Options:
+  --for <target>    Target tool (required)
+  --root <path>     Workspace root (default: current directory)
+  --install         Install config to target's config file
+
+Examples:
+  palace mcp-config --for claude-code              # Print config to stdout
+  palace mcp-config --for claude-desktop           # Config for Claude Desktop
+  palace mcp-config --for cursor --install         # Install to Cursor config
+  palace mcp-config --for claude-code --install    # Install to .mcp.json
+
+Config file locations:
+  claude-code:    .mcp.json (in workspace root)
+  claude-desktop: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS)
+  cursor:         ~/.cursor/mcp.json
+`)
 	case "stats":
 		fmt.Print(`palace stats - Show index and knowledge statistics
 
@@ -248,7 +275,7 @@ Generated: .palace/index/*, .palace/outputs/*
 	case "all":
 		fmt.Println(ExplainAll())
 	default:
-		return fmt.Errorf("unknown help topic: %s\n\nAvailable topics: explore, store, recall, brief, init, scan, check, stats, serve, session, corridor, dashboard, clean, artifacts", topic)
+		return fmt.Errorf("unknown help topic: %s\n\nAvailable topics: explore, store, recall, brief, init, scan, check, stats, serve, session, corridor, dashboard, clean, mcp-config, artifacts", topic)
 	}
 	return nil
 }

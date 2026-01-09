@@ -73,6 +73,8 @@ func Run(args []string) error {
 	// Housekeeping
 	case "clean":
 		return cmdClean(args[1:])
+	case "mcp-config":
+		return cmdMCPConfig(args[1:])
 	case "update":
 		return cmdUpdate(args[1:])
 	case "version", "--version", "-v":
@@ -177,6 +179,11 @@ func cmdCorridor(args []string) error {
 // cmdClean delegates to commands.RunClean (maintenance command)
 func cmdClean(args []string) error {
 	return commands.RunClean(args)
+}
+
+// cmdMCPConfig delegates to commands.RunMCPConfig
+func cmdMCPConfig(args []string) error {
+	return commands.RunMCPConfig(args)
 }
 
 // cmdUpdate delegates to commands.RunUpdate
