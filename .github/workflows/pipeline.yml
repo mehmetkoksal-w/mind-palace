@@ -38,7 +38,7 @@ jobs:
           npm run test
           npm run build
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: dashboard-build
           path: apps/dashboard/dist/dashboard/
@@ -247,7 +247,7 @@ jobs:
             cp -r dist/dashboard/* ../../dashboard-dist/
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: dashboard-assets
           path: dashboard-dist/
@@ -279,7 +279,7 @@ jobs:
           npx vsce package --no-dependencies
           mv *.vsix ../..
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: vscode-extension
           path: "*.vsix"
@@ -429,7 +429,7 @@ jobs:
 
       # ── Upload Artifacts ───────────────────────────────────────────
       - name: Upload Installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: installer-${{ matrix.platform }}
           path: |
