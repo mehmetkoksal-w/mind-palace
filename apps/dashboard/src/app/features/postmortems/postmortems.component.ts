@@ -338,20 +338,7 @@ import {
         color: #64748b;
       }
 
-      .spinner {
-        width: 20px;
-        height: 20px;
-        border: 2px solid #3d3d54;
-        border-top-color: #9d4edd;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      }
-
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
+      /* spinner styles in global styles.scss */
 
       .list {
         flex: 1;

@@ -452,16 +452,7 @@ interface TreeNode {
         color: #fff;
       }
 
-      .empty-state {
-        text-align: center;
-        padding: 48px;
-        color: #666;
-      }
-
-      .empty-state .hint {
-        font-size: 13px;
-        margin-top: 8px;
-      }
+      /* empty-state styles in global styles.scss */
 
       /* List View Styles */
       .sections-container {

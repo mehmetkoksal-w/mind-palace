@@ -30,3 +30,93 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
   background: #4a5568;
 }
+
+// ========================================
+// Shared Component Styles
+// ========================================
+
+// Loading and empty states
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: #64748b;
+  text-align: center;
+
+  svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    color: #94a3b8;
+  }
+}
+
+// Spinner animation
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #334155;
+  border-top-color: #8b5cf6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Meta items (date, counts, etc.)
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #64748b;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+// Search box
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  min-width: 250px;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+  }
+
+  input {
+    background: transparent;
+    border: none;
+    color: #f1f5f9;
+    flex: 1;
+    outline: none;
+    font-size: 0.9rem;
+
+    &::placeholder {
+      color: #64748b;
+    }
+  }
+}
