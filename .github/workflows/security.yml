@@ -49,16 +49,16 @@ jobs:
           scan-type: 'fs'
           scan-ref: '.'
           severity: 'CRITICAL,HIGH,MEDIUM'
-          format: 'template'
-          template: '@/contrib/html.tpl'
-          output: 'trivy-report.html'
+          format: 'table'
+          output: 'trivy-report.txt'
 
-      - name: Upload HTML Report
+      - name: Upload Report
         uses: actions/upload-artifact@v6
         with:
-          name: trivy-html-report
-          path: trivy-report.html
+          name: trivy-report
+          path: trivy-report.txt
           retention-days: 30
+          if-no-files-found: ignore
 
   # ============================================================
   # Go Security Scan
