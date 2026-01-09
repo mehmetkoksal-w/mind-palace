@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "kind": "palace/project-profile",
   "projectRoot": ".",
-  "languages": ["go"],
+  "languages": ["unknown"],
   "capabilities": {
     "search.text": {
       "command": "rg --no-heading --line-number --color never \"{{query}}\" {{paths}}",
@@ -13,16 +13,16 @@
       "description": "Read a single file"
     },
     "graph.deps": {
-      "command": "go list -deps ./...",
-      "description": "List module dependencies"
+      "command": "echo graph deps not configured",
+      "description": "List project dependencies"
     },
     "tests.run": {
-      "command": "go test ./...",
-      "description": "Run all Go tests"
+      "command": "echo tests not configured",
+      "description": "Run project tests"
     },
     "lint.run": {
       "command": "echo lint not configured",
-      "description": "Stub lint command"
+      "description": "Run project linter"
     },
     "symbols.lookup": {
       "command": "echo symbols lookup not configured",
@@ -30,7 +30,7 @@
     }
   },
   "provenance": {
-    "createdBy": "palace detect",
+    "createdBy": "palace init",
     "createdAt": "{{createdAt}}"
   }
 }
