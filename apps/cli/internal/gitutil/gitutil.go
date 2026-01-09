@@ -103,11 +103,9 @@ func GetChangedFilesSinceCommit(root, baseCommit string) (added, modified, delet
 	}
 
 	// Also get uncommitted changes (both staged and unstaged)
-	uncommittedAdded, uncommittedModified, uncommittedDeleted, uncommittedErr := getUncommittedChanges(root)
-	if uncommittedErr != nil {
-		// Ignore errors for uncommitted changes - return what we have from committed changes
-		return added, modified, deleted, nil
-	}
+	// We intentionally ignore errors here - if we can't get uncommitted changes,
+	// we still return the committed changes we already have
+	uncommittedAdded, uncommittedModified, uncommittedDeleted, _ := getUncommittedChanges(root)
 
 	// Merge uncommitted changes (using a set to avoid duplicates)
 	addedSet := make(map[string]bool)
