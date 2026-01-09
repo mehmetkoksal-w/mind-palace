@@ -278,20 +278,7 @@ import {
         color: #64748b;
       }
 
-      .spinner {
-        width: 20px;
-        height: 20px;
-        border: 2px solid #3d3d54;
-        border-top-color: #9d4edd;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      }
-
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
+      /* spinner styles in global styles.scss */
 
       .timeline-track {
         background: #1a1a2e;
@@ -541,28 +528,7 @@ import {
         background: rgba(157, 78, 221, 0.25);
       }
 
-      .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: #64748b;
-      }
-
-      .empty-state svg {
-        width: 64px;
-        height: 64px;
-        margin-bottom: 1rem;
-        opacity: 0.5;
-      }
-
-      .empty-state h3 {
-        color: #94a3b8;
-        margin: 0 0 0.5rem 0;
-      }
-
-      .empty-state p {
-        margin: 0;
-        font-size: 0.875rem;
-      }
+      /* empty-state styles in global styles.scss */
 
       /* Modal */
       .modal-overlay {

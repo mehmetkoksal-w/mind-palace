@@ -274,18 +274,7 @@ import { ApiService, ScopeExplanation, ScopeLevel, Learning, Decision, Idea } fr
       color: #64748b;
     }
 
-    .spinner {
-      width: 24px;
-      height: 24px;
-      border: 2px solid #3d3d54;
-      border-top-color: #9d4edd;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    /* spinner styles in global styles.scss */
 
     .error-message {
       background: rgba(239, 68, 68, 0.1);
@@ -580,28 +569,7 @@ import { ApiService, ScopeExplanation, ScopeLevel, Learning, Decision, Idea } fr
       font-size: 1rem;
     }
 
-    .empty-state {
-      text-align: center;
-      padding: 3rem 2rem;
-      color: #64748b;
-    }
-
-    .empty-state svg {
-      width: 64px;
-      height: 64px;
-      margin-bottom: 1rem;
-      opacity: 0.5;
-    }
-
-    .empty-state h3 {
-      color: #94a3b8;
-      margin: 0 0 0.5rem 0;
-    }
-
-    .empty-state p {
-      margin: 0 0 1.5rem 0;
-      font-size: 0.875rem;
-    }
+    /* empty-state styles in global styles.scss */
 
     .hint-list {
       display: flex;
