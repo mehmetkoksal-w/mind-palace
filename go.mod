@@ -9,7 +9,7 @@ require (
 	github.com/muhammadmuzzammil1998/jsonc v1.0.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
-	modernc.org/sqlite v1.40.1
+	modernc.org/sqlite v1.43.0
 )
 
 require (
