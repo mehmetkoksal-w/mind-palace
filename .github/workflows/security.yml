@@ -54,7 +54,7 @@ jobs:
           output: 'trivy-report.html'
 
       - name: Upload HTML Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: trivy-html-report
           path: trivy-report.html
@@ -111,7 +111,7 @@ jobs:
           npm audit --audit-level=moderate || true
 
       - name: Upload audit results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: npm-audit-${{ matrix.app }}
           path: apps/${{ matrix.app }}/audit-results.json
