@@ -51,10 +51,11 @@ CROSS-WORKSPACE
   corridor  Cross-workspace knowledge sharing
 
 HOUSEKEEPING
-  clean     Clean up stale data
-  update    Update palace to latest version
-  help      Show help for a command or topic
-  version   Show version information
+  clean      Clean up stale data
+  mcp-config Generate MCP configuration for AI tools
+  update     Update palace to latest version
+  help       Show help for a command or topic
+  version    Show version information
 
 EXPLORE EXAMPLES
   palace explore "auth logic"              # Search for code
@@ -100,17 +101,22 @@ Usage: palace scan [options]
 
 Options:
   --root <path>    Workspace root (default: current directory)
-  --full           Force full rescan (default: incremental)
+  --full           Force full rescan
+  --incremental    Force git-based incremental scan
   --deep           Enable LSP-based deep analysis for call tracking
   --verbose, -v    Show detailed progress information
   --debug          Show debug information (LSP communication, etc.)
 
 The scan command parses your codebase using Tree-sitter and builds a structural index.
+By default, it auto-detects: if in a git repo with a previous scan, uses git diff
+to find changed files (faster). Otherwise, uses hash-based change detection.
+
 For Dart/Flutter projects, deep analysis runs automatically to extract accurate call graphs.
 
 Examples:
-  palace scan                  # Incremental scan
+  palace scan                  # Auto-detect: git-based if possible
   palace scan --full           # Force full rescan
+  palace scan --incremental    # Force git-based incremental
   palace scan -v               # Show progress details
   palace scan --debug          # Debug mode for troubleshooting
 `)
@@ -226,6 +232,49 @@ Usage: palace clean [options]
 Options:
   --dry-run         Show what would be done
 `)
+	case "mcp-config":
+		fmt.Print(`palace mcp-config - Generate MCP configuration for AI tools
+
+Usage: palace mcp-config --for <target> [options]
+
+Supported Tools:
+  claude-code       Anthropic's Claude Code CLI
+  claude-desktop    Anthropic's Claude Desktop app
+  cursor            Cursor AI editor
+  vscode            GitHub Copilot in VS Code
+  windsurf          Codeium's Windsurf IDE
+  cline             Cline VS Code extension
+  zed               Zed editor
+  codex             OpenAI's Codex CLI
+  antigravity       Google's Antigravity IDE
+  opencode          OpenCode terminal AI assistant
+  jetbrains         JetBrains IDEs (IntelliJ, PyCharm, etc.)
+  gemini-cli        Google's Gemini CLI
+
+Options:
+  --for <target>    Target tool (required)
+  --root <path>     Workspace root (default: current directory)
+  --install         Install config to target's config file
+  --list            List all supported tools
+
+Examples:
+  palace mcp-config --list                         # List all supported tools
+  palace mcp-config --for claude-code              # Print config to stdout
+  palace mcp-config --for vscode --install         # Install to .vscode/mcp.json
+  palace mcp-config --for codex                    # Print TOML config for Codex
+  palace mcp-config --for windsurf --install       # Install to Windsurf config
+
+Config file locations (macOS):
+  claude-code:    .mcp.json (workspace)
+  claude-desktop: ~/Library/Application Support/Claude/claude_desktop_config.json
+  cursor:         ~/.cursor/mcp.json
+  vscode:         .vscode/mcp.json (workspace)
+  windsurf:       ~/.codeium/windsurf/mcp_config.json
+  cline:          ~/Library/Application Support/Code/User/globalStorage/.../cline_mcp_settings.json
+  zed:            ~/Library/Application Support/Zed/settings.json
+  codex:          ~/.codex/config.toml
+  opencode:       ~/.config/opencode/opencode.json
+`)
 	case "stats":
 		fmt.Print(`palace stats - Show index and knowledge statistics
 
@@ -248,7 +297,7 @@ Generated: .palace/index/*, .palace/outputs/*
 	case "all":
 		fmt.Println(ExplainAll())
 	default:
-		return fmt.Errorf("unknown help topic: %s\n\nAvailable topics: explore, store, recall, brief, init, scan, check, stats, serve, session, corridor, dashboard, clean, artifacts", topic)
+		return fmt.Errorf("unknown help topic: %s\n\nAvailable topics: explore, store, recall, brief, init, scan, check, stats, serve, session, corridor, dashboard, clean, mcp-config, artifacts", topic)
 	}
 	return nil
 }

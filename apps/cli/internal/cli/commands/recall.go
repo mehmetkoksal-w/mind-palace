@@ -42,10 +42,10 @@ func RunRecall(args []string) error {
 // runRecallList lists/searches knowledge.
 func runRecallList(args []string) error {
 	fs := flag.NewFlagSet("recall", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	scope := fs.String("scope", "", "filter by scope (file, room, palace)")
 	path := fs.String("path", "", "filter by scope path")
-	limit := fs.Int("limit", 10, "maximum results")
+	limit := flags.AddLimitFlag(fs, 10)
 	typeFilter := fs.String("type", "", "filter by type: decision, idea, learning")
 	pending := fs.Bool("pending", false, "show decisions awaiting outcome")
 	since := fs.Int("since", 30, "for --pending: show decisions older than N days")
