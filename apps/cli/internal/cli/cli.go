@@ -53,6 +53,8 @@ func Run(args []string) error {
 		return cmdScan(args[1:])
 	case "check":
 		return cmdCheck(args[1:])
+	case "stats":
+		return cmdStats(args[1:])
 
 	// Services
 	case "serve":
@@ -135,6 +137,11 @@ func cmdScan(args []string) error {
 // cmdCheck delegates to commands.RunCheck
 func cmdCheck(args []string) error {
 	return commands.RunCheck(args)
+}
+
+// cmdStats delegates to commands.RunStats
+func cmdStats(args []string) error {
+	return commands.RunStats(args)
 }
 
 // ============================================================================
