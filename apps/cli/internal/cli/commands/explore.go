@@ -49,9 +49,9 @@ type ExploreOptions struct {
 // RunExplore executes the explore command with parsed arguments.
 func RunExplore(args []string) error {
 	fs := flag.NewFlagSet("explore", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	room := fs.String("room", "", "filter to specific room")
-	limit := fs.Int("limit", 10, "maximum results")
+	limit := flags.AddLimitFlag(fs, 10)
 	fuzzy := fs.Bool("fuzzy", false, "enable fuzzy matching for typo tolerance")
 	full := fs.Bool("full", false, "get full context including learnings and decisions")
 	mapSymbol := fs.String("map", "", "trace call graph for a symbol or use --map --file for file graph")

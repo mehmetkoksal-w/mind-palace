@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/util"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
 )
@@ -39,7 +40,7 @@ type BriefOptions struct {
 // RunBrief executes the brief command.
 func RunBrief(args []string) error {
 	fs := flag.NewFlagSet("brief", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	sessions := fs.Bool("sessions", false, "show detailed session information")
 	if err := fs.Parse(args); err != nil {
 		return err

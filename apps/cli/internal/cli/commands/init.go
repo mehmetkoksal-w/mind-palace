@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/project"
 )
@@ -33,8 +34,8 @@ type InitOptions struct {
 // RunInit initializes a new Mind Palace in the specified directory.
 func RunInit(args []string) error {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
-	force := fs.Bool("force", false, "overwrite existing curated files")
+	root := flags.AddRootFlag(fs)
+	force := flags.AddForceFlag(fs)
 	withOutputs := fs.Bool("with-outputs", false, "also create generated outputs (context-pack)")
 	skipDetect := fs.Bool("skip-detect", false, "skip auto-detection of project type")
 	if err := fs.Parse(args); err != nil {

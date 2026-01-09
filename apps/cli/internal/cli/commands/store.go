@@ -46,7 +46,7 @@ func RunStore(args []string) error {
 			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
 				if arg == "--scope" || arg == "-scope" ||
 					arg == "--path" || arg == "-path" ||
-					arg == "--root" || arg == "-root" ||
+					arg == "--root" || arg == "-root" || arg == "-r" ||
 					arg == "--tag" || arg == "-tag" ||
 					arg == "--as" || arg == "-as" ||
 					arg == "--confidence" || arg == "-confidence" {
@@ -60,7 +60,7 @@ func RunStore(args []string) error {
 	}
 
 	fs := flag.NewFlagSet("store", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	scope := fs.String("scope", "palace", "scope (file, room, palace)")
 	path := fs.String("path", "", "scope path (file path or room name)")
 	tag := fs.String("tag", "", "comma-separated tags")

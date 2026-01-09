@@ -38,7 +38,7 @@ type CheckOptions struct {
 // RunCheck executes the check command with parsed arguments.
 func RunCheck(args []string) error {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	diff := fs.String("diff", "", "diff range for scoped verification")
 	var strictFlag flags.BoolFlag
 	fs.Var(&strictFlag, "strict", "strict mode (hash all files; slower but thorough)")
