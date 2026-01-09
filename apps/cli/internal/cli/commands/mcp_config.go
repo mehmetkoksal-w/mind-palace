@@ -246,7 +246,7 @@ func printJSONConfig(target string, tool ToolInfo, palacePath, rootPath string) 
 }
 
 // printTOMLConfig outputs TOML configuration for OpenAI Codex.
-func printTOMLConfig(target, palacePath, rootPath string) error {
+func printTOMLConfig(_, palacePath, rootPath string) error {
 	toml := generateTOMLConfig(palacePath, rootPath)
 	fmt.Println(toml)
 	return nil
@@ -327,7 +327,10 @@ func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, roo
 
 	// Generate the server config
 	newConfig := generateJSONConfig(target, tool, palacePath, rootPath)
-	newServers := newConfig[tool.ConfigKey].(map[string]interface{})
+	newServers, ok := newConfig[tool.ConfigKey].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("internal error: invalid config structure for %s", target)
+	}
 
 	// Merge servers
 	existingServers, ok := existingConfig[tool.ConfigKey].(map[string]interface{})
@@ -511,7 +514,7 @@ func getConfigPath(target, rootPath string) (string, error) {
 	}
 }
 
-// Legacy functions for backward compatibility
+// Legacy functions for backward compatibility (used by tests)
 
 // generateMCPConfig creates the MCP server configuration (legacy).
 func generateMCPConfig(palacePath, rootPath string) MCPConfig {
@@ -525,15 +528,8 @@ func generateMCPConfig(palacePath, rootPath string) MCPConfig {
 	}
 }
 
-// printConfig outputs the configuration as formatted JSON (legacy).
-func printConfig(config MCPConfig) error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(config)
-}
-
 // installConfig writes the configuration to the appropriate file (legacy).
-func installConfig(target string, config MCPConfig, rootPath string) error {
+func installConfig(target string, _ MCPConfig, rootPath string) error {
 	tool, ok := supportedTools[target]
 	if !ok {
 		return fmt.Errorf("unknown target: %s", target)
