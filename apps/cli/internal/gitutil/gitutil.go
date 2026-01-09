@@ -103,9 +103,9 @@ func GetChangedFilesSinceCommit(root, baseCommit string) (added, modified, delet
 	}
 
 	// Also get uncommitted changes (both staged and unstaged)
-	uncommittedAdded, uncommittedModified, uncommittedDeleted, err := getUncommittedChanges(root)
-	if err != nil {
-		// Ignore errors for uncommitted changes
+	uncommittedAdded, uncommittedModified, uncommittedDeleted, uncommittedErr := getUncommittedChanges(root)
+	if uncommittedErr != nil {
+		// Ignore errors for uncommitted changes - return what we have from committed changes
 		return added, modified, deleted, nil
 	}
 
@@ -194,14 +194,15 @@ func getUncommittedChanges(root string) (added, modified, deleted []string, err 
 		worktreeStatus := status[1]
 
 		// Determine the effective status
-		if indexStatus == '?' || worktreeStatus == '?' {
+		switch {
+		case indexStatus == '?' || worktreeStatus == '?':
 			// Untracked file
 			added = append(added, path)
-		} else if indexStatus == 'D' || worktreeStatus == 'D' {
+		case indexStatus == 'D' || worktreeStatus == 'D':
 			deleted = append(deleted, path)
-		} else if indexStatus == 'A' {
+		case indexStatus == 'A':
 			added = append(added, path)
-		} else if indexStatus == 'M' || worktreeStatus == 'M' {
+		case indexStatus == 'M' || worktreeStatus == 'M':
 			modified = append(modified, path)
 		}
 	}
@@ -234,7 +235,7 @@ func GetRepoRoot(path string) (string, error) {
 		return "", err
 	}
 
-	cmd := exec.CommandContext(context.Background(),"git", "-C", absPath, "rev-parse", "--show-toplevel")
+	cmd := exec.CommandContext(context.Background(), "git", "-C", absPath, "rev-parse", "--show-toplevel") //nolint:gosec // absPath is sanitized by filepath.Abs
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err
