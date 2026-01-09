@@ -2,7 +2,7 @@
   "name": "mind-palace-vscode",
   "displayName": "Mind Palace Observer",
   "description": "Head-Up Display for the Mind Palace CLI",
-  "version": "0.2.0-alpha",
+  "version": "0.3.0-alpha",
   "license": "MIT",
   "publisher": "mind-palace",
   "icon": "images/icon.png",
