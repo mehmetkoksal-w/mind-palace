@@ -10,7 +10,8 @@ import (
 
 // DecodeFile loads a JSONC file into the provided destination.
 func DecodeFile(path string, dest any) error {
-	b, err := os.ReadFile(path)
+	// CodeQL: path-injection - path is from internal config loading, constructed from trusted palace config paths
+	b, err := os.ReadFile(path) //nolint:gosec // G304: path from trusted internal config
 	if err != nil {
 		return fmt.Errorf("read %s: %w", path, err)
 	}

@@ -26,7 +26,6 @@ let treeData: any[] = [];
 // DOM ELEMENTS
 // ══════════════════════════════════════════════════════════════════
 
-const contentArea = document.getElementById("content-area")!;
 const treeView = document.getElementById("tree-view")!;
 const mapView = document.getElementById("map-view")!;
 const cyContainer = document.getElementById("cy")!;
@@ -371,11 +370,9 @@ function getCytoscapeStyle() {
   const fg = getCssVar("--vscode-editor-foreground", "#d4d4d4");
   const fgDim = getCssVar("--vscode-descriptionForeground", "#808080");
   const fgMuted = getCssVar("--vscode-editorLineNumber-foreground", "#5a5a5a");
-  const accent = getCssVar("--vscode-focusBorder", "#007fd4");
   const accentSoft = getCssVar("--vscode-charts-blue", "#4fc1ff");
   const green = getCssVar("--vscode-charts-green", "#89d185");
   const purple = getCssVar("--vscode-charts-purple", "#c586c0");
-  const orange = getCssVar("--vscode-charts-orange", "#d19a66");
 
   return [
     // ROOM: Normal State

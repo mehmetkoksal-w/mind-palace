@@ -4,7 +4,6 @@ import * as vscode from "vscode";
 import {
   getConfig,
   watchProjectConfig,
-  readProjectConfig,
   fsAdapter,
 } from "../../config";
 
@@ -129,7 +128,7 @@ describe("Configuration Tests", () => {
         .stub(vscode.workspace, "workspaceFolders")
         .value([{ uri: { fsPath: "/test/workspace" } }]);
 
-      const readFileStub = sandbox
+      sandbox
         .stub(fsAdapter, "readFileSync")
         .returns(JSON.stringify(mockProjectConfig));
       sandbox.stub(fsAdapter, "existsSync").returns(true);

@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as minimatch from 'minimatch';
 import { parse as parseJSONC } from 'jsonc-parser';
 import { Room, HUDStatus } from './types';
 

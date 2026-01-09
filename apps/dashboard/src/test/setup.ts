@@ -5,7 +5,6 @@ import {
   BrowserDynamicTestingModule,
   platformBrowserDynamicTesting,
 } from "@angular/platform-browser-dynamic/testing";
-import { ɵresetCompiledComponents } from "@angular/core";
 
 // Mock all SCSS imports
 vi.mock("*.scss", () => ({}));

@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
-import { ApiService, ScopeExplanation, ScopeLevel, Learning, Decision, Idea } from '../../core/services/api.service';
+import { ApiService, ScopeExplanation } from '../../core/services/api.service';
 
 @Component({
     selector: 'app-scope-explorer',

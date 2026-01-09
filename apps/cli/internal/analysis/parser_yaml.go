@@ -122,6 +122,7 @@ func (p *YAMLParser) parseFlowPair(node *sitter.Node, content []byte, analysis *
 			continue
 		}
 
+		// CodeQL: comparison-of-identical-expressions - false positive; checking type AND empty key to extract first flow_node value
 		if child.Type() == "flow_node" && key == "" {
 			key = p.extractScalarValue(child, content)
 			break
