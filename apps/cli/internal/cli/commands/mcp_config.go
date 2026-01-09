@@ -343,7 +343,7 @@ func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, roo
 	existingConfig[tool.ConfigKey] = existingServers
 
 	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o700); err != nil {
 		return fmt.Errorf("create config directory: %w", err)
 	}
 
@@ -353,7 +353,7 @@ func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, roo
 		return fmt.Errorf("marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(configPath, output, 0o644); err != nil {
+	if err := os.WriteFile(configPath, output, 0o600); err != nil {
 		return fmt.Errorf("write config %s: %w", configPath, err)
 	}
 
@@ -399,11 +399,11 @@ func installTOMLConfig(configPath, palacePath, rootPath string) error {
 	finalContent := strings.TrimRight(existingContent, "\n") + "\n\n" + newConfig
 
 	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o700); err != nil {
 		return fmt.Errorf("create config directory: %w", err)
 	}
 
-	if err := os.WriteFile(configPath, []byte(finalContent), 0o644); err != nil {
+	if err := os.WriteFile(configPath, []byte(finalContent), 0o600); err != nil {
 		return fmt.Errorf("write config %s: %w", configPath, err)
 	}
 
