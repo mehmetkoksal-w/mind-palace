@@ -26,18 +26,20 @@ func init() {
 
 // ScanOptions contains the configuration for the scan command.
 type ScanOptions struct {
-	Root    string
-	Full    bool
-	Deep    bool // Enable deep analysis (LSP-based call tracking for Dart)
-	Verbose bool // Show detailed progress
-	Debug   bool // Show debug information
+	Root        string
+	Full        bool
+	Incremental bool // Force git-based incremental scan
+	Deep        bool // Enable deep analysis (LSP-based call tracking for Dart)
+	Verbose     bool // Show detailed progress
+	Debug       bool // Show debug information
 }
 
 // RunScan executes the scan command with parsed arguments.
 func RunScan(args []string) error {
 	fs := flag.NewFlagSet("scan", flag.ContinueOnError)
 	root := fs.String("root", ".", "workspace root")
-	full := fs.Bool("full", false, "force full rescan (default: incremental)")
+	full := fs.Bool("full", false, "force full rescan")
+	incremental := fs.Bool("incremental", false, "force git-based incremental scan")
 	deep := fs.Bool("deep", false, "enable deep analysis (LSP-based call tracking for Dart/Flutter)")
 	verbose := fs.Bool("verbose", false, "show detailed progress")
 	verboseShort := fs.Bool("v", false, "show detailed progress (shorthand)")
@@ -47,11 +49,12 @@ func RunScan(args []string) error {
 	}
 
 	return ExecuteScan(ScanOptions{
-		Root:    *root,
-		Full:    *full,
-		Deep:    *deep,
-		Verbose: *verbose || *verboseShort,
-		Debug:   *debug,
+		Root:        *root,
+		Full:        *full,
+		Incremental: *incremental,
+		Deep:        *deep,
+		Verbose:     *verbose || *verboseShort,
+		Debug:       *debug,
 	})
 }
 
@@ -66,10 +69,14 @@ func ExecuteScan(opts ScanOptions) error {
 	}
 
 	var err error
-	if opts.Full {
+	switch {
+	case opts.Full:
 		err = executeFullScan(opts.Root)
-	} else {
-		err = executeIncrementalScan(opts.Root)
+	case opts.Incremental:
+		err = executeGitIncrementalScan(opts.Root)
+	default:
+		// Auto-detect: try git-based if available, fall back to hash-based
+		err = executeAutoIncrementalScan(opts.Root)
 	}
 
 	if err != nil {
@@ -147,6 +154,57 @@ func executeIncrementalScan(root string) error {
 		fmt.Printf("%d files unchanged\n", summary.FilesUnchanged)
 	}
 	return nil
+}
+
+func executeGitIncrementalScan(root string) error {
+	summary, err := scan.RunIncrementalGit(root)
+	if err != nil {
+		// If no index or not a git repo, fall back to hash-based
+		if strings.Contains(err.Error(), "no index found") {
+			return executeFullScan(root)
+		}
+		if strings.Contains(err.Error(), "not a git repository") {
+			fmt.Fprintf(os.Stderr, "not a git repository, using hash-based incremental scan\n")
+			return executeIncrementalScan(root)
+		}
+		if strings.Contains(err.Error(), "no previous git-based scan") {
+			fmt.Fprintf(os.Stderr, "no previous git scan found, using hash-based incremental scan\n")
+			return executeIncrementalScan(root)
+		}
+		// For other errors, show warning and try hash-based
+		fmt.Fprintf(os.Stderr, "git-based scan failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "falling back to hash-based incremental scan...\n")
+		return executeIncrementalScan(root)
+	}
+
+	totalChanges := summary.FilesAdded + summary.FilesModified + summary.FilesDeleted
+	if totalChanges == 0 {
+		fmt.Printf("no changes detected (git-based, %d files unchanged)\n", summary.FilesUnchanged)
+	} else {
+		fmt.Printf("git-based incremental scan: +%d added, ~%d modified, -%d deleted (took %v)\n",
+			summary.FilesAdded, summary.FilesModified, summary.FilesDeleted, summary.Duration.Round(time.Millisecond))
+		fmt.Printf("%d files unchanged\n", summary.FilesUnchanged)
+	}
+	return nil
+}
+
+func executeAutoIncrementalScan(root string) error {
+	// Try git-based incremental first if available
+	summary, err := scan.RunIncrementalGit(root)
+	if err == nil {
+		totalChanges := summary.FilesAdded + summary.FilesModified + summary.FilesDeleted
+		if totalChanges == 0 {
+			fmt.Printf("no changes detected (git-based, %d files unchanged)\n", summary.FilesUnchanged)
+		} else {
+			fmt.Printf("git-based incremental scan: +%d added, ~%d modified, -%d deleted (took %v)\n",
+				summary.FilesAdded, summary.FilesModified, summary.FilesDeleted, summary.Duration.Round(time.Millisecond))
+			fmt.Printf("%d files unchanged\n", summary.FilesUnchanged)
+		}
+		return nil
+	}
+
+	// Fall back to hash-based incremental scan
+	return executeIncrementalScan(root)
 }
 
 // executeDeepAnalysis runs LSP-based deep analysis for Dart/Flutter projects
