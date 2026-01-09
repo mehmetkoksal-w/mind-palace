@@ -181,6 +181,7 @@ func getIndexStats(rootPath string) (*IndexStats, error) {
 				stats.SymbolsByKind[kind] = count
 			}
 		}
+		_ = rows.Err() // Check for iteration errors
 	}
 
 	// Count relationships
@@ -200,6 +201,7 @@ func getIndexStats(rootPath string) (*IndexStats, error) {
 				stats.RelationshipsByKind[kind] = count
 			}
 		}
+		_ = rows.Err() // Check for iteration errors
 	}
 
 	// Get last scan info
