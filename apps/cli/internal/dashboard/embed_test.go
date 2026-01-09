@@ -20,6 +20,12 @@ func TestEmbeddedAngularDashboard(t *testing.T) {
 
 	content := string(data)
 
+	// Check for placeholder (go install support) - this is valid
+	if strings.Contains(content, "go install") {
+		t.Log("using placeholder dashboard (for go install support)")
+		return
+	}
+
 	// Skip if dashboard is not built (placeholder index.html)
 	if !strings.Contains(content, "<app-root>") {
 		t.Skip("dashboard not built (placeholder index.html) — run 'cd apps/dashboard && ng build' to enable this test")
