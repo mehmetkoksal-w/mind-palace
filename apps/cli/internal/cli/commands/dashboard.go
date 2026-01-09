@@ -33,8 +33,8 @@ type DashboardOptions struct {
 // RunDashboard executes the dashboard command with parsed arguments.
 func RunDashboard(args []string) error {
 	fs := flag.NewFlagSet("dashboard", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
-	port := fs.Int("port", 3001, "server port")
+	root := flags.AddRootFlag(fs)
+	port := flags.AddPortFlag(fs, 3001)
 	noBrowser := fs.Bool("no-browser", false, "don't open browser automatically")
 	if err := fs.Parse(args); err != nil {
 		return err

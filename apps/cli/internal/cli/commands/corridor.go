@@ -165,7 +165,7 @@ Example:
 func ExecuteCorridorPersonal(args []string) error {
 	fs := flag.NewFlagSet("personal", flag.ContinueOnError)
 	query := fs.String("query", "", "search query")
-	limit := fs.Int("limit", 20, "maximum results")
+	limit := flags.AddLimitFlag(fs, 10)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func ExecuteCorridorPersonal(args []string) error {
 // ExecuteCorridorPromote promotes a workspace learning to personal corridor
 func ExecuteCorridorPromote(args []string) error {
 	fs := flag.NewFlagSet("promote", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ Example:
 func ExecuteCorridorSearch(args []string) error {
 	fs := flag.NewFlagSet("search", flag.ContinueOnError)
 	all := fs.Bool("all", false, "search all linked workspaces too")
-	limit := fs.Int("limit", 20, "maximum results")
+	limit := flags.AddLimitFlag(fs, 10)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
