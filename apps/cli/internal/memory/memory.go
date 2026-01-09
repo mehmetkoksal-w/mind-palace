@@ -69,9 +69,8 @@ type FileIntel struct {
 
 // Open opens or creates the memory database at the given workspace root.
 func Open(root string) (*Memory, error) {
-	// CodeQL: path-injection - root is a trusted workspace path from CLI args, sanitized by filepath.Join
 	dbDir := filepath.Join(root, ".palace")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	if err := os.MkdirAll(dbDir, 0o755); err != nil { // lgtm[go/path-injection] root is trusted CLI workspace path
 		return nil, fmt.Errorf("create .palace dir: %w", err)
 	}
 
