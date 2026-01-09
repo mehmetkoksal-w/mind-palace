@@ -64,7 +64,7 @@ type SessionStartOptions struct {
 // RunSessionStart executes the session start subcommand.
 func RunSessionStart(args []string) error {
 	fs := flag.NewFlagSet("session start", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	agent := fs.String("agent", "cli", "agent type (claude, cursor, aider, etc.)")
 	agentID := fs.String("agent-id", "", "unique agent instance ID")
 	goal := fs.String("goal", "", "session goal")
@@ -123,7 +123,7 @@ type SessionEndOptions struct {
 // RunSessionEnd executes the session end subcommand.
 func RunSessionEnd(args []string) error {
 	fs := flag.NewFlagSet("session end", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	state := fs.String("state", "completed", "final state (completed, abandoned)")
 	summary := fs.String("summary", "", "session summary")
 	if err := fs.Parse(args); err != nil {
@@ -174,9 +174,9 @@ type SessionListOptions struct {
 // RunSessionList executes the session list subcommand.
 func RunSessionList(args []string) error {
 	fs := flag.NewFlagSet("session list", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	active := fs.Bool("active", false, "show only active sessions")
-	limit := fs.Int("limit", 10, "maximum sessions to show")
+	limit := flags.AddLimitFlag(fs, 10)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -248,7 +248,7 @@ type SessionShowOptions struct {
 // RunSessionShow executes the session show subcommand.
 func RunSessionShow(args []string) error {
 	fs := flag.NewFlagSet("session show", flag.ContinueOnError)
-	root := fs.String("root", ".", "workspace root")
+	root := flags.AddRootFlag(fs)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
