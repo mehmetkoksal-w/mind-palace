@@ -69,11 +69,12 @@ func ExecuteScan(opts ScanOptions) error {
 	}
 
 	var err error
-	if opts.Full {
+	switch {
+	case opts.Full:
 		err = executeFullScan(opts.Root)
-	} else if opts.Incremental {
+	case opts.Incremental:
 		err = executeGitIncrementalScan(opts.Root)
-	} else {
+	default:
 		// Auto-detect: try git-based if available, fall back to hash-based
 		err = executeAutoIncrementalScan(opts.Root)
 	}
