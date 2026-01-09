@@ -66,6 +66,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 		lineNum := p.lineNumberAt(fullContent, match[0])
 		nameStart, nameEnd := match[6], match[7]
 		name := fullContent[nameStart:nameEnd]
+		colStart := p.columnAt(fullContent, nameStart)
 
 		isAbstract := match[2] != -1 && match[3] != -1
 		doc := p.extractDocComment(lines, lineNum-1)
@@ -75,6 +76,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 			Kind:       KindClass,
 			LineStart:  lineNum,
 			LineEnd:    p.findBlockEnd(lines, lineNum-1),
+			ColStart:   colStart,
 			DocComment: doc,
 			Exported:   !strings.HasPrefix(name, "_"),
 		}
@@ -95,6 +97,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 		lineNum := p.lineNumberAt(fullContent, match[0])
 		nameStart, nameEnd := match[4], match[5]
 		name := fullContent[nameStart:nameEnd]
+		colStart := p.columnAt(fullContent, nameStart)
 
 		doc := p.extractDocComment(lines, lineNum-1)
 		endLine := p.findBlockEnd(lines, lineNum-1)
@@ -104,6 +107,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 			Kind:       KindClass,
 			LineStart:  lineNum,
 			LineEnd:    endLine,
+			ColStart:   colStart,
 			DocComment: doc,
 			Exported:   !strings.HasPrefix(name, "_"),
 		}
@@ -118,12 +122,14 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 		lineNum := p.lineNumberAt(fullContent, match[0])
 		nameStart, nameEnd := match[4], match[5]
 		name := fullContent[nameStart:nameEnd]
+		colStart := p.columnAt(fullContent, nameStart)
 
 		analysis.Symbols = append(analysis.Symbols, Symbol{
 			Name:       name,
 			Kind:       KindEnum,
 			LineStart:  lineNum,
 			LineEnd:    p.findBlockEnd(lines, lineNum-1),
+			ColStart:   colStart,
 			DocComment: p.extractDocComment(lines, lineNum-1),
 			Exported:   !strings.HasPrefix(name, "_"),
 		})
@@ -134,8 +140,10 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 		lineNum := p.lineNumberAt(fullContent, match[0])
 
 		name := "extension"
+		colStart := 0
 		if match[4] != -1 && match[5] != -1 {
 			name = fullContent[match[4]:match[5]]
+			colStart = p.columnAt(fullContent, match[4])
 		}
 
 		analysis.Symbols = append(analysis.Symbols, Symbol{
@@ -143,6 +151,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 			Kind:      KindClass,
 			LineStart: lineNum,
 			LineEnd:   p.findBlockEnd(lines, lineNum-1),
+			ColStart:  colStart,
 			Exported:  !strings.HasPrefix(name, "_"),
 		})
 	}
@@ -152,12 +161,14 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 		lineNum := p.lineNumberAt(fullContent, match[0])
 		nameStart, nameEnd := match[4], match[5]
 		name := fullContent[nameStart:nameEnd]
+		colStart := p.columnAt(fullContent, nameStart)
 
 		analysis.Symbols = append(analysis.Symbols, Symbol{
 			Name:      name,
 			Kind:      KindType,
 			LineStart: lineNum,
 			LineEnd:   lineNum,
+			ColStart:  colStart,
 			Exported:  !strings.HasPrefix(name, "_"),
 		})
 	}
@@ -187,6 +198,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 		nameStart, nameEnd := match[6], match[7]
 		name := fullContent[nameStart:nameEnd]
 		params := fullContent[match[8]:match[9]]
+		colStart := p.columnAt(fullContent, nameStart)
 
 		// Skip common keywords that look like return types but aren't
 		if returnType == "if" || returnType == "for" || returnType == "while" || returnType == "switch" || returnType == "return" {
@@ -198,6 +210,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 			Kind:       KindFunction,
 			LineStart:  lineNum,
 			LineEnd:    p.findBlockEnd(lines, lineNum-1),
+			ColStart:   colStart,
 			Signature:  returnType + " " + name + "(" + params + ")",
 			DocComment: p.extractDocComment(lines, lineNum-1),
 			Exported:   !strings.HasPrefix(name, "_"),
@@ -227,12 +240,14 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 
 		nameStart, nameEnd := match[8], match[9]
 		name := fullContent[nameStart:nameEnd]
+		colStart := p.columnAt(fullContent, nameStart)
 
 		analysis.Symbols = append(analysis.Symbols, Symbol{
 			Name:      name,
 			Kind:      KindConstant,
 			LineStart: lineNum,
 			LineEnd:   lineNum,
+			ColStart:  colStart,
 			Exported:  !strings.HasPrefix(name, "_"),
 		})
 	}
@@ -256,6 +271,7 @@ func (p *DartParser) extractClassMembers(lines []string, startLine, endLine int)
 		returnType := strings.TrimSpace(classContent[match[6]:match[7]])
 		name := classContent[match[8]:match[9]]
 		params := classContent[match[10]:match[11]]
+		colStart := p.columnAt(classContent, match[8])
 
 		// Skip common keywords
 		if returnType == "if" || returnType == "for" || returnType == "while" || returnType == "switch" || returnType == "return" {
@@ -277,6 +293,7 @@ func (p *DartParser) extractClassMembers(lines []string, startLine, endLine int)
 			Kind:      kind,
 			LineStart: lineNum,
 			LineEnd:   lineNum,
+			ColStart:  colStart,
 			Signature: sig,
 			Exported:  !strings.HasPrefix(name, "_"),
 		})
@@ -289,12 +306,14 @@ func (p *DartParser) extractClassMembers(lines []string, startLine, endLine int)
 
 		name := classContent[match[8]:match[9]]
 		returnType := strings.TrimSpace(classContent[match[6]:match[7]])
+		colStart := p.columnAt(classContent, match[8])
 
 		children = append(children, Symbol{
 			Name:      name,
 			Kind:      KindProperty,
 			LineStart: lineNum,
 			LineEnd:   lineNum,
+			ColStart:  colStart,
 			Signature: returnType + " get " + name,
 			Exported:  !strings.HasPrefix(name, "_"),
 		})
@@ -306,12 +325,14 @@ func (p *DartParser) extractClassMembers(lines []string, startLine, endLine int)
 		lineNum := startLine + localLineNum - 1
 
 		name := classContent[match[4]:match[5]]
+		colStart := p.columnAt(classContent, match[4])
 
 		children = append(children, Symbol{
 			Name:      name,
 			Kind:      KindProperty,
 			LineStart: lineNum,
 			LineEnd:   lineNum,
+			ColStart:  colStart,
 			Signature: "set " + name,
 			Exported:  !strings.HasPrefix(name, "_"),
 		})
@@ -328,6 +349,7 @@ func (p *DartParser) extractClassMembers(lines []string, startLine, endLine int)
 
 		fieldType := strings.TrimSpace(classContent[match[12]:match[13]])
 		name := classContent[match[14]:match[15]]
+		colStart := p.columnAt(classContent, match[14])
 
 		kind := KindProperty
 		if isConst || (isStatic && isFinal) {
@@ -344,6 +366,7 @@ func (p *DartParser) extractClassMembers(lines []string, startLine, endLine int)
 			Kind:      kind,
 			LineStart: lineNum,
 			LineEnd:   lineNum,
+			ColStart:  colStart,
 			Signature: sig,
 			Exported:  !strings.HasPrefix(name, "_"),
 		})
@@ -421,6 +444,15 @@ func (p *DartParser) extractRelationships(lines []string, analysis *FileAnalysis
 
 func (p *DartParser) lineNumberAt(content string, pos int) int {
 	return strings.Count(content[:pos], "\n") + 1
+}
+
+// columnAt calculates the 0-based column position at a given offset
+func (p *DartParser) columnAt(content string, pos int) int {
+	lastNewline := strings.LastIndex(content[:pos], "\n")
+	if lastNewline == -1 {
+		return pos
+	}
+	return pos - lastNewline - 1
 }
 
 func (p *DartParser) findBlockEnd(lines []string, startIdx int) int {
