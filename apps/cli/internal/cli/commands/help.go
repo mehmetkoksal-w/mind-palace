@@ -101,17 +101,22 @@ Usage: palace scan [options]
 
 Options:
   --root <path>    Workspace root (default: current directory)
-  --full           Force full rescan (default: incremental)
+  --full           Force full rescan
+  --incremental    Force git-based incremental scan
   --deep           Enable LSP-based deep analysis for call tracking
   --verbose, -v    Show detailed progress information
   --debug          Show debug information (LSP communication, etc.)
 
 The scan command parses your codebase using Tree-sitter and builds a structural index.
+By default, it auto-detects: if in a git repo with a previous scan, uses git diff
+to find changed files (faster). Otherwise, uses hash-based change detection.
+
 For Dart/Flutter projects, deep analysis runs automatically to extract accurate call graphs.
 
 Examples:
-  palace scan                  # Incremental scan
+  palace scan                  # Auto-detect: git-based if possible
   palace scan --full           # Force full rescan
+  palace scan --incremental    # Force git-based incremental
   palace scan -v               # Show progress details
   palace scan --debug          # Debug mode for troubleshooting
 `)

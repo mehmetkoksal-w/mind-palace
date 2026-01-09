@@ -35,6 +35,7 @@ type ScanSummary struct {
 	ID                int64
 	Root              string
 	ScanHash          string
+	CommitHash        string // Git commit hash at scan time (empty if not a git repo)
 	FileCount         int
 	ChunkCount        int
 	SymbolCount       int
@@ -86,6 +87,8 @@ CREATE TABLE IF NOT EXISTS schema_version (
 var indexMigrations = []func(*sql.Tx) error{
 	// Migration 0: Initial schema
 	indexMigrateV0,
+	// Migration 1: Add git commit hash tracking to scans
+	indexMigrateV1,
 }
 
 // indexMigrateV0 creates the initial index schema (version 0)
@@ -212,6 +215,19 @@ func indexMigrateV0(tx *sql.Tx) error {
 	return nil
 }
 
+// indexMigrateV1 adds git commit hash tracking to scans table
+func indexMigrateV1(tx *sql.Tx) error {
+	// Add commit_hash column to scans table for git-based incremental scanning
+	_, err := tx.ExecContext(context.Background(), `ALTER TABLE scans ADD COLUMN commit_hash TEXT DEFAULT '';`)
+	if err != nil {
+		// Column might already exist from manual addition
+		if !strings.Contains(err.Error(), "duplicate column") {
+			return fmt.Errorf("add commit_hash column: %w", err)
+		}
+	}
+	return nil
+}
+
 func ensureSchema(db *sql.DB) error {
 	// Create schema version table first
 	if _, err := db.ExecContext(context.Background(), indexSchemaVersionTable); err != nil {
@@ -309,8 +325,18 @@ func BuildFileRecords(root string, guardrails config.Guardrails) ([]FileRecord, 
 	return records, nil
 }
 
+// WriteScanOptions provides options for WriteScan.
+type WriteScanOptions struct {
+	CommitHash string // Git commit hash (optional)
+}
+
 // WriteScan writes a batch of file records to the index database.
 func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Time) (ScanSummary, error) {
+	return WriteScanWithOptions(db, root, records, startedAt, WriteScanOptions{})
+}
+
+// WriteScanWithOptions writes a batch of file records to the index database with options.
+func WriteScanWithOptions(db *sql.DB, root string, records []FileRecord, startedAt time.Time, opts WriteScanOptions) (ScanSummary, error) {
 	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return ScanSummary{}, err
@@ -405,7 +431,7 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 	}
 
 	scanHash := computeScanHash(records)
-	res, err := tx.ExecContext(context.Background(), `INSERT INTO scans(root, scan_hash, started_at, completed_at) VALUES(?, ?, ?, ?);`, root, scanHash, startedAt.UTC().Format(time.RFC3339), now.Format(time.RFC3339))
+	res, err := tx.ExecContext(context.Background(), `INSERT INTO scans(root, scan_hash, started_at, completed_at, commit_hash) VALUES(?, ?, ?, ?, ?);`, root, scanHash, startedAt.UTC().Format(time.RFC3339), now.Format(time.RFC3339), opts.CommitHash)
 	if err != nil {
 		return ScanSummary{}, fmt.Errorf("insert scan: %w", err)
 	}
@@ -419,6 +445,7 @@ func WriteScan(db *sql.DB, root string, records []FileRecord, startedAt time.Tim
 		ID:                scanID,
 		Root:              root,
 		ScanHash:          scanHash,
+		CommitHash:        opts.CommitHash,
 		FileCount:         len(records),
 		ChunkCount:        chunkCount,
 		SymbolCount:       symbolCount,
@@ -470,10 +497,10 @@ func computeScanHash(records []FileRecord) string {
 
 // LatestScan returns the most recent scan metadata.
 func LatestScan(db *sql.DB) (ScanSummary, error) {
-	row := db.QueryRowContext(context.Background(), `SELECT id, root, scan_hash, completed_at FROM scans ORDER BY id DESC LIMIT 1;`)
+	row := db.QueryRowContext(context.Background(), `SELECT id, root, scan_hash, completed_at, COALESCE(commit_hash, '') FROM scans ORDER BY id DESC LIMIT 1;`)
 	var id int64
-	var root, hash, completed string
-	if err := row.Scan(&id, &root, &hash, &completed); err != nil {
+	var root, hash, completed, commitHash string
+	if err := row.Scan(&id, &root, &hash, &completed, &commitHash); err != nil {
 		if err == sql.ErrNoRows {
 			return ScanSummary{}, nil
 		}
@@ -483,7 +510,7 @@ func LatestScan(db *sql.DB) (ScanSummary, error) {
 	if err != nil {
 		return ScanSummary{}, fmt.Errorf("parse completed_at: %w", err)
 	}
-	return ScanSummary{ID: id, Root: root, ScanHash: hash, CompletedAt: t}, nil
+	return ScanSummary{ID: id, Root: root, ScanHash: hash, CommitHash: commitHash, CompletedAt: t}, nil
 }
 
 // FileMetadata contains basic information about an indexed file.
