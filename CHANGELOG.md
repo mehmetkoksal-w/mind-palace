@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0-alpha] - 2026-01-07
+## [0.2.0-alpha] - 2026-01-09
 
 ### Added
 
@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Provider Registration**: Fixed knowledge tree provider syntax and rendering logic
 - **Config Watcher**: Added graceful handling for missing workspace folders
 - **MCP Client**: Improved connection handling and error recovery
+- **CI Pipeline**: Consolidated workflows (PR Validation for PRs, Pipeline for main), fixed CodeQL v4 upgrade, resolved Gitleaks false positives
+- **Security Scan**: Added CodeQL config to exclude coverage reports, fixed Trivy template path issues
 
 ### Testing
 
