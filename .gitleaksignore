@@ -1,0 +1,27 @@
+# Gitleaks False Positive Suppression
+#
+# These entries suppress generic-api-key findings in test files that use
+# fake/placeholder API keys like "test-api-key" for unit testing purposes.
+# These are not real secrets - they are test fixtures used to verify API
+# client behavior with mock HTTP servers.
+#
+# File: apps/cli/internal/llm/anthropic_test.go
+# All instances use the hardcoded string "test-api-key" which is a fake
+# credential used exclusively in test contexts.
+#
+# Format: <commit>:<file>:<rule>:<line>
+# Note: These fingerprints are tied to specific commits and may need to be
+# regenerated if the test file is modified. For a more maintainable approach,
+# consider using a .gitleaks.toml config with path-based allowlists.
+
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:137
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:186
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:283
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:338
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:369
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:400
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:426
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:434
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:442
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:564
+cb067fd5e81dd2a13dd73640c8c1317511ddfbb8:apps/cli/internal/llm/anthropic_test.go:generic-api-key:614

@@ -647,7 +647,6 @@ export class KnowledgeTreeProvider
 
     // Separate decisions with outcomes
     const withOutcome = this.decisions.filter((d) => d.outcome);
-    const withoutOutcome = this.decisions.filter((d) => !d.outcome);
 
     for (const [status, statusDecisions] of Object.entries(grouped)) {
       const decisionsInStatus = statusDecisions.filter((d) => !d.outcome);

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { PalaceBridge, RecallResult, RecordLink } from "../../bridge";
+import { PalaceBridge } from "../../bridge";
 
 /**
  * Graph node for visualization

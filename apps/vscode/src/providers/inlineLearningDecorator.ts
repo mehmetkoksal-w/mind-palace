@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { PalaceBridge, FileIntelResult } from '../bridge';
+import { PalaceBridge } from '../bridge';
 
 /**
  * Learning with line information

@@ -1,8 +1,7 @@
 import * as cp from "child_process";
 import * as vscode from "vscode";
 import * as util from "util";
-import * as readline from "readline";
-import { createCache, LRUCache } from "./services/cache";
+import { createCache } from "./services/cache";
 import { SafeOutputChannel } from "./services/logger";
 
 const exec = util.promisify(cp.exec);

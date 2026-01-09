@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { PalaceBridge, SemanticSearchResult } from '../bridge';
+import { PalaceBridge } from '../bridge';
 
 /**
  * Cached learning suggestions for a file

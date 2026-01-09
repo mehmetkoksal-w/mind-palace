@@ -417,24 +417,42 @@ func replaceExecutable(currentPath, newPath string) error {
 		os.Rename(backupPath, currentPath)
 		return err
 	}
-	defer newFile.Close()
+	defer func() {
+		if cerr := newFile.Close(); cerr != nil {
+			// Log close error but don't fail - file was only opened for reading
+			_ = cerr
+		}
+	}()
 
 	destFile, err := os.OpenFile(currentPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755) //nolint:gosec // G302: executable requires 0755 permissions
 	if err != nil {
 		os.Rename(backupPath, currentPath)
 		return err
 	}
-	defer destFile.Close()
+
+	// Track close error for writable file
+	var closeErr error
+	defer func() {
+		if cerr := destFile.Close(); cerr != nil && closeErr == nil {
+			closeErr = cerr
+		}
+	}()
 
 	if _, err := io.Copy(destFile, newFile); err != nil {
-		destFile.Close()
 		_ = os.Remove(currentPath)
 		_ = os.Rename(backupPath, currentPath)
 		return err
 	}
 
+	// Sync to ensure data is written to disk before removing backup
+	if err := destFile.Sync(); err != nil {
+		_ = os.Remove(currentPath)
+		_ = os.Rename(backupPath, currentPath)
+		return fmt.Errorf("sync file: %w", err)
+	}
+
 	_ = os.Remove(backupPath)
-	return nil
+	return closeErr
 }
 
 func loadCache(path string) (cacheEntry, bool) {

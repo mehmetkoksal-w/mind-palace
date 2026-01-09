@@ -9,7 +9,6 @@ import { PalaceHUD } from "../hud";
 import { PalaceDecorator } from "../decorator";
 import { getConfig } from "../config";
 import { ViewRegistry } from "./view-registry";
-import { logger } from "../services/logger";
 
 export interface CommandContext {
   bridge: PalaceBridge;
