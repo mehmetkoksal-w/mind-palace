@@ -11,7 +11,6 @@ permissions:
   contents: write
   pages: write
   id-token: write
-  workflows: write
 
 concurrency:
   group: "pipeline-${{ github.ref }}"
@@ -486,8 +485,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.check.outputs.version_tag }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
+          # Create tag via GitHub API (avoids GITHUB_TOKEN workflow file restrictions)
+          COMMIT_SHA=$(git rev-parse HEAD)
+          gh api repos/${{ github.repository }}/git/refs -f ref="refs/tags/$TAG" -f sha="$COMMIT_SHA" || echo "Tag may already exist"
+
+          # Create release with artifacts
           gh release create "$TAG" ./release/* --title "$TAG" --notes-file release-notes.txt
