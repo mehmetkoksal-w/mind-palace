@@ -393,7 +393,7 @@
     "@types/minimatch": "^5.1.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "^18.14.6",
-    "@types/sinon": "^17.0.4",
+    "@types/sinon": "^21.0.0",
     "@types/vscode": "^1.80.0",
     "@vscode/test-electron": "^2.4.1",
     "chai": "^6.2.2",
@@ -403,7 +403,7 @@
     "esbuild": "^0.27.2",
     "mocha": "^10.8.2",
     "nyc": "^17.1.0",
-    "sinon": "^19.0.2",
+    "sinon": "^21.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.1.3"
   },
