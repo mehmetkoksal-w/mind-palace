@@ -38,6 +38,7 @@ SETUP & INDEX
   init      Initialize the palace in the current directory
   scan      Build/refresh the code index
   check     Verify index freshness and optionally generate CI outputs
+  stats     Show index and knowledge statistics
 
 SERVICES
   serve     Start MCP server for AI agents
@@ -225,6 +226,19 @@ Usage: palace clean [options]
 Options:
   --dry-run         Show what would be done
 `)
+	case "stats":
+		fmt.Print(`palace stats - Show index and knowledge statistics
+
+Usage: palace stats [options]
+
+Options:
+  --root <path>     Workspace root (default: current directory)
+
+Displays statistics about:
+- Index: files, symbols (by kind), relationships, last scan
+- Knowledge: ideas, decisions, learnings
+- Sessions: total and active count
+`)
 	case "artifacts":
 		fmt.Print(`Mind Palace Artifacts
 
@@ -234,7 +248,7 @@ Generated: .palace/index/*, .palace/outputs/*
 	case "all":
 		fmt.Println(ExplainAll())
 	default:
-		return fmt.Errorf("unknown help topic: %s\n\nAvailable topics: explore, store, recall, brief, init, scan, check, serve, session, corridor, dashboard, clean, artifacts", topic)
+		return fmt.Errorf("unknown help topic: %s\n\nAvailable topics: explore, store, recall, brief, init, scan, check, stats, serve, session, corridor, dashboard, clean, artifacts", topic)
 	}
 	return nil
 }
