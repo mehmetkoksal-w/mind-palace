@@ -951,8 +951,9 @@ func TestGetIndexSchemaVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetIndexSchemaVersion() error = %v", err)
 	}
-	if version != 0 {
-		t.Fatalf("schema version = %d, want 0", version)
+	// Version 0: Initial schema, Version 1: Added commit_hash column
+	if version != 1 {
+		t.Fatalf("schema version = %d, want 1", version)
 	}
 }
 
