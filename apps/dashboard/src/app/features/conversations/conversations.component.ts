@@ -359,35 +359,7 @@ interface TimelineEvent {
         margin: 0.25rem 0 0 0;
       }
 
-      .search-box {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 8px;
-        padding: 0.5rem 0.75rem;
-        min-width: 250px;
-      }
-
-      .search-box svg {
-        width: 18px;
-        height: 18px;
-        color: #64748b;
-      }
-
-      .search-box input {
-        background: transparent;
-        border: none;
-        color: #f1f5f9;
-        flex: 1;
-        outline: none;
-        font-size: 0.9rem;
-      }
-
-      .search-box input::placeholder {
-        color: #64748b;
-      }
+      /* search-box styles in global styles.scss */
 
       .content-grid {
         display: grid;
@@ -470,59 +442,9 @@ interface TimelineEvent {
         gap: 1rem;
       }
 
-      .meta-item {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-size: 0.8rem;
-        color: #64748b;
-      }
+      /* meta-item styles in global styles.scss */
 
-      .meta-item svg {
-        width: 14px;
-        height: 14px;
-      }
-
-      .loading-state,
-      .empty-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 3rem;
-        color: #64748b;
-        text-align: center;
-      }
-
-      .empty-state svg {
-        width: 48px;
-        height: 48px;
-        margin-bottom: 1rem;
-        opacity: 0.5;
-      }
-
-      .empty-state h3 {
-        margin: 0 0 0.5rem 0;
-        color: #94a3b8;
-      }
-
-      .spinner {
-        width: 32px;
-        height: 32px;
-        border: 3px solid #334155;
-        border-top-color: #8b5cf6;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 1rem;
-      }
-
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-
-      /* Detail View */
+      /* Detail View - loading-state, empty-state, spinner are in global styles */
       .conversation-detail {
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         border: 1px solid #334155;
