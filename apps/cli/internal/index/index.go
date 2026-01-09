@@ -46,7 +46,7 @@ type ScanSummary struct {
 // Open opens the sqlite database at the given path and applies pragmas.
 func Open(dbPath string) (*sql.DB, error) {
 	// CodeQL: path-injection - dbPath is constructed from trusted palace workspace paths (e.g., .palace/index/palace.db)
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil { //nolint:gosec // G301: directory permissions appropriate for index storage
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
 		return nil, err
 	}
 	db, err := sql.Open("sqlite", dbPath)

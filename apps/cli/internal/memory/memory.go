@@ -71,7 +71,7 @@ type FileIntel struct {
 func Open(root string) (*Memory, error) {
 	// CodeQL: path-injection - root is a trusted workspace path from CLI args, sanitized by filepath.Join
 	dbDir := filepath.Join(root, ".palace")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: directory permissions appropriate for user workspace
+	if err := os.MkdirAll(dbDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create .palace dir: %w", err)
 	}
 

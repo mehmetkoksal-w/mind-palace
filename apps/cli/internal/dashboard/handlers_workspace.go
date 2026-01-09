@@ -99,7 +99,7 @@ func (s *Server) handleWorkspaceSwitch(w http.ResponseWriter, r *http.Request) {
 
 	// Check if path exists
 	// CodeQL: path-injection - absPath is sanitized via filepath.Abs and validated before use in switchWorkspace
-	if _, err := os.Stat(absPath); os.IsNotExist(err) { //nolint:gosec // G304: path validated via filepath.Abs
+	if _, err := os.Stat(absPath); os.IsNotExist(err) {
 		writeError(w, http.StatusBadRequest, "path does not exist")
 		return
 	}
@@ -150,7 +150,7 @@ func (s *Server) switchWorkspace(rootPath string) error {
 	// Try to open new butler for code search
 	// CodeQL: path-injection - rootPath is validated workspace path, filepath.Join sanitizes the path
 	dbPath := filepath.Join(rootPath, ".palace", "index", "palace.db")
-	if _, err := os.Stat(dbPath); err == nil { //nolint:gosec // G304: path constructed from validated workspace root
+	if _, err := os.Stat(dbPath); err == nil {
 		db, err := index.Open(dbPath)
 		if err == nil {
 			b, err := butler.New(db, rootPath)
