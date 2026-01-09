@@ -36,6 +36,7 @@ type Symbol struct {
 	Kind       SymbolKind
 	LineStart  int
 	LineEnd    int
+	ColStart   int // Column where symbol name starts (0-based)
 	Signature  string
 	DocComment string
 	Exported   bool
