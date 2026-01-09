@@ -101,9 +101,17 @@ Options:
   --root <path>    Workspace root (default: current directory)
   --full           Force full rescan (default: incremental)
   --deep           Enable LSP-based deep analysis for call tracking
+  --verbose, -v    Show detailed progress information
+  --debug          Show debug information (LSP communication, etc.)
 
 The scan command parses your codebase using Tree-sitter and builds a structural index.
 For Dart/Flutter projects, deep analysis runs automatically to extract accurate call graphs.
+
+Examples:
+  palace scan                  # Incremental scan
+  palace scan --full           # Force full rescan
+  palace scan -v               # Show progress details
+  palace scan --debug          # Debug mode for troubleshooting
 `)
 	case "check":
 		fmt.Print(`palace check - Verify index freshness
