@@ -39,7 +39,7 @@ func RunIncremental(root string) (index.IncrementalScanSummary, error) {
 	// Check if index exists - if not, need full scan
 	dbPath := filepath.Join(rootPath, ".palace", "index", "palace.db")
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		return index.IncrementalScanSummary{}, fmt.Errorf("no index found; run 'palace scan --full' first")
+		return index.IncrementalScanSummary{}, fmt.Errorf("no index found")
 	}
 
 	guardrails := config.LoadGuardrails(rootPath)

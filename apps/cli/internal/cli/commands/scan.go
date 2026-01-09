@@ -112,9 +112,14 @@ func executeFullScan(root string) error {
 func executeIncrementalScan(root string) error {
 	summary, err := scan.RunIncremental(root)
 	if err != nil {
-		// If no index exists, fall back to full scan
-		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
-		fmt.Fprintf(os.Stderr, "Running full scan instead...\n")
+		// If no index exists, fall back to full scan silently
+		// This is normal for fresh projects - no need for a warning
+		if strings.Contains(err.Error(), "no index found") {
+			return executeFullScan(root)
+		}
+		// For other errors, show warning and try full scan
+		fmt.Fprintf(os.Stderr, "incremental scan failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "falling back to full scan...\n")
 		return executeFullScan(root)
 	}
 
