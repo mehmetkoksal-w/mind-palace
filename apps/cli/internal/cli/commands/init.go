@@ -27,7 +27,7 @@ type InitOptions struct {
 	Root        string
 	Force       bool
 	WithOutputs bool
-	Detect      bool
+	SkipDetect  bool
 }
 
 // RunInit initializes a new Mind Palace in the specified directory.
@@ -36,7 +36,7 @@ func RunInit(args []string) error {
 	root := fs.String("root", ".", "workspace root")
 	force := fs.Bool("force", false, "overwrite existing curated files")
 	withOutputs := fs.Bool("with-outputs", false, "also create generated outputs (context-pack)")
-	detect := fs.Bool("detect", false, "auto-detect project type and generate profile")
+	skipDetect := fs.Bool("skip-detect", false, "skip auto-detection of project type")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func RunInit(args []string) error {
 		Root:        *root,
 		Force:       *force,
 		WithOutputs: *withOutputs,
-		Detect:      *detect,
+		SkipDetect:  *skipDetect,
 	}
 
 	return ExecuteInit(opts)
@@ -65,10 +65,10 @@ func ExecuteInit(opts InitOptions) error {
 		return err
 	}
 
-	// Auto-detect project type if requested
+	// Auto-detect project type by default
 	language := "unknown"
 	var monorepoRooms []MonorepoRoom
-	if opts.Detect {
+	if !opts.SkipDetect {
 		profile := project.BuildProfile(rootPath)
 		profilePath := filepath.Join(rootPath, ".palace", "project-profile.json")
 		if err := config.WriteJSON(profilePath, profile); err != nil {
@@ -113,8 +113,8 @@ func ExecuteInit(opts InitOptions) error {
 	if err := config.WriteTemplate(filepath.Join(rootPath, ".palace", "playbooks", "default.jsonc"), "playbooks/default.jsonc", map[string]string{}, opts.Force); err != nil {
 		return err
 	}
-	// Only write default project-profile template if NOT detecting (detect writes its own profile)
-	if !opts.Detect {
+	// Only write default project-profile template if skipping detection (detection writes its own profile)
+	if opts.SkipDetect {
 		if err := config.WriteTemplate(filepath.Join(rootPath, ".palace", "project-profile.json"), "project-profile.json", map[string]string{}, opts.Force); err != nil {
 			return err
 		}
