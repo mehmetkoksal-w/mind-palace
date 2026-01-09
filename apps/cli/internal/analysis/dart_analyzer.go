@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/koksalmehmet/mind-palace/apps/cli/internal/logger"
 )
 
 // DartAnalyzer provides deep analysis of Dart files using the Dart Analysis Server
@@ -186,6 +189,8 @@ func (a *DartAnalyzer) QuickCallScan(files []string, progressFn func(current, to
 	var allCalls []CallInfo
 
 	total := len(files)
+	logger.Info("Starting QuickCallScan on %d files", total)
+
 	for i, file := range files {
 		if progressFn != nil {
 			progressFn(i+1, total, file)
@@ -195,22 +200,42 @@ func (a *DartAnalyzer) QuickCallScan(files []string, progressFn func(current, to
 			continue
 		}
 
+		relFile := a.toRelativePath(file)
+		logger.Debug("Analyzing: %s", relFile)
+		startTime := time.Now()
+
 		content, err := os.ReadFile(file)
 		if err != nil {
+			logger.Error("Failed to read file %s: %v", relFile, err)
 			continue
 		}
 
 		parser := NewDartParser()
 		analysis, err := parser.Parse(content, file)
 		if err != nil {
+			logger.Error("Failed to parse file %s: %v", relFile, err)
 			continue
 		}
+
+		symbolCount := len(analysis.Symbols)
+		exportedCount := 0
+		for _, sym := range analysis.Symbols {
+			if sym.Exported {
+				exportedCount++
+			}
+		}
+		logger.Debug("  Parsed: %d symbols (%d exported)", symbolCount, exportedCount)
 
 		if err := a.client.OpenFile(file, string(content)); err != nil {
+			logger.Error("Failed to open file in LSP %s: %v", relFile, err)
 			continue
 		}
 
+		// Give LSP time to analyze the file
+		time.Sleep(50 * time.Millisecond)
+
 		// Only analyze exported (public) symbols
+		fileCalls := 0
 		for _, sym := range analysis.Symbols {
 			if !sym.Exported {
 				continue
@@ -221,19 +246,32 @@ func (a *DartAnalyzer) QuickCallScan(files []string, progressFn func(current, to
 				if sym.Kind == KindClass {
 					for _, child := range sym.Children {
 						if child.Exported && (child.Kind == KindMethod || child.Kind == KindConstructor) {
-							calls, _ := a.client.ExtractCallsForSymbol(file, child.LineStart-1, 0)
-							allCalls = append(allCalls, calls...)
+							calls, err := a.client.ExtractCallsForSymbol(file, child.LineStart-1, 0)
+							if err != nil {
+								logger.Debug("  Failed to extract calls for %s.%s: %v", sym.Name, child.Name, err)
+							} else {
+								fileCalls += len(calls)
+								allCalls = append(allCalls, calls...)
+							}
 						}
 					}
 				} else {
-					calls, _ := a.client.ExtractCallsForSymbol(file, sym.LineStart-1, 0)
-					allCalls = append(allCalls, calls...)
+					calls, err := a.client.ExtractCallsForSymbol(file, sym.LineStart-1, 0)
+					if err != nil {
+						logger.Debug("  Failed to extract calls for %s: %v", sym.Name, err)
+					} else {
+						fileCalls += len(calls)
+						allCalls = append(allCalls, calls...)
+					}
 				}
 			}
 		}
 
 		a.client.CloseFile(file)
+		elapsed := time.Since(startTime).Round(time.Millisecond)
+		logger.Debug("  Found %d call relationships (took %v)", fileCalls, elapsed)
 	}
 
+	logger.Info("QuickCallScan complete: %d total call relationships", len(allCalls))
 	return allCalls, nil
 }
