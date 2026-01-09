@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 // DartAnalyzer provides deep analysis of Dart files using the Dart Analysis Server
@@ -60,6 +61,9 @@ func (a *DartAnalyzer) AnalyzeFile(filePath string) (*FileAnalysis, error) {
 	}
 	defer a.client.CloseFile(filePath)
 
+	// Give LSP time to analyze the file
+	time.Sleep(50 * time.Millisecond)
+
 	// Extract call relationships for each function/method
 	a.extractCallsForSymbols(filePath, analysis.Symbols, analysis)
 
@@ -71,8 +75,8 @@ func (a *DartAnalyzer) extractCallsForSymbols(filePath string, symbols []Symbol,
 	for _, sym := range symbols {
 		// Only analyze functions and methods
 		if sym.Kind == KindFunction || sym.Kind == KindMethod || sym.Kind == KindConstructor {
-			// Get character position (start of line, adjust if needed)
-			calls, err := a.client.ExtractCallsForSymbol(filePath, sym.LineStart-1, 0)
+			// Use ColStart for correct position
+			calls, err := a.client.ExtractCallsForSymbol(filePath, sym.LineStart-1, sym.ColStart)
 			if err == nil {
 				for _, call := range calls {
 					// Convert to relative paths
@@ -151,10 +155,14 @@ func (a *DartAnalyzer) ExtractAllCalls(files []string, progressFn func(current, 
 			continue
 		}
 
+		// Give LSP time to analyze the file
+		time.Sleep(50 * time.Millisecond)
+
 		// Extract calls for each function/method
 		for _, sym := range analysis.Symbols {
 			if sym.Kind == KindFunction || sym.Kind == KindMethod || sym.Kind == KindConstructor {
-				calls, err := a.client.ExtractCallsForSymbol(file, sym.LineStart-1, 0)
+				// Use ColStart for correct position
+				calls, err := a.client.ExtractCallsForSymbol(file, sym.LineStart-1, sym.ColStart)
 				if err == nil && len(calls) > 0 {
 					mu.Lock()
 					allCalls = append(allCalls, calls...)
@@ -165,7 +173,8 @@ func (a *DartAnalyzer) ExtractAllCalls(files []string, progressFn func(current, 
 			// Check children
 			for _, child := range sym.Children {
 				if child.Kind == KindFunction || child.Kind == KindMethod || child.Kind == KindConstructor {
-					calls, err := a.client.ExtractCallsForSymbol(file, child.LineStart-1, 0)
+					// Use ColStart for correct position
+					calls, err := a.client.ExtractCallsForSymbol(file, child.LineStart-1, child.ColStart)
 					if err == nil && len(calls) > 0 {
 						mu.Lock()
 						allCalls = append(allCalls, calls...)
@@ -210,6 +219,9 @@ func (a *DartAnalyzer) QuickCallScan(files []string, progressFn func(current, to
 			continue
 		}
 
+		// Give LSP time to analyze the file
+		time.Sleep(50 * time.Millisecond)
+
 		// Only analyze exported (public) symbols
 		for _, sym := range analysis.Symbols {
 			if !sym.Exported {
@@ -221,12 +233,14 @@ func (a *DartAnalyzer) QuickCallScan(files []string, progressFn func(current, to
 				if sym.Kind == KindClass {
 					for _, child := range sym.Children {
 						if child.Exported && (child.Kind == KindMethod || child.Kind == KindConstructor) {
-							calls, _ := a.client.ExtractCallsForSymbol(file, child.LineStart-1, 0)
+							// Use ColStart for correct position
+							calls, _ := a.client.ExtractCallsForSymbol(file, child.LineStart-1, child.ColStart)
 							allCalls = append(allCalls, calls...)
 						}
 					}
 				} else {
-					calls, _ := a.client.ExtractCallsForSymbol(file, sym.LineStart-1, 0)
+					// Use ColStart for correct position
+					calls, _ := a.client.ExtractCallsForSymbol(file, sym.LineStart-1, sym.ColStart)
 					allCalls = append(allCalls, calls...)
 				}
 			}
