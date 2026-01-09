@@ -316,7 +316,7 @@ func installConfigForTool(target string, tool ToolInfo, palacePath, rootPath str
 func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, rootPath string) error {
 	// Read existing config if it exists
 	existingConfig := make(map[string]interface{})
-	data, err := os.ReadFile(configPath)
+	data, err := os.ReadFile(configPath) //nolint:gosec // G304: configPath from getConfigPath uses user's home dir
 	if err == nil {
 		if err := json.Unmarshal(data, &existingConfig); err != nil {
 			return fmt.Errorf("parse existing config %s: %w", configPath, err)
@@ -365,7 +365,7 @@ func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, roo
 func installTOMLConfig(configPath, palacePath, rootPath string) error {
 	// Read existing config if it exists
 	existingContent := ""
-	data, err := os.ReadFile(configPath)
+	data, err := os.ReadFile(configPath) //nolint:gosec // G304: configPath from getConfigPath uses user's home dir
 	if err == nil {
 		existingContent = string(data)
 	} else if !os.IsNotExist(err) {
