@@ -544,3 +544,167 @@ func (b *Butler) GetCallGraph(filePath string) (*index.CallGraph, error) {
 func (b *Butler) GetCallChain(symbolName, filePath, direction string, maxDepth int) (*index.CallChainResult, error) {
 	return index.GetCallChain(b.db, symbolName, filePath, direction, maxDepth)
 }
+
+// BoundedContextConfig configures the bounded authoritative context query.
+// This uses explicit item counts and character limits, not token heuristics.
+type BoundedContextConfig struct {
+	// MaxDecisions is the maximum number of decisions to include.
+	// Default: 10
+	MaxDecisions int
+
+	// MaxLearnings is the maximum number of learnings to include.
+	// Default: 10
+	MaxLearnings int
+
+	// MaxContentLen is the maximum characters per content item.
+	// Content exceeding this limit is truncated with "...".
+	// Default: 500
+	MaxContentLen int
+}
+
+// DefaultBoundedContextConfig returns sensible defaults.
+func DefaultBoundedContextConfig() *BoundedContextConfig {
+	return &BoundedContextConfig{
+		MaxDecisions:  10,
+		MaxLearnings:  10,
+		MaxContentLen: 500,
+	}
+}
+
+// BoundedContextResult contains the bounded authoritative context.
+type BoundedContextResult struct {
+	// FilePath is the input file path.
+	FilePath string `json:"filePath"`
+
+	// Room is the resolved room for the file.
+	Room string `json:"room,omitempty"`
+
+	// ScopeChain shows the scope inheritance chain.
+	ScopeChain []BoundedScopeLevel `json:"scopeChain"`
+
+	// Decisions are authoritative decisions across the scope chain.
+	Decisions []BoundedDecision `json:"decisions,omitempty"`
+
+	// Learnings are authoritative learnings across the scope chain.
+	Learnings []BoundedLearning `json:"learnings,omitempty"`
+
+	// TotalDecisions is the count before limiting.
+	TotalDecisions int `json:"totalDecisions"`
+
+	// TotalLearnings is the count before limiting.
+	TotalLearnings int `json:"totalLearnings"`
+
+	// Truncated indicates whether any content was truncated.
+	Truncated bool `json:"truncated"`
+}
+
+// BoundedScopeLevel represents a scope level in the bounded result.
+type BoundedScopeLevel struct {
+	Scope    string `json:"scope"`
+	Path     string `json:"path"`
+	Priority int    `json:"priority"`
+}
+
+// BoundedDecision is a decision with source scope and truncated content.
+type BoundedDecision struct {
+	ID          string `json:"id"`
+	Content     string `json:"content"`
+	Rationale   string `json:"rationale,omitempty"`
+	Scope       string `json:"scope"`
+	ScopePath   string `json:"scopePath"`
+	SourceScope string `json:"sourceScope"` // Which scope level it came from
+}
+
+// BoundedLearning is a learning with source scope and truncated content.
+type BoundedLearning struct {
+	ID          string  `json:"id"`
+	Content     string  `json:"content"`
+	Confidence  float64 `json:"confidence"`
+	Scope       string  `json:"scope"`
+	ScopePath   string  `json:"scopePath"`
+	SourceScope string  `json:"sourceScope"` // Which scope level it came from
+}
+
+// GetBoundedAuthoritativeContext returns authoritative decisions and learnings
+// for a file path with deterministic, bounded results.
+//
+// This method:
+// - Uses centralized scope expansion (file -> room -> palace)
+// - Applies explicit item counts and character limits (no token heuristics)
+// - Uses deterministic truncation (first N chars + "...")
+// - Only returns authoritative records (approved/legacy_approved)
+func (b *Butler) GetBoundedAuthoritativeContext(filePath string, cfg *BoundedContextConfig) (*BoundedContextResult, error) {
+	if cfg == nil {
+		cfg = DefaultBoundedContextConfig()
+	}
+
+	result := &BoundedContextResult{
+		FilePath: filePath,
+	}
+
+	// Resolve room from file path
+	room := b.resolveRoom(filePath)
+	result.Room = room
+
+	if b.memory == nil {
+		return result, nil
+	}
+
+	// Create memory query config from bounded config
+	memoryCfg := &memory.AuthoritativeQueryConfig{
+		MaxDecisions:      cfg.MaxDecisions,
+		MaxLearnings:      cfg.MaxLearnings,
+		MaxContentLen:     cfg.MaxContentLen,
+		AuthoritativeOnly: true,
+	}
+
+	// Use centralized scope expansion and query
+	scopedResult, err := b.memory.GetAuthoritativeState(
+		memory.ScopeFile,
+		filePath,
+		b.resolveRoom, // Pass our room resolver
+		memoryCfg,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get authoritative state: %w", err)
+	}
+
+	// Convert scope chain
+	for _, level := range scopedResult.ScopeChain {
+		result.ScopeChain = append(result.ScopeChain, BoundedScopeLevel{
+			Scope:    string(level.Scope),
+			Path:     level.Path,
+			Priority: level.Priority,
+		})
+	}
+
+	// Convert decisions
+	for _, sd := range scopedResult.Decisions {
+		result.Decisions = append(result.Decisions, BoundedDecision{
+			ID:          sd.Decision.ID,
+			Content:     sd.Decision.Content,
+			Rationale:   memoryCfg.TruncateContent(sd.Decision.Rationale),
+			Scope:       sd.Decision.Scope,
+			ScopePath:   sd.Decision.ScopePath,
+			SourceScope: string(sd.SourceScope.Scope),
+		})
+	}
+
+	// Convert learnings
+	for _, sl := range scopedResult.Learnings {
+		result.Learnings = append(result.Learnings, BoundedLearning{
+			ID:          sl.Learning.ID,
+			Content:     sl.Learning.Content,
+			Confidence:  sl.Learning.Confidence,
+			Scope:       sl.Learning.Scope,
+			ScopePath:   sl.Learning.ScopePath,
+			SourceScope: string(sl.SourceScope.Scope),
+		})
+	}
+
+	result.TotalDecisions = scopedResult.TotalDecisions
+	result.TotalLearnings = scopedResult.TotalLearnings
+	result.Truncated = scopedResult.Truncated
+
+	return result, nil
+}
