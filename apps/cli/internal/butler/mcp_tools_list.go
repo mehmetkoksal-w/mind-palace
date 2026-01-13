@@ -224,6 +224,30 @@ func buildToolsList() []mcpTool {
 				"required": []string{"file"},
 			},
 		},
+		{
+			Name:        "get_route",
+			Description: "Get a deterministic navigation route for understanding a topic. Returns an ordered list of rooms, decisions, learnings, and files to explore based on intent.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"intent": map[string]interface{}{
+						"type":        "string",
+						"description": "What you want to understand (e.g., 'understand auth flow', 'learn about caching strategy').",
+					},
+					"scope": map[string]interface{}{
+						"type":        "string",
+						"description": "Starting scope: 'file', 'room', or 'palace'. Default: palace.",
+						"enum":        []string{"file", "room", "palace"},
+						"default":     "palace",
+					},
+					"scopePath": map[string]interface{}{
+						"type":        "string",
+						"description": "Path for file/room scope (file path or room name). Required if scope is 'file'.",
+					},
+				},
+				"required": []string{"intent"},
+			},
+		},
 
 		// ============================================================
 		// STORE TOOLS - Store ideas, decisions, and learnings
@@ -265,6 +289,100 @@ func buildToolsList() []mcpTool {
 					},
 				},
 				"required": []string{"content"},
+			},
+		},
+		{
+			Name:        "store_direct",
+			Description: "[HUMAN MODE ONLY] Store a decision or learning directly, bypassing the proposal workflow. Creates an audit log entry. Use sparingly - proposals are preferred for traceability.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"content": map[string]interface{}{
+						"type":        "string",
+						"description": "The content to store directly.",
+					},
+					"as": map[string]interface{}{
+						"type":        "string",
+						"description": "Record type: 'decision' or 'learning'. Required for direct write.",
+						"enum":        []string{"decision", "learning"},
+					},
+					"scope": map[string]interface{}{
+						"type":        "string",
+						"description": "Scope: 'palace', 'room', or 'file'. Default: palace.",
+						"enum":        []string{"palace", "room", "file"},
+						"default":     "palace",
+					},
+					"scopePath": map[string]interface{}{
+						"type":        "string",
+						"description": "Path for room/file scope.",
+					},
+					"context": map[string]interface{}{
+						"type":        "string",
+						"description": "Additional context for the record.",
+					},
+					"rationale": map[string]interface{}{
+						"type":        "string",
+						"description": "For decisions: the rationale behind this decision.",
+					},
+					"confidence": map[string]interface{}{
+						"type":        "number",
+						"description": "For learnings: confidence level 0.0-1.0 (default: 0.7).",
+						"default":     0.7,
+					},
+					"actorId": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional identifier for who performed this direct write (for audit).",
+					},
+				},
+				"required": []string{"content", "as"},
+			},
+		},
+
+		// ============================================================
+		// GOVERNANCE TOOLS - Approve/reject proposals (human mode only)
+		// ============================================================
+		{
+			Name:        "approve",
+			Description: "[HUMAN MODE ONLY] Approve a pending proposal, creating the corresponding decision or learning with 'approved' authority.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"proposalId": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the proposal to approve (e.g., 'prop_abc123').",
+					},
+					"by": map[string]interface{}{
+						"type":        "string",
+						"description": "Name or identifier of who is approving.",
+					},
+					"note": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional note about why this was approved.",
+					},
+				},
+				"required": []string{"proposalId"},
+			},
+		},
+		{
+			Name:        "reject",
+			Description: "[HUMAN MODE ONLY] Reject a pending proposal with a reason. The proposal will be marked as rejected and not promoted.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"proposalId": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the proposal to reject (e.g., 'prop_abc123').",
+					},
+					"by": map[string]interface{}{
+						"type":        "string",
+						"description": "Name or identifier of who is rejecting.",
+					},
+					"note": map[string]interface{}{
+						"type":        "string",
+						"description": "Reason for rejection (recommended).",
+					},
+				},
+				"required": []string{"proposalId"},
 			},
 		},
 

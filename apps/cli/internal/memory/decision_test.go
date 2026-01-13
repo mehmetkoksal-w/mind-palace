@@ -521,12 +521,12 @@ func TestGetSchemaVersion(t *testing.T) {
 	mem, _ := Open(tmpDir)
 	defer mem.Close()
 
-	// After opening, schema version should be 4 (v0, v1, v2, v3 for postmortems, v4 for authority)
+	// After opening, schema version should be 7 (v0-v6 + v7 for authoritative views)
 	version, err := mem.GetSchemaVersion()
 	if err != nil {
 		t.Fatalf("GetSchemaVersion failed: %v", err)
 	}
-	if version != 4 {
-		t.Errorf("Expected schema version 4, got %d", version)
+	if version != 7 {
+		t.Errorf("Expected schema version 7, got %d", version)
 	}
 }

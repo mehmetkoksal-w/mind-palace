@@ -63,6 +63,9 @@ func TestGetConfigPath(t *testing.T) {
 		t.Skip("cannot get home directory")
 	}
 
+	// Use a platform-appropriate test workspace path
+	testWorkspace := filepath.Join(string(filepath.Separator), "workspace")
+
 	tests := []struct {
 		target   string
 		rootPath string
@@ -70,8 +73,8 @@ func TestGetConfigPath(t *testing.T) {
 	}{
 		{
 			target:   "claude-code",
-			rootPath: "/workspace",
-			want:     "/workspace/.mcp.json",
+			rootPath: testWorkspace,
+			want:     filepath.Join(testWorkspace, ".mcp.json"),
 		},
 		{
 			target: "cursor",
@@ -291,18 +294,21 @@ func TestGetConfigPath_AllTools(t *testing.T) {
 		t.Skip("cannot get home directory")
 	}
 
+	// Use a platform-appropriate test workspace path
+	testWorkspace := filepath.Join(string(filepath.Separator), "workspace")
+
 	// Test that all supported tools have config paths
 	for target := range supportedTools {
 		t.Run(target, func(t *testing.T) {
-			path, err := getConfigPath(target, "/workspace")
+			path, err := getConfigPath(target, testWorkspace)
 			if err != nil {
 				t.Fatalf("unexpected error for %s: %v", target, err)
 			}
 			if path == "" {
 				t.Errorf("expected non-empty path for %s", target)
 			}
-			// Verify path contains home or workspace
-			if !strings.Contains(path, home) && !strings.Contains(path, "/workspace") {
+			// Verify path contains home or workspace (platform-independent check)
+			if !strings.Contains(path, home) && !strings.Contains(path, "workspace") {
 				t.Errorf("path %q doesn't contain home or workspace", path)
 			}
 		})
