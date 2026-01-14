@@ -129,7 +129,7 @@ func TestGetRoute_FetchRefFormats(t *testing.T) {
 				t.Errorf("Room fetch_ref should be 'explore_rooms', got %q", node.FetchRef)
 			}
 		case RouteNodeKindFile:
-			expected := "explore_file --path " + node.ID
+			expected := "explore_file --file " + node.ID
 			if node.FetchRef != expected {
 				t.Errorf("File fetch_ref should be %q, got %q", expected, node.FetchRef)
 			}

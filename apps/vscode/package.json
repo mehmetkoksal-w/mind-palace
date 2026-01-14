@@ -191,6 +191,26 @@
         "command": "mindPalace.showKnowledgeGraph",
         "title": "Mind Palace: Show Knowledge Graph",
         "icon": "$(graph)"
+      },
+      {
+        "command": "palace.proposals.list",
+        "title": "Mind Palace: List Proposals",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "palace.proposals.approve",
+        "title": "Mind Palace: Approve Proposal",
+        "icon": "$(check)"
+      },
+      {
+        "command": "palace.proposals.reject",
+        "title": "Mind Palace: Reject Proposal",
+        "icon": "$(close)"
+      },
+      {
+        "command": "palace.proposals.reviewPending",
+        "title": "Mind Palace: Review Pending Proposals",
+        "icon": "$(checklist)"
       }
     ],
     "menus": {

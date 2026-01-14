@@ -112,6 +112,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: "proposals",
+        loadComponent: () =>
+          import("./features/proposals/proposals.component").then(
+            (m) => m.ProposalsComponent
+          ),
+      },
+      {
         path: "decision-timeline",
         loadComponent: () =>
           import(

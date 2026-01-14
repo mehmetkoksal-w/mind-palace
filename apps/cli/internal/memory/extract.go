@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -120,39 +121,75 @@ func (e *LLMExtractor) ExtractFromConversation(conv Conversation) ([]string, err
 		}
 	}
 
-	// Store decisions
+	// Store decisions (as proposals with evidence)
 	for _, item := range result.Decisions {
 		if item.Content == "" {
 			continue
 		}
-		dec := Decision{
-			Content:   item.Content,
-			Context:   item.Context,
-			Status:    DecisionStatusActive,
-			Outcome:   DecisionOutcomeUnknown,
-			Scope:     "palace",
-			SessionID: conv.SessionID,
-			Source:    "auto-extract",
+		cls := Classify(item.Content)
+		signalsJSON := "[]"
+		if len(cls.Signals) > 0 {
+			if data, err := json.Marshal(cls.Signals); err == nil {
+				signalsJSON = string(data)
+			}
 		}
-		id, err := e.memory.AddDecision(dec)
+		evidence := EvidenceRef{SessionID: conv.SessionID, ConversationID: conv.ID, Extractor: "llm"}
+		evidenceJSON, _ := json.Marshal(evidence)
+
+		prop := Proposal{
+			ProposedAs:               ProposedAsDecision,
+			Content:                  item.Content,
+			Context:                  item.Context,
+			Scope:                    "palace",
+			SessionID:                conv.SessionID,
+			Source:                   "auto-extract",
+			ClassificationConfidence: cls.Confidence,
+			ClassificationSignals:    signalsJSON,
+			EvidenceRefs:             string(evidenceJSON),
+		}
+		// Dedupe
+		prop.DedupeKey = GenerateDedupeKey(prop.ProposedAs, prop.Content, prop.Scope, prop.ScopePath)
+		if existing, _ := e.memory.CheckDuplicateProposal(prop.DedupeKey); existing != nil {
+			// Skip duplicate
+			continue
+		}
+		id, err := e.memory.AddProposal(prop)
 		if err == nil {
 			recordIDs = append(recordIDs, id)
 		}
 	}
 
-	// Store learnings
+	// Store learnings (as proposals with evidence)
 	for _, item := range result.Learnings {
 		if item.Content == "" {
 			continue
 		}
-		learning := Learning{
-			Content:    item.Content,
-			Scope:      "palace",
-			SessionID:  conv.SessionID,
-			Source:     "auto-extract",
-			Confidence: 0.5, // Start at neutral confidence
+		cls := Classify(item.Content)
+		signalsJSON := "[]"
+		if len(cls.Signals) > 0 {
+			if data, err := json.Marshal(cls.Signals); err == nil {
+				signalsJSON = string(data)
+			}
 		}
-		id, err := e.memory.AddLearning(learning)
+		evidence := EvidenceRef{SessionID: conv.SessionID, ConversationID: conv.ID, Extractor: "llm"}
+		evidenceJSON, _ := json.Marshal(evidence)
+
+		prop := Proposal{
+			ProposedAs:               ProposedAsLearning,
+			Content:                  item.Content,
+			Context:                  item.Context,
+			Scope:                    "palace",
+			SessionID:                conv.SessionID,
+			Source:                   "auto-extract",
+			ClassificationConfidence: cls.Confidence,
+			ClassificationSignals:    signalsJSON,
+			EvidenceRefs:             string(evidenceJSON),
+		}
+		prop.DedupeKey = GenerateDedupeKey(prop.ProposedAs, prop.Content, prop.Scope, prop.ScopePath)
+		if existing, _ := e.memory.CheckDuplicateProposal(prop.DedupeKey); existing != nil {
+			continue
+		}
+		id, err := e.memory.AddProposal(prop)
 		if err == nil {
 			recordIDs = append(recordIDs, id)
 		}

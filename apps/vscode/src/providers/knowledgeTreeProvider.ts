@@ -159,6 +159,9 @@ export class KnowledgeTreeItem extends vscode.TreeItem {
     this.tooltip = new vscode.MarkdownString();
     this.tooltip.appendMarkdown(`**Decision**: ${decision.content}\n\n`);
     this.tooltip.appendMarkdown(`**Status**: ${decision.status}\n\n`);
+    if (decision.authority) {
+      this.tooltip.appendMarkdown(`**Authority**: ${decision.authority}\n\n`);
+    }
     this.tooltip.appendMarkdown(`**Scope**: ${decision.scope}`);
     if (decision.scopePath) {
       this.tooltip.appendMarkdown(` (${decision.scopePath})`);
@@ -167,17 +170,36 @@ export class KnowledgeTreeItem extends vscode.TreeItem {
       this.tooltip.appendMarkdown(`\n\n**Outcome**: ${decision.outcome}`);
     }
 
-    this.description = decision.scopePath
-      ? `[${this.getScopeLabel(decision.scope, decision.scopePath)}]`
-      : "";
+    // Show authority status in description
+    let description = "";
+    if (decision.authority === "proposed") {
+      description = "⏳ Pending";
+    } else if (decision.authority === "rejected") {
+      description = "✗ Rejected";
+    } else if (decision.scopePath) {
+      description = `[${this.getScopeLabel(
+        decision.scope,
+        decision.scopePath
+      )}]`;
+    }
+    this.description = description;
 
     const status = decision.outcome
       ? "has_outcome"
       : decision.status || "pending";
-    const iconId = (STATUS_ICONS[status] ?? "$(law)")
+    let iconId = (STATUS_ICONS[status] ?? "$(law)")
       .replace("$(", "")
       .replace(")", "");
-    this.iconPath = new vscode.ThemeIcon(iconId);
+
+    // Dimmed icon for non-approved items
+    if (decision.authority && decision.authority !== "approved") {
+      this.iconPath = new vscode.ThemeIcon(
+        iconId,
+        new vscode.ThemeColor("disabledForeground")
+      );
+    } else {
+      this.iconPath = new vscode.ThemeIcon(iconId);
+    }
 
     this.command = {
       command: "mindPalace.showKnowledgeDetail",
@@ -193,14 +215,24 @@ export class KnowledgeTreeItem extends vscode.TreeItem {
     this.tooltip.appendMarkdown(
       `**Confidence**: ${Math.round((learning.confidence ?? 0.5) * 100)}%\n\n`
     );
+    if (learning.authority) {
+      this.tooltip.appendMarkdown(`**Authority**: ${learning.authority}\n\n`);
+    }
     this.tooltip.appendMarkdown(`**Scope**: ${learning.scope}`);
     if (learning.scopePath) {
       this.tooltip.appendMarkdown(` (${learning.scopePath})`);
     }
 
-    this.description = learning.confidence
-      ? `${Math.round(learning.confidence * 100)}%`
-      : "";
+    // Show authority status or confidence in description
+    let description = "";
+    if (learning.authority === "proposed") {
+      description = "⏳ Pending";
+    } else if (learning.authority === "rejected") {
+      description = "✗ Rejected";
+    } else if (learning.confidence) {
+      description = `${Math.round(learning.confidence * 100)}%`;
+    }
+    this.description = description;
 
     // Icon based on confidence
     const confidence = learning.confidence ?? 0.5;
@@ -210,7 +242,16 @@ export class KnowledgeTreeItem extends vscode.TreeItem {
     } else if (confidence < 0.5) {
       iconId = "question";
     }
-    this.iconPath = new vscode.ThemeIcon(iconId);
+
+    // Dimmed icon for non-approved items
+    if (learning.authority && learning.authority !== "approved") {
+      this.iconPath = new vscode.ThemeIcon(
+        iconId,
+        new vscode.ThemeColor("disabledForeground")
+      );
+    } else {
+      this.iconPath = new vscode.ThemeIcon(iconId);
+    }
 
     this.command = {
       command: "mindPalace.showKnowledgeDetail",

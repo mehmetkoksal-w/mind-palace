@@ -1,0 +1,167 @@
+# Governance Quick Reference
+
+Quick reference for the Mind Palace governance system.
+
+## Authority States
+
+| State      | Description    | Visible to AI |
+| ---------- | -------------- | ------------- |
+| `proposed` | Pending review | ❌            |
+| `approved` | Authoritative  | ✅            |
+| `rejected` | Declined       | ❌            |
+
+## MCP Modes
+
+| Mode    | Tools                        |
+| ------- | ---------------------------- |
+| `agent` | Read-only + create proposals |
+| `human` | Full access + approve/reject |
+
+## CLI Commands
+
+### Proposals
+
+```bash
+# List proposals
+palace proposals
+palace proposals --status proposed
+palace proposals --status approved
+palace proposals --status rejected
+
+# Review
+palace approve <id>
+palace reject <id>
+
+# Create
+palace propose --type decision --content "Use JWT"
+```
+
+### Knowledge
+
+```bash
+# With approval workflow
+palace store --type decision --content "..." --scope palace
+
+# Direct (approved immediately)
+palace store-direct --type decision --content "..." --scope palace
+```
+
+## MCP Tools
+
+### Agent Mode
+
+- `recall [--id ID] [--query TEXT]` - Fetch approved learnings
+- `recall_decisions [--id ID] [--query TEXT]` - Fetch approved decisions
+- `recall_learnings [--id ID] [--query TEXT]` - Fetch approved learnings
+- `recall_fragments [--id ID] [--query TEXT]` - Fetch approved fragments
+- `get_route --intent TEXT --scope SCOPE` - Get navigation route
+- `store --type TYPE --content TEXT --scope SCOPE` - Create proposal
+
+### Human Mode
+
+All agent tools plus:
+
+- `store_direct --type TYPE --content TEXT --scope SCOPE` - Create approved record
+- `approve_proposal --id ID` - Approve proposal
+- `reject_proposal --id ID` - Reject proposal
+
+## Scope Hierarchy
+
+```
+palace (global)
+  └── project
+      └── room (file/module)
+```
+
+Queries inherit from parent scopes.
+
+## Workflow Examples
+
+### Agent Discovery
+
+```json
+{
+  "tool": "get_route",
+  "arguments": {
+    "intent": "understand auth",
+    "scope": "palace"
+  }
+}
+```
+
+Returns nodes with `fetch_ref`:
+
+```json
+{
+  "nodes": [
+    {
+      "id": "dec_123",
+      "fetch_ref": "recall_decisions --id dec_123",
+      "summary": "Use JWT"
+    }
+  ]
+}
+```
+
+### Create Proposal
+
+```json
+{
+  "tool": "store",
+  "arguments": {
+    "type": "decision",
+    "content": "Use PostgreSQL",
+    "scope": "palace"
+  }
+}
+```
+
+### Approve Proposal
+
+```bash
+palace proposals --status proposed
+palace approve prop_abc123
+```
+
+### Direct Store (Human)
+
+```json
+{
+  "tool": "store_direct",
+  "arguments": {
+    "type": "decision",
+    "content": "Use Redis for caching",
+    "scope": "palace"
+  }
+}
+```
+
+## Best Practices
+
+**For AI Agents:**
+
+- ✅ Use `get_route` for discovery
+- ✅ Follow `fetch_ref` for details
+- ✅ Create proposals via `store`
+- ✅ Trust approved knowledge
+
+**For Humans:**
+
+- ✅ Review proposals regularly
+- ✅ Approve quality content
+- ✅ Reject incorrect/low-quality
+- ✅ Use `store_direct` for verified info
+
+## Troubleshooting
+
+| Issue            | Solution                              |
+| ---------------- | ------------------------------------- |
+| No results       | Check if approved: `palace proposals` |
+| Tool unavailable | Check MCP mode (agent vs human)       |
+| Duplicates       | System uses dedupe keys automatically |
+
+## Further Reading
+
+- [Full Governance Guide](/features/governance)
+- [MCP Integration](/features/agents)
+- [Implementation Logs](https://github.com/koksalmehmet/mind-palace/tree/main/docs/implementation-logs)

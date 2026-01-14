@@ -395,6 +395,10 @@ func buildToolsList() []mcpTool {
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of a specific learning to retrieve. If provided, returns only that record.",
+					},
 					"query": map[string]interface{}{
 						"type":        "string",
 						"description": "Optional search query to filter learnings.",
@@ -422,6 +426,10 @@ func buildToolsList() []mcpTool {
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of a specific decision to retrieve. If provided, returns only that record.",
+					},
 					"query": map[string]interface{}{
 						"type":        "string",
 						"description": "Optional search query to filter decisions.",

@@ -102,7 +102,7 @@ func (b *Butler) GetRoute(intent string, scope memory.Scope, scopePath string, c
 				Kind:     RouteNodeKindFile,
 				ID:       scopePath,
 				Reason:   "Specified scope file",
-				FetchRef: "explore_file --path " + scopePath,
+				FetchRef: "explore_file --file " + scopePath,
 			},
 			score: 0.5, // Mid-priority for the scope file
 		})
@@ -198,7 +198,7 @@ func (b *Butler) matchRooms(intentWords []string) []scoredNode {
 						Kind:     RouteNodeKindFile,
 						ID:       entry,
 						Reason:   "Room entry point",
-						FetchRef: "explore_file --path " + entry,
+						FetchRef: "explore_file --file " + entry,
 					},
 					score: score * 0.8, // Slightly lower than room
 				})

@@ -185,12 +185,10 @@ func (s *MCPServer) toolStore(id any, args map[string]interface{}) jsonRPCRespon
 				}
 				autoLink := cfg.ContradictionAutoLink
 
-				if mem != nil {
-					contradictions, _ = mem.AutoCheckContradictions(
-						recordID, string(kind), content,
-						analyzer, embedder, autoLink, minConfidence,
-					)
-				}
+				contradictions, _ = mem.AutoCheckContradictions(
+					recordID, string(kind), content,
+					analyzer, embedder, autoLink, minConfidence,
+				)
 			}
 		}
 
@@ -217,6 +215,55 @@ func (s *MCPServer) toolStore(id any, args map[string]interface{}) jsonRPCRespon
 
 // toolRecallDecisions retrieves decisions from the brain.
 func (s *MCPServer) toolRecallDecisions(id any, args map[string]interface{}) jsonRPCResponse {
+	// Support direct lookup by ID for route fetch_ref compatibility
+	if idArg, ok := args["id"].(string); ok && idArg != "" {
+		d, err := s.butler.memory.GetDecision(idArg)
+		if err != nil {
+			return s.toolError(id, fmt.Sprintf("get decision failed: %v", err))
+		}
+
+		var output strings.Builder
+		statusIcon := "🔵"
+		switch d.Status {
+		case memory.DecisionStatusSuperseded:
+			statusIcon = "🔄"
+		case memory.DecisionStatusReversed:
+			statusIcon = "↩️"
+		}
+
+		outcomeIcon := "❓"
+		switch d.Outcome {
+		case memory.DecisionOutcomeSuccessful:
+			outcomeIcon = "✅"
+		case memory.DecisionOutcomeFailed:
+			outcomeIcon = "❌"
+		case memory.DecisionOutcomeMixed:
+			outcomeIcon = "⚖️"
+		}
+
+		scopeInfo := d.Scope
+		if d.ScopePath != "" {
+			scopeInfo = fmt.Sprintf("%s:%s", d.Scope, d.ScopePath)
+		}
+
+		fmt.Fprintf(&output, "# Decision %s `%s` %s\n\n", statusIcon, d.ID, outcomeIcon)
+		fmt.Fprintf(&output, "- **Status:** %s | **Outcome:** %s\n", d.Status, d.Outcome)
+		fmt.Fprintf(&output, "- **Scope:** %s\n", scopeInfo)
+		fmt.Fprintf(&output, "- **Content:** %s\n", d.Content)
+		if d.Rationale != "" {
+			fmt.Fprintf(&output, "- **Rationale:** %s\n", d.Rationale)
+		}
+		fmt.Fprintf(&output, "- **Created:** %s\n", d.CreatedAt.Format(time.RFC3339))
+
+		return jsonRPCResponse{
+			JSONRPC: "2.0",
+			ID:      id,
+			Result: mcpToolResult{
+				Content: []mcpContent{{Type: "text", Text: output.String()}},
+			},
+		}
+	}
+
 	query, _ := args["query"].(string)
 	status, _ := args["status"].(string)
 	scope, _ := args["scope"].(string)
