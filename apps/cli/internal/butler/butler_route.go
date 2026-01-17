@@ -16,6 +16,7 @@ const RouteRuleVersion = "v1.0"
 type RouteNodeKind string
 
 const (
+	// RouteNodeKindRoom represents a room node in the route.
 	RouteNodeKindRoom     RouteNodeKind = "room"
 	RouteNodeKindDecision RouteNodeKind = "decision"
 	RouteNodeKindLearning RouteNodeKind = "learning"
