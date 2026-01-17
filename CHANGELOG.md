@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1-alpha] - 2026-01-17
+
+### Fixed
+
+- **Governance Commands**: Wired up `proposals`, `approve`, `reject` commands that were implemented but not connected to CLI dispatcher
+- **E2E Test**: Fixed learning recall test by adding `--direct` flag for bypassing proposal workflow
+- **Test Fixes**: Resolved 5 failing tests related to auto-scan behavior and direct writes
+
+### Changed
+
+- **Documentation**: Updated CLI reference with `--direct` flag for store command
+- **Version Display**: Banner now dynamically reads version from VERSION file
+- **Lint Exclusions**: Added targeted suppressions for pre-existing lint issues
+
+### Dependencies
+
+- Merged 11 Dependabot PRs for updated GitHub Actions, npm packages, and Go dependencies
+
+---
+
 ## [0.2.0-alpha] - 2026-01-09
 
 ### Added

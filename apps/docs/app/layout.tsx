@@ -3,9 +3,29 @@ import { Banner, Head } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 import './globals.css'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 // Get basePath from environment
 const basePath = process.env.NODE_ENV === 'production' ? '/mind-palace' : ''
+
+// Read version from VERSION file at build time
+let version = 'unknown'
+try {
+  version = readFileSync(join(process.cwd(), '..', '..', '..', 'VERSION'), 'utf8').trim()
+} catch {
+  try {
+    version = readFileSync(join(process.cwd(), '..', 'VERSION'), 'utf8').trim()
+  } catch {
+    // Fallback to package.json
+    try {
+      const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8'))
+      version = pkg.version
+    } catch {
+      version = '0.0.0'
+    }
+  }
+}
 
 export const metadata = {
   title: {
@@ -23,9 +43,9 @@ export const metadata = {
 }
 
 const banner = (
-  <Banner storageKey="alpha-release">
+  <Banner storageKey={`mind-palace-${version}`}>
     <a href="https://github.com/koksalmehmet/mind-palace/releases" target="_blank">
-      Mind Palace v0.0.1-alpha is out. Check it out →
+      Mind Palace {version} is out. Check it out →
     </a>
   </Banner>
 )
