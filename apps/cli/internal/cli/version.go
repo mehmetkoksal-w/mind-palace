@@ -3,15 +3,17 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"os"
 	"runtime/debug"
+	"strings"
 
 	"github.com/koksalmehmet/mind-palace/apps/cli/internal/update"
 )
 
 var (
-	buildVersion = "0.3.1-alpha"
-	buildCommit  = "unknown"
-	buildDate    = "unknown"
+	buildVersion = ""
+	buildCommit  = ""
+	buildDate    = ""
 )
 
 func init() {
@@ -46,7 +48,35 @@ func SetBuildInfo(version, commit, date string) {
 
 // GetVersion returns the current build version.
 func GetVersion() string {
-	return buildVersion
+	if buildVersion != "" && buildVersion != "dev" {
+		return buildVersion
+	}
+
+	// Dynamic fallback for development: try to find the VERSION file
+	// by climbing up from the current directory.
+	if v, err := findVersionFile(); err == nil {
+		return v
+	}
+
+	return "dev"
+}
+
+func findVersionFile() (string, error) {
+	// Simple implementation: check common locations relative to project roots
+	paths := []string{
+		"VERSION",
+		"../VERSION",
+		"../../VERSION",
+		"../../../VERSION",
+		"../../../../VERSION",
+	}
+
+	for _, p := range paths {
+		if content, err := os.ReadFile(p); err == nil {
+			return strings.TrimSpace(string(content)), nil
+		}
+	}
+	return "", fmt.Errorf("version file not found")
 }
 
 func cmdVersion(args []string) error {
@@ -56,10 +86,10 @@ func cmdVersion(args []string) error {
 		return err
 	}
 
-	fmt.Printf("palace %s (commit %s, built %s)\n", buildVersion, buildCommit, buildDate)
+	fmt.Printf("palace %s (commit %s, built %s)\n", GetVersion(), buildCommit, buildDate)
 
 	if *check {
-		result, err := update.Check(buildVersion)
+		result, err := update.Check(GetVersion())
 		if err != nil {
 			fmt.Printf("\nUpdate check failed: %v\n", err)
 			return nil

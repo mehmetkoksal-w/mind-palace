@@ -22,12 +22,12 @@ fi
 
 echo "Syncing ecosystem to version: $VERSION"
 
-# 1. Update Go version (CLI)
-CLI_VERSION_FILE="$ROOT_DIR/apps/cli/internal/cli/version.go"
-if [ -f "$CLI_VERSION_FILE" ]; then
-    echo "Updating $CLI_VERSION_FILE..."
-    sed -i '' "s/buildVersion = \".*\"/buildVersion = \"$VERSION\"/" "$CLI_VERSION_FILE"
-fi
+# 1. Update Go version (CLI) - NO LONGER NEEDED (Dynamic detector in internal/cli/version.go)
+# CLI_VERSION_FILE="$ROOT_DIR/apps/cli/internal/cli/version.go"
+# if [ -f "$CLI_VERSION_FILE" ]; then
+#     echo "Updating $CLI_VERSION_FILE..."
+#     sed -i '' "s/buildVersion = \".*\"/buildVersion = \"$VERSION\"/" "$CLI_VERSION_FILE"
+# fi
 
 # 2. Update Dashboard version
 DASHBOARD_PKC="$ROOT_DIR/apps/dashboard/package.json"
