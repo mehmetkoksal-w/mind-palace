@@ -89,9 +89,8 @@ palace explore "fix the login bug" --full
 Track ideas, decisions, and their outcomes over time.
 
 ```bash
-palace remember "Let's use JWT for authentication"
-palace outcome d_abc123 successful
-palace review
+palace store "Let's use JWT for authentication" --as decision
+palace recall "auth" --type decision
 ```
 
 ### Session Memory
@@ -100,9 +99,8 @@ Track agent work sessions, activities, and learnings. See [Session Memory](/feat
 
 ```bash
 palace session start --agent claude --goal "Add authentication"
-palace learn "Use bcrypt for password hashing"
+palace store "Use bcrypt for password hashing" --as learning
 palace recall "authentication"
-palace intel src/auth.go
 palace brief src/auth.go
 ```
 
@@ -111,8 +109,19 @@ palace brief src/auth.go
 Explore function relationships in your codebase.
 
 ```bash
-palace graph handleAuth --callers
-palace graph processRequest --callees --depth 3
+palace explore --map handleAuth --direction up
+palace explore --map processRequest --direction down --depth 3
+```
+
+### Governance
+
+Proposals workflow for human-in-the-loop approval. See [Governance](/features/governance).
+
+```bash
+palace store "Use JWT for auth" --as decision  # Creates proposal
+palace proposals --status pending              # List pending proposals
+palace approve prop_abc123                     # Approve proposal
+palace store --direct "Trust this source" --as learning  # Direct write
 ```
 
 ### Corridors

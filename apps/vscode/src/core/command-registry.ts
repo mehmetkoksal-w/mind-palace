@@ -34,6 +34,7 @@ export class CommandRegistry {
     this.registerSessionCommands();
     this.registerKnowledgeCommands();
     this.registerPostmortemCommands();
+    this.registerProposalCommands();
     this.registerCorridorCommands();
     this.registerConversationCommands();
     this.registerLinksAndTagsCommands();
@@ -130,6 +131,14 @@ export class CommandRegistry {
           arg.id
         );
       }
+    );
+  }
+
+  private registerProposalCommands(): void {
+    const { registerProposalCommands } = require("../commands/proposals");
+    registerProposalCommands(
+      this.context.extensionContext,
+      this.context.bridge
     );
   }
 

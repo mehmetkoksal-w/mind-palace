@@ -70,6 +70,14 @@ func Run(args []string) error {
 	case "corridor":
 		return cmdCorridor(args[1:])
 
+	// Governance
+	case "proposals":
+		return cmdProposals(args[1:])
+	case "approve":
+		return cmdApprove(args[1:])
+	case "reject":
+		return cmdReject(args[1:])
+
 	// Housekeeping
 	case "clean":
 		return cmdClean(args[1:])
@@ -87,10 +95,13 @@ func Run(args []string) error {
 
 	default:
 		// Check for shorthand: palace "content" -> palace store "content"
-		if !strings.HasPrefix(args[0], "-") && looksLikeContent(args[0]) {
+		if len(args) > 0 && !strings.HasPrefix(args[0], "-") && looksLikeContent(args[0]) {
 			return cmdStore(args)
 		}
-		return fmt.Errorf("unknown command: %s\nRun 'palace help' for usage", args[0])
+		if len(args) > 0 {
+			return fmt.Errorf("unknown command: %s\nRun 'palace help' for usage", args[0])
+		}
+		return fmt.Errorf("unknown command\nRun 'palace help' for usage")
 	}
 }
 
@@ -172,6 +183,25 @@ func cmdSession(args []string) error {
 // cmdCorridor delegates to commands.RunCorridor
 func cmdCorridor(args []string) error {
 	return commands.RunCorridor(args)
+}
+
+// ============================================================================
+// Governance Commands - delegating to commands package
+// ============================================================================
+
+// cmdProposals delegates to commands.RunProposals
+func cmdProposals(args []string) error {
+	return commands.RunProposals(args)
+}
+
+// cmdApprove delegates to commands.RunApprove
+func cmdApprove(args []string) error {
+	return commands.RunApprove(args)
+}
+
+// cmdReject delegates to commands.RunReject
+func cmdReject(args []string) error {
+	return commands.RunReject(args)
 }
 
 // ============================================================================

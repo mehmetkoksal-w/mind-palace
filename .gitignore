@@ -80,3 +80,4 @@ yarn.lock
 .DS_Store
 Thumbs.db
 /.claude
+/apps/dashboard/coverage

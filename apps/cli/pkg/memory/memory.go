@@ -131,6 +131,7 @@ func (m *Memory) GetActivities(sessionID, filePath string, limit int) ([]Activit
 }
 
 // AddLearning adds a new learning to the workspace.
+// Learnings created via the public API are approved by default (human/tool interface).
 func (m *Memory) AddLearning(l Learning) (string, error) {
 	return m.internal.AddLearning(memory.Learning{
 		SessionID:  l.SessionID,
@@ -139,6 +140,7 @@ func (m *Memory) AddLearning(l Learning) (string, error) {
 		Content:    l.Content,
 		Confidence: l.Confidence,
 		Source:     l.Source,
+		Authority:  string(memory.AuthorityApproved), // Public API = approved by default
 	})
 }
 

@@ -162,6 +162,7 @@ func TestLinkedLearningsAndPromotion(t *testing.T) {
 		Content:    "shared learning",
 		Confidence: 0.9,
 		UseCount:   3,
+		Authority:  "legacy_approved", // Set authority for governance layer
 	})
 	if err != nil {
 		t.Fatalf("AddLearning() error = %v", err)

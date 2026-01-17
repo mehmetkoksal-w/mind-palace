@@ -17,7 +17,7 @@ func TestExecuteCheckMissingIndex(t *testing.T) {
 	root := t.TempDir()
 
 	// Initialize palace but don't scan
-	err := ExecuteInit(InitOptions{Root: root})
+	err := ExecuteInit(InitOptions{Root: root, NoScan: true})
 	if err != nil {
 		t.Fatalf("ExecuteInit() error: %v", err)
 	}

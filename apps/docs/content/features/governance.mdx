@@ -1,0 +1,342 @@
+# Governance System
+
+Mind Palace includes a comprehensive governance system that ensures all knowledge is validated through a human-in-the-loop approval workflow before becoming authoritative.
+
+## Overview
+
+The governance system provides:
+
+- **Authority States**: Track approval status of all knowledge records
+- **Proposal Workflow**: AI agents create proposals that require human review
+- **Mode-Based Access**: Separate agent and human capabilities
+- **Deterministic Queries**: Consistent, reproducible results across all operations
+
+## Authority States
+
+Every knowledge record (decisions, learnings, fragments, postmortems) has an `authority` field:
+
+| State      | Description                | Visible to AI |
+| ---------- | -------------------------- | ------------- |
+| `proposed` | Pending human review       | ❌ No         |
+| `approved` | Verified and authoritative | ✅ Yes        |
+| `rejected` | Declined during review     | ❌ No         |
+
+**Key Principle**: AI agents only see `authority=approved` records in all queries and searches.
+
+## MCP Modes
+
+The MCP (Model Context Protocol) server operates in two modes:
+
+### Agent Mode
+
+- **Purpose**: AI agent operations
+- **Access**: Read-only to approved knowledge
+- **Tools**: `recall`, `get_route`, `store` (creates proposals)
+- **Restrictions**: Cannot approve/reject proposals or bypass workflow
+
+### Human Mode
+
+- **Purpose**: Human operator control
+- **Access**: Full read/write to all knowledge
+- **Tools**: All agent tools + `store_direct`, `approve_proposal`, `reject_proposal`
+- **Capabilities**: Can approve, reject, and create authoritative knowledge directly
+
+## Workflow
+
+### AI Agent Discovery
+
+1. Agent calls `get_route` with an intent (e.g., "understand authentication")
+2. System returns a route with navigation nodes
+3. Each node includes a `fetch_ref` (e.g., `recall_decisions --id dec_abc123`)
+4. Agent follows `fetch_ref` to retrieve full content
+5. Only `authority=approved` records are returned
+
+Example:
+
+```json
+{
+  "tool": "get_route",
+  "arguments": {
+    "intent": "understand authentication",
+    "scope": "palace"
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "nodes": [
+    {
+      "id": "dec_abc123",
+      "kind": "decision",
+      "fetch_ref": "recall_decisions --id dec_abc123",
+      "score": 0.95,
+      "summary": "Use JWT for authentication"
+    }
+  ]
+}
+```
+
+### Proposal Creation
+
+When an AI agent learns something new:
+
+1. Agent calls `store` tool with knowledge content
+2. System creates a proposal with `authority=proposed`
+3. Proposal is queued for human review
+4. Record is **not visible** to agents until approved
+
+Example:
+
+```json
+{
+  "tool": "store",
+  "arguments": {
+    "type": "decision",
+    "content": "Use PostgreSQL for the database",
+    "scope": "palace"
+  }
+}
+```
+
+### Human Review
+
+Humans review proposals using CLI or dashboard:
+
+```bash
+# List pending proposals
+palace proposals --status proposed
+
+# Approve a proposal
+palace approve <proposal-id>
+
+# Reject a proposal
+palace reject <proposal-id>
+```
+
+Once approved:
+
+- Record updated to `authority=approved`
+- Becomes visible to all AI agents
+- Appears in all recall and route queries
+
+### Direct Knowledge Entry
+
+Humans can bypass the proposal workflow for verified information:
+
+```json
+{
+  "tool": "store_direct",
+  "arguments": {
+    "type": "decision",
+    "content": "Use Redis for caching",
+    "scope": "palace"
+  }
+}
+```
+
+This creates a record with `authority=approved` immediately.
+
+## Scope Hierarchy
+
+Knowledge is organized in a three-level hierarchy:
+
+```
+palace (global)
+  └── project (project-specific)
+      └── room (file/module-specific)
+```
+
+### Scope Inheritance
+
+When querying a scope, results include:
+
+- Records in that scope
+- Records from parent scopes (inherited)
+- Deterministic truncation if result set too large
+
+Example: Querying scope `room` returns:
+
+- ✅ Records with `scope=room`
+- ✅ Records with `scope=project` (inherited)
+- ✅ Records with `scope=palace` (inherited)
+
+This allows global knowledge to be available everywhere while enabling fine-grained scoping.
+
+## Deterministic Guarantees
+
+All governance queries provide determinism:
+
+- **Consistent Ordering**: Results sorted by relevance score, stable tie-breaking by ID
+- **Reproducible Results**: Same input → same output (always)
+- **Bounded Truncation**: Fixed limits (default 20 nodes) with deterministic selection
+- **Version Tracking**: Route algorithm version included in responses
+
+This ensures:
+
+- Reproducible debugging
+- Consistent AI behavior
+- Predictable system state
+
+## Database Schema
+
+### Proposals Table
+
+```sql
+CREATE TABLE proposals (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,           -- decision, learning, fragment, postmortem
+    content TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    status TEXT NOT NULL,         -- proposed, approved, rejected
+    dedupe_key TEXT NOT NULL,     -- hash(type, content, scope)
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    reviewed_by TEXT,
+    reviewed_at INTEGER,
+    evidence TEXT,                -- JSON array of supporting info
+    target_id TEXT,               -- ID of created record (if approved)
+    UNIQUE(dedupe_key)
+);
+```
+
+### Authority Field
+
+All knowledge tables include:
+
+```sql
+authority TEXT NOT NULL DEFAULT 'proposed'  -- proposed, approved, rejected
+```
+
+## CLI Commands
+
+### Proposal Management
+
+```bash
+# Create proposal
+palace propose --type decision --content "Use JWT for auth"
+
+# List proposals
+palace proposals                    # All proposals
+palace proposals --status proposed  # Pending only
+palace proposals --status approved  # Approved only
+
+# Review proposals
+palace approve <proposal-id>
+palace reject <proposal-id>
+```
+
+### Knowledge Storage
+
+```bash
+# Store with approval workflow (creates proposal)
+palace store --type decision --content "Use JWT" --scope palace
+
+# Store directly (approved immediately, human-verified)
+palace store-direct --type decision --content "Use JWT" --scope palace
+```
+
+## MCP Tool Reference
+
+### Read Operations (Agent + Human)
+
+- `recall` - Fetch learnings by query or ID
+- `recall_decisions` - Fetch decisions by query or ID
+- `recall_learnings` - Fetch learnings by query or ID
+- `recall_fragments` - Fetch code fragments by query or ID
+- `get_route` - Get navigation route for intent
+
+All read operations filter by `authority=approved`.
+
+### Write Operations (Agent)
+
+- `store` - Create proposal (requires human approval)
+
+### Admin Operations (Human Only)
+
+- `store_direct` - Create approved record immediately
+- `approve_proposal` - Approve a proposal
+- `reject_proposal` - Reject a proposal
+
+## Best Practices
+
+### For AI Agents
+
+- ✅ Trust that all recalled knowledge is approved and accurate
+- ✅ Use `get_route` for knowledge discovery
+- ✅ Follow `fetch_ref` links to retrieve details
+- ✅ Create proposals for new knowledge via `store`
+
+### For Humans
+
+- ✅ Review proposals regularly
+- ✅ Approve high-quality, accurate proposals
+- ✅ Reject low-quality or incorrect proposals
+- ✅ Use `store_direct` for manually verified information
+- ✅ Maintain knowledge quality through diligent review
+
+### For System Designers
+
+- ✅ All recall queries must filter `authority=approved`
+- ✅ New records default to `authority=proposed`
+- ✅ Implement audit logging for all operations
+- ✅ Use scope hierarchy to organize knowledge
+
+## Implementation Details
+
+The governance system was implemented across 5 phases:
+
+1. **Phase 1**: Authority field centralization
+2. **Phase 2**: Proposals workflow
+3. **Phase 3**: MCP mode gating
+4. **Phase 4**: Authoritative state queries
+5. **Phase 5**: Route & polyline queries
+
+See [implementation logs](https://github.com/koksalmehmet/mind-palace/tree/main/docs/implementation-logs) for complete details.
+
+## Testing
+
+Comprehensive test coverage validates:
+
+- Authority filtering in all queries
+- Proposal creation and approval flow
+- Mode-based access control
+- Deterministic query results
+- End-to-end workflows
+
+Run tests:
+
+```bash
+cd apps/cli
+go test ./internal/butler -run Route     # Route tests
+go test ./internal/memory -run Authority # Authority tests
+go test ./internal/butler -run E2E       # E2E integration tests
+```
+
+## Troubleshooting
+
+### "No results found" when recalling
+
+- Check if records are approved: `palace proposals`
+- Approve pending proposals if relevant
+- Verify scope matches query scope
+
+### "Tool not available"
+
+- Check MCP mode (agent vs human)
+- Admin tools require human mode
+- Verify tool name in MCP schema
+
+### Duplicate proposals
+
+- System prevents duplicates via dedupe keys
+- Dedupe key = hash(type, content, scope)
+- Edit content slightly if intentional duplicate needed
+
+## Further Reading
+
+- [Quick Reference Guide](/reference/governance-quick-reference)
+- [Implementation Plan](https://github.com/koksalmehmet/mind-palace/blob/main/docs/IMPLEMENTATION_PLAN_V2.1.md)
+- [MCP Integration](/features/agents)

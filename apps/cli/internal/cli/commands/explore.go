@@ -149,6 +149,7 @@ func runExploreSearch(opts ExploreOptions) error {
 	if err != nil {
 		return fmt.Errorf("initialize butler: %w", err)
 	}
+	defer b.Close()
 
 	results, err := b.Search(opts.Query, butler.SearchOptions{
 		Limit:      opts.Limit,
@@ -495,6 +496,7 @@ func runExploreListRooms(root string) error {
 	if err != nil {
 		return fmt.Errorf("initialize butler: %w", err)
 	}
+	defer b.Close()
 
 	rooms := b.ListRooms()
 

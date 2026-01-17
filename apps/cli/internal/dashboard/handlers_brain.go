@@ -1,7 +1,10 @@
 package dashboard
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -68,6 +71,7 @@ func (s *Server) handleRemember(w http.ResponseWriter, r *http.Request) {
 	// Store based on kind
 	var recordID string
 	var err error
+	needsAudit := false
 
 	switch kind {
 	case memory.RecordKindIdea:
@@ -75,33 +79,39 @@ func (s *Server) handleRemember(w http.ResponseWriter, r *http.Request) {
 			Content:   req.Content,
 			Scope:     req.Scope,
 			ScopePath: req.ScopePath,
-			Source:    "api",
+			Source:    "dashboard",
 		}
 		recordID, err = mem.AddIdea(idea)
 	case memory.RecordKindDecision:
+		// Dashboard writes from humans are treated as approved (direct authority)
 		dec := memory.Decision{
 			Content:   req.Content,
 			Scope:     req.Scope,
 			ScopePath: req.ScopePath,
-			Source:    "api",
+			Source:    "dashboard",
+			Authority: string(memory.AuthorityApproved),
 		}
 		recordID, err = mem.AddDecision(dec)
+		needsAudit = true
 	case memory.RecordKindLearning:
+		// Dashboard writes from humans are treated as approved (direct authority)
 		learning := memory.Learning{
 			Content:    req.Content,
 			Scope:      req.Scope,
 			ScopePath:  req.ScopePath,
-			Source:     "api",
+			Source:     "dashboard",
 			Confidence: 0.5,
+			Authority:  string(memory.AuthorityApproved),
 		}
 		recordID, err = mem.AddLearning(learning)
+		needsAudit = true
 	default:
 		// Default to idea if unknown
 		idea := memory.Idea{
 			Content:   req.Content,
 			Scope:     req.Scope,
 			ScopePath: req.ScopePath,
-			Source:    "api",
+			Source:    "dashboard",
 		}
 		recordID, err = mem.AddIdea(idea)
 		kind = memory.RecordKindIdea
@@ -110,6 +120,21 @@ func (s *Server) handleRemember(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Audit log for direct writes (decisions/learnings)
+	if needsAudit {
+		hash := sha256.Sum256([]byte(req.Content))
+		contentHash := hex.EncodeToString(hash[:])
+		targetKind := string(kind)
+		_, _ = mem.AddAuditLog(memory.AuditLogEntry{
+			Action:     memory.AuditActionDirectWrite,
+			ActorType:  memory.AuditActorHuman,
+			ActorID:    "dashboard",
+			TargetID:   recordID,
+			TargetKind: targetKind,
+			Details:    fmt.Sprintf(`{"scope":"%s","scope_path":"%s","content_hash":"%s"}`, req.Scope, req.ScopePath, contentHash), //nolint:gocritic // JSON template uses %s for values inside quotes
+		})
 	}
 
 	// Set tags if any

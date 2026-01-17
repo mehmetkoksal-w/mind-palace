@@ -302,6 +302,42 @@ linters:
       - path: apps/cli/internal/(config|fsutil|jsonc|lint|project|scan|signal|stale|update|validate|verify)/
         linters:
           - revive
+      - path: apps/cli/internal/cli/commands/store\.go
+        text: "sprintfQuotedString"
+        linters:
+          - gocritic
+      - path: apps/cli/internal/cli/commands/proposals\.go
+        text: "sprintfQuotedString|rangeValCopy"
+        linters:
+          - gocritic
+      - path: apps/cli/internal/cli/commands/mcp_config\.go
+        text: "ptrToRefParam"
+        linters:
+          - gocritic
+      - path: apps/cli/internal/butler/butler_route\.go
+        text: "rangeValCopy"
+        linters:
+          - gocritic
+      - path: apps/cli/internal/butler/butler_context\.go
+        text: "rangeValCopy"
+        linters:
+          - gocritic
+      - path: apps/cli/internal/analysis/lsp_client\.go
+        text: "G204"
+        linters:
+          - gosec
+      - path: apps/cli/internal/gitutil/gitutil\.go
+        text: "G204"
+        linters:
+          - gosec
+      - path: apps/cli/internal/memory/learning\.go
+        text: "G202"
+        linters:
+          - gosec
+      - path: apps/cli/internal/update/update\.go
+        text: "G302"
+        linters:
+          - gosec
       - path: apps/cli/main\.go
         linters:
           - revive

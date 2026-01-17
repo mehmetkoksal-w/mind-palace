@@ -28,6 +28,14 @@ var migrations = []func(*sql.Tx) error{
 	migrateV2,
 	// Migration 3: Postmortems table for failure memory
 	migrateV3,
+	// Migration 4: Authority field for governance (proposed/approved/legacy_approved)
+	migrateV4,
+	// Migration 5: Proposals table for governance write path
+	migrateV5,
+	// Migration 6: Audit log table for governance actions
+	migrateV6,
+	// Migration 7: Authoritative state views for bounded queries
+	migrateV7,
 }
 
 // migrateV0 creates the initial database schema (version 0)
@@ -392,4 +400,240 @@ END;
 `
 	_, err := tx.ExecContext(context.Background(), schema)
 	return err
+}
+
+// migrateV4 adds authority field for governance layer
+func migrateV4(tx *sql.Tx) error {
+	// Add authority columns to decisions and learnings tables
+	// SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so we ignore errors
+	// if the column already exists
+	alterStatements := []string{
+		`ALTER TABLE decisions ADD COLUMN authority TEXT DEFAULT 'proposed'`,
+		`ALTER TABLE decisions ADD COLUMN promoted_from_proposal_id TEXT DEFAULT ''`,
+		`ALTER TABLE learnings ADD COLUMN authority TEXT DEFAULT 'proposed'`,
+		`ALTER TABLE learnings ADD COLUMN promoted_from_proposal_id TEXT DEFAULT ''`,
+	}
+
+	for _, stmt := range alterStatements {
+		_, _ = tx.ExecContext(context.Background(), stmt)
+	}
+
+	// Backfill existing records with legacy_approved (DP-2: preserves audit trail)
+	backfillStatements := []string{
+		`UPDATE decisions SET authority = 'legacy_approved' WHERE authority = 'proposed'`,
+		`UPDATE learnings SET authority = 'legacy_approved' WHERE authority = 'proposed'`,
+	}
+
+	for _, stmt := range backfillStatements {
+		if _, err := tx.ExecContext(context.Background(), stmt); err != nil {
+			return fmt.Errorf("backfill authority: %w", err)
+		}
+	}
+
+	// Create indexes on authority for efficient filtering
+	indexStatements := []string{
+		`CREATE INDEX IF NOT EXISTS idx_decisions_authority ON decisions(authority)`,
+		`CREATE INDEX IF NOT EXISTS idx_learnings_authority ON learnings(authority)`,
+	}
+
+	for _, stmt := range indexStatements {
+		if _, err := tx.ExecContext(context.Background(), stmt); err != nil {
+			return fmt.Errorf("create authority index: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// migrateV5 adds the proposals table for governance write path
+func migrateV5(tx *sql.Tx) error {
+	schema := `
+-- Proposals table for governance write path
+-- Agent/LLM writes go to proposals first, requiring human approval to become authoritative records
+CREATE TABLE IF NOT EXISTS proposals (
+    id TEXT PRIMARY KEY,
+    proposed_as TEXT NOT NULL,                    -- 'decision' or 'learning'
+    content TEXT NOT NULL,
+    context TEXT DEFAULT '',
+    rationale TEXT DEFAULT '',                    -- For decisions
+    scope TEXT DEFAULT 'palace',
+    scope_path TEXT DEFAULT '',
+    source TEXT NOT NULL,                         -- 'agent', 'auto-extract', etc.
+    session_id TEXT DEFAULT '',
+    agent_type TEXT DEFAULT '',
+    evidence_refs TEXT DEFAULT '{}',              -- JSON: session_id, conversation_id, etc.
+    classification_confidence REAL DEFAULT 0,
+    classification_signals TEXT DEFAULT '[]',
+    dedupe_key TEXT DEFAULT '',                   -- For duplicate detection
+    status TEXT DEFAULT 'pending',                -- pending, approved, rejected, expired
+    reviewed_by TEXT DEFAULT '',
+    reviewed_at TEXT DEFAULT '',
+    review_note TEXT DEFAULT '',
+    promoted_to_id TEXT DEFAULT '',               -- ID of created decision/learning
+    created_at TEXT NOT NULL,
+    expires_at TEXT DEFAULT '',
+    archived_at TEXT DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_proposals_dedupe ON proposals(dedupe_key) WHERE dedupe_key != '';
+CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);
+CREATE INDEX IF NOT EXISTS idx_proposals_proposed_as ON proposals(proposed_as);
+CREATE INDEX IF NOT EXISTS idx_proposals_expires ON proposals(expires_at) WHERE expires_at != '';
+CREATE INDEX IF NOT EXISTS idx_proposals_created ON proposals(created_at DESC);
+
+-- FTS5 for proposals search
+CREATE VIRTUAL TABLE IF NOT EXISTS proposals_fts USING fts5(
+    content, context, rationale,
+    content=proposals, content_rowid=rowid
+);
+
+CREATE TRIGGER IF NOT EXISTS proposals_ai AFTER INSERT ON proposals BEGIN
+    INSERT INTO proposals_fts(rowid, content, context, rationale)
+    VALUES (new.rowid, new.content, new.context, new.rationale);
+END;
+
+CREATE TRIGGER IF NOT EXISTS proposals_ad AFTER DELETE ON proposals BEGIN
+    INSERT INTO proposals_fts(proposals_fts, rowid, content, context, rationale)
+    VALUES('delete', old.rowid, old.content, old.context, old.rationale);
+END;
+
+CREATE TRIGGER IF NOT EXISTS proposals_au AFTER UPDATE ON proposals BEGIN
+    INSERT INTO proposals_fts(proposals_fts, rowid, content, context, rationale)
+    VALUES('delete', old.rowid, old.content, old.context, old.rationale);
+    INSERT INTO proposals_fts(rowid, content, context, rationale)
+    VALUES (new.rowid, new.content, new.context, new.rationale);
+END;
+`
+	_, err := tx.ExecContext(context.Background(), schema)
+	return err
+}
+
+// migrateV6 adds the audit_log table for governance actions
+func migrateV6(tx *sql.Tx) error {
+	schema := `
+-- Audit log table for governance actions
+-- Records all direct writes, approvals, and rejections for accountability
+CREATE TABLE IF NOT EXISTS audit_log (
+    id TEXT PRIMARY KEY,
+    action TEXT NOT NULL,              -- 'direct_write', 'approve', 'reject'
+    actor_type TEXT NOT NULL,          -- 'human', 'agent'
+    actor_id TEXT DEFAULT '',          -- Optional identifier (username, session ID)
+    target_id TEXT NOT NULL,           -- ID of affected record
+    target_kind TEXT NOT NULL,         -- 'decision', 'learning', 'proposal'
+    details TEXT DEFAULT '{}',         -- JSON details about the action
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
+CREATE INDEX IF NOT EXISTS idx_audit_log_target ON audit_log(target_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor_type, actor_id);
+`
+	_, err := tx.ExecContext(context.Background(), schema)
+	return err
+}
+
+// migrateV7 adds authoritative state views for bounded queries.
+// Views are created dynamically using AuthoritativeValues() to avoid hard-coding.
+func migrateV7(tx *sql.Tx) error {
+	// Build authority IN clause from AuthoritativeValues()
+	// This ensures the views stay in sync with the authority.go source of truth
+	authVals := AuthoritativeValuesStrings()
+	authInClause := "'" + authVals[0] + "'"
+	for i := 1; i < len(authVals); i++ {
+		authInClause += ", '" + authVals[i] + "'"
+	}
+
+	// Create view for authoritative decisions
+	// This view filters decisions to only show approved/legacy_approved records
+	decisionsViewSQL := fmt.Sprintf(`
+CREATE VIEW IF NOT EXISTS authoritative_decisions AS
+SELECT
+    id,
+    content,
+    rationale,
+    context,
+    status,
+    outcome,
+    outcome_note,
+    outcome_at,
+    scope,
+    scope_path,
+    session_id,
+    source,
+    authority,
+    promoted_from_proposal_id,
+    created_at,
+    updated_at
+FROM decisions
+WHERE authority IN (%s)
+  AND status = 'active'
+ORDER BY created_at DESC;
+`, authInClause)
+
+	if _, err := tx.ExecContext(context.Background(), decisionsViewSQL); err != nil {
+		return fmt.Errorf("create authoritative_decisions view: %w", err)
+	}
+
+	// Create view for authoritative learnings
+	// This view filters learnings to only show approved/legacy_approved records
+	learningsViewSQL := fmt.Sprintf(`
+CREATE VIEW IF NOT EXISTS authoritative_learnings AS
+SELECT
+    id,
+    session_id,
+    scope,
+    scope_path,
+    content,
+    confidence,
+    source,
+    authority,
+    promoted_from_proposal_id,
+    status,
+    obsolete_reason,
+    archived_at,
+    created_at,
+    last_used,
+    use_count
+FROM learnings
+WHERE authority IN (%s)
+  AND (status IS NULL OR status = 'active' OR status = '')
+ORDER BY confidence DESC, use_count DESC;
+`, authInClause)
+
+	if _, err := tx.ExecContext(context.Background(), learningsViewSQL); err != nil {
+		return fmt.Errorf("create authoritative_learnings view: %w", err)
+	}
+
+	// Create view for scope hierarchy summary
+	// This provides a quick summary of authoritative records by scope
+	scopeSummaryViewSQL := fmt.Sprintf(`
+CREATE VIEW IF NOT EXISTS scope_authority_summary AS
+SELECT
+    'decision' as record_type,
+    scope,
+    scope_path,
+    COUNT(*) as record_count
+FROM decisions
+WHERE authority IN (%s)
+  AND status = 'active'
+GROUP BY scope, scope_path
+UNION ALL
+SELECT
+    'learning' as record_type,
+    scope,
+    scope_path,
+    COUNT(*) as record_count
+FROM learnings
+WHERE authority IN (%s)
+  AND (status IS NULL OR status = 'active' OR status = '')
+GROUP BY scope, scope_path
+ORDER BY record_type, scope, scope_path;
+`, authInClause, authInClause)
+
+	if _, err := tx.ExecContext(context.Background(), scopeSummaryViewSQL); err != nil {
+		return fmt.Errorf("create scope_authority_summary view: %w", err)
+	}
+
+	return nil
 }

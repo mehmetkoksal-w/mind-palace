@@ -2,7 +2,7 @@
   "name": "mind-palace-vscode",
   "displayName": "Mind Palace Observer",
   "description": "Head-Up Display for the Mind Palace CLI",
-  "version": "0.3.0-alpha",
+  "version": "0.3.1-alpha",
   "license": "MIT",
   "publisher": "mind-palace",
   "icon": "images/icon.png",
@@ -191,6 +191,26 @@
         "command": "mindPalace.showKnowledgeGraph",
         "title": "Mind Palace: Show Knowledge Graph",
         "icon": "$(graph)"
+      },
+      {
+        "command": "palace.proposals.list",
+        "title": "Mind Palace: List Proposals",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "palace.proposals.approve",
+        "title": "Mind Palace: Approve Proposal",
+        "icon": "$(check)"
+      },
+      {
+        "command": "palace.proposals.reject",
+        "title": "Mind Palace: Reject Proposal",
+        "icon": "$(close)"
+      },
+      {
+        "command": "palace.proposals.reviewPending",
+        "title": "Mind Palace: Review Pending Proposals",
+        "icon": "$(checklist)"
       }
     ],
     "menus": {

@@ -1,6 +1,7 @@
 {
   "cli": "CLI Reference",
   "extension": "VS Code Extension",
+  "governance-quick-reference": "Governance Quick Reference",
   "public-api": "Public API",
   "errors": "Error Reference",
   "migration": "Migration Guide",

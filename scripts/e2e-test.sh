@@ -172,7 +172,7 @@ echo "=========================================="
 echo "6. Learning Tests"
 echo "=========================================="
 
-run_test "learn command" "$PALACE_BIN store --as learning 'Always use meaningful variable names in Go' && sleep 1"
+run_test "learn command" "$PALACE_BIN store --as learning --direct 'Always use meaningful variable names in Go' && sleep 1"
 run_test_output "recall test" "$PALACE_BIN recall 'variable'" "variable"
 
 echo ""

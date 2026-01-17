@@ -1,6 +1,7 @@
 package butler
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -9,6 +10,8 @@ import (
 )
 
 // toolStore stores a thought with auto-classification.
+// Phase 2: Creates a proposal instead of direct record for decisions/learnings.
+// Ideas are still stored directly (no governance for ideas).
 func (s *MCPServer) toolStore(id any, args map[string]interface{}) jsonRPCResponse {
 	content, _ := args["content"].(string)
 	if content == "" {
@@ -25,6 +28,10 @@ func (s *MCPServer) toolStore(id any, args map[string]interface{}) jsonRPCRespon
 		scope = "palace"
 	}
 	scopePath, _ := args["scopePath"].(string)
+
+	// Optional context and rationale for proposals
+	contextStr, _ := args["context"].(string)
+	rationale, _ := args["rationale"].(string)
 
 	// Parse tags from array
 	var tags []string
@@ -53,97 +60,148 @@ func (s *MCPServer) toolStore(id any, args map[string]interface{}) jsonRPCRespon
 	extractedTags := memory.ExtractTags(content)
 	tags = append(tags, extractedTags...)
 
-	// Store based on kind
+	mem := s.butler.Memory()
+	if mem == nil {
+		return s.toolError(id, "memory not initialized")
+	}
+
 	var recordID string
 	var err error
+	var isProposal bool
 
+	// Phase 2: Decisions and learnings go through proposal workflow
+	// Ideas are stored directly (no governance requirement)
 	switch kind {
 	case memory.RecordKindIdea:
+		// Ideas are stored directly (backward compatible)
 		idea := memory.Idea{
 			Content:   content,
+			Context:   contextStr,
 			Scope:     scope,
 			ScopePath: scopePath,
 			Source:    "agent",
 		}
 		recordID, err = s.butler.AddIdea(idea)
-	case memory.RecordKindDecision:
-		dec := memory.Decision{
-			Content:   content,
-			Scope:     scope,
-			ScopePath: scopePath,
-			Source:    "agent",
+
+	case memory.RecordKindDecision, memory.RecordKindLearning:
+		// Decisions and learnings go through proposal workflow
+		isProposal = true
+		proposedAs := memory.ProposedAsDecision
+		if kind == memory.RecordKindLearning {
+			proposedAs = memory.ProposedAsLearning
 		}
-		recordID, err = s.butler.AddDecision(dec)
-	case memory.RecordKindLearning:
-		learning := memory.Learning{
-			Content:    content,
-			Scope:      scope,
-			ScopePath:  scopePath,
-			Source:     "agent",
-			Confidence: 0.5,
+
+		// Generate classification signals JSON
+		signalsJSON := "[]"
+		if len(classification.Signals) > 0 {
+			if data, err := json.Marshal(classification.Signals); err == nil {
+				signalsJSON = string(data)
+			}
 		}
-		recordID, err = s.butler.AddLearning(learning)
+
+		proposal := memory.Proposal{
+			ProposedAs:               proposedAs,
+			Content:                  content,
+			Context:                  contextStr,
+			Rationale:                rationale,
+			Scope:                    scope,
+			ScopePath:                scopePath,
+			Source:                   "agent",
+			ClassificationConfidence: classification.Confidence,
+			ClassificationSignals:    signalsJSON,
+		}
+
+		// Check for duplicates
+		dedupeKey := memory.GenerateDedupeKey(proposedAs, content, scope, scopePath)
+		existing, _ := mem.CheckDuplicateProposal(dedupeKey)
+		if existing != nil {
+			return s.toolError(id, fmt.Sprintf("duplicate proposal already exists: %s", existing.ID))
+		}
+		proposal.DedupeKey = dedupeKey
+
+		recordID, err = mem.AddProposal(proposal)
 	}
 
 	if err != nil {
 		return s.toolError(id, fmt.Sprintf("store %s failed: %v", kind, err))
 	}
 
-	// Set tags if any
-	if len(tags) > 0 {
+	// Set tags if any (only for ideas, proposals don't have tags yet)
+	if len(tags) > 0 && !isProposal {
 		s.butler.SetTags(recordID, string(kind), tags)
 	}
 
 	var output strings.Builder
-	output.WriteString("# Thought Remembered\n\n")
-	fmt.Fprintf(&output, "**ID:** `%s`\n", recordID)
-	fmt.Fprintf(&output, "**Type:** %s\n", kind)
-	fmt.Fprintf(&output, "**Confidence:** %.0f%%\n", classification.Confidence*100)
-	if len(classification.Signals) > 0 {
-		fmt.Fprintf(&output, "**Signals:** %v\n", classification.Signals)
+	if isProposal {
+		output.WriteString("# Proposal Created\n\n")
+		fmt.Fprintf(&output, "**ID:** `%s`\n", recordID)
+		fmt.Fprintf(&output, "**Type:** %s (proposal)\n", kind)
+		fmt.Fprintf(&output, "**Status:** pending\n")
+		fmt.Fprintf(&output, "**Classification Confidence:** %.0f%%\n", classification.Confidence*100)
+		if len(classification.Signals) > 0 {
+			fmt.Fprintf(&output, "**Signals:** %v\n", classification.Signals)
+		}
+		fmt.Fprintf(&output, "**Scope:** %s", scope)
+		if scopePath != "" {
+			fmt.Fprintf(&output, " (%s)", scopePath)
+		}
+		output.WriteString("\n")
+		fmt.Fprintf(&output, "\n**Content:** %s\n", content)
+		output.WriteString("\n---\n")
+		output.WriteString("This proposal requires human approval before becoming authoritative.\n")
+		output.WriteString("Use `palace proposals` to view pending proposals.\n")
+		output.WriteString("Use `palace approve <id>` to approve this proposal.\n")
+	} else {
+		output.WriteString("# Thought Remembered\n\n")
+		fmt.Fprintf(&output, "**ID:** `%s`\n", recordID)
+		fmt.Fprintf(&output, "**Type:** %s\n", kind)
+		fmt.Fprintf(&output, "**Confidence:** %.0f%%\n", classification.Confidence*100)
+		if len(classification.Signals) > 0 {
+			fmt.Fprintf(&output, "**Signals:** %v\n", classification.Signals)
+		}
+		fmt.Fprintf(&output, "**Scope:** %s", scope)
+		if scopePath != "" {
+			fmt.Fprintf(&output, " (%s)", scopePath)
+		}
+		output.WriteString("\n")
+		if len(tags) > 0 {
+			fmt.Fprintf(&output, "**Tags:** %s\n", strings.Join(tags, ", "))
+		}
+		fmt.Fprintf(&output, "\n**Content:** %s\n", content)
 	}
-	fmt.Fprintf(&output, "**Scope:** %s", scope)
-	if scopePath != "" {
-		fmt.Fprintf(&output, " (%s)", scopePath)
-	}
-	output.WriteString("\n")
-	if len(tags) > 0 {
-		fmt.Fprintf(&output, "**Tags:** %s\n", strings.Join(tags, ", "))
-	}
-	fmt.Fprintf(&output, "\n**Content:** %s\n", content)
 
-	// Auto-check for contradictions if enabled
-	var contradictions []memory.ContradictionResult
-	cfg := s.butler.Config()
-	if cfg != nil && cfg.ContradictionAutoCheck {
-		if llmClient, err := s.butler.GetLLMClient(); err == nil && llmClient != nil {
-			analyzer := memory.NewLLMContradictionAnalyzer(llmClient)
-			embedder := s.butler.GetEmbedder()
+	// Auto-check for contradictions if enabled (only for non-proposals)
+	if !isProposal {
+		var contradictions []memory.ContradictionResult
+		cfg := s.butler.Config()
+		if cfg != nil && cfg.ContradictionAutoCheck {
+			if llmClient, err := s.butler.GetLLMClient(); err == nil && llmClient != nil {
+				analyzer := memory.NewLLMContradictionAnalyzer(llmClient)
+				embedder := s.butler.GetEmbedder()
 
-			minConfidence := cfg.ContradictionMinConfidence
-			if minConfidence <= 0 {
-				minConfidence = 0.8
-			}
-			autoLink := cfg.ContradictionAutoLink
+				minConfidence := cfg.ContradictionMinConfidence
+				if minConfidence <= 0 {
+					minConfidence = 0.8
+				}
+				// Disable auto-linking in agent mode - requires human approval
+				autoLink := cfg.ContradictionAutoLink && s.mode == MCPModeHuman
 
-			mem := s.butler.Memory()
-			if mem != nil {
 				contradictions, _ = mem.AutoCheckContradictions(
 					recordID, string(kind), content,
 					analyzer, embedder, autoLink, minConfidence,
 				)
 			}
 		}
-	}
 
-	// Add contradiction warnings to output
-	if len(contradictions) > 0 {
-		output.WriteString("\n---\n\n")
-		output.WriteString("## Contradictions Detected\n\n")
-		for i, c := range contradictions {
-			fmt.Fprintf(&output, "### %d. `%s` (%.0f%% confidence)\n\n", i+1, c.Record2ID, c.Confidence*100)
-			fmt.Fprintf(&output, "**Type:** %s\n", c.ContradictType)
-			fmt.Fprintf(&output, "**Explanation:** %s\n\n", c.Explanation)
+		// Add contradiction warnings to output
+		if len(contradictions) > 0 {
+			output.WriteString("\n---\n\n")
+			output.WriteString("## Contradictions Detected\n\n")
+			for i, c := range contradictions {
+				fmt.Fprintf(&output, "### %d. `%s` (%.0f%% confidence)\n\n", i+1, c.Record2ID, c.Confidence*100)
+				fmt.Fprintf(&output, "**Type:** %s\n", c.ContradictType)
+				fmt.Fprintf(&output, "**Explanation:** %s\n\n", c.Explanation)
+			}
 		}
 	}
 
@@ -158,6 +216,55 @@ func (s *MCPServer) toolStore(id any, args map[string]interface{}) jsonRPCRespon
 
 // toolRecallDecisions retrieves decisions from the brain.
 func (s *MCPServer) toolRecallDecisions(id any, args map[string]interface{}) jsonRPCResponse {
+	// Support direct lookup by ID for route fetch_ref compatibility
+	if idArg, ok := args["id"].(string); ok && idArg != "" {
+		d, err := s.butler.memory.GetDecision(idArg)
+		if err != nil {
+			return s.toolError(id, fmt.Sprintf("get decision failed: %v", err))
+		}
+
+		var output strings.Builder
+		statusIcon := "🔵"
+		switch d.Status {
+		case memory.DecisionStatusSuperseded:
+			statusIcon = "🔄"
+		case memory.DecisionStatusReversed:
+			statusIcon = "↩️"
+		}
+
+		outcomeIcon := "❓"
+		switch d.Outcome {
+		case memory.DecisionOutcomeSuccessful:
+			outcomeIcon = "✅"
+		case memory.DecisionOutcomeFailed:
+			outcomeIcon = "❌"
+		case memory.DecisionOutcomeMixed:
+			outcomeIcon = "⚖️"
+		}
+
+		scopeInfo := d.Scope
+		if d.ScopePath != "" {
+			scopeInfo = fmt.Sprintf("%s:%s", d.Scope, d.ScopePath)
+		}
+
+		fmt.Fprintf(&output, "# Decision %s `%s` %s\n\n", statusIcon, d.ID, outcomeIcon)
+		fmt.Fprintf(&output, "- **Status:** %s | **Outcome:** %s\n", d.Status, d.Outcome)
+		fmt.Fprintf(&output, "- **Scope:** %s\n", scopeInfo)
+		fmt.Fprintf(&output, "- **Content:** %s\n", d.Content)
+		if d.Rationale != "" {
+			fmt.Fprintf(&output, "- **Rationale:** %s\n", d.Rationale)
+		}
+		fmt.Fprintf(&output, "- **Created:** %s\n", d.CreatedAt.Format(time.RFC3339))
+
+		return jsonRPCResponse{
+			JSONRPC: "2.0",
+			ID:      id,
+			Result: mcpToolResult{
+				Content: []mcpContent{{Type: "text", Text: output.String()}},
+			},
+		}
+	}
+
 	query, _ := args["query"].(string)
 	status, _ := args["status"].(string)
 	scope, _ := args["scope"].(string)
@@ -647,8 +754,10 @@ func (s *MCPServer) toolRecallLearningsByStatus(id any, args map[string]interfac
 	}
 
 	var output strings.Builder
-	statusTitle := strings.Title(status)
-	output.WriteString(fmt.Sprintf("# %s Learnings\n\n", statusTitle))
+	if status != "" {
+		status = strings.ToUpper(status[:1]) + status[1:]
+	}
+	output.WriteString(fmt.Sprintf("# %s Learnings\n\n", status))
 	fmt.Fprintf(&output, "Found %d learnings with status '%s'\n\n", len(learnings), status)
 
 	for i := range learnings {
@@ -710,6 +819,10 @@ func (s *MCPServer) toolRecallContradictions(id any, args map[string]interface{}
 	autoLink := true
 	if al, ok := args["autoLink"].(bool); ok {
 		autoLink = al
+	}
+	// Disable auto-linking in agent mode - requires human approval
+	if s.mode == MCPModeAgent {
+		autoLink = false
 	}
 
 	// Get the source record

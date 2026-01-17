@@ -254,7 +254,7 @@ func (p *DartParser) extractSymbols(lines []string, analysis *FileAnalysis) {
 }
 
 func (p *DartParser) extractClassMembers(lines []string, startLine, endLine int) []Symbol {
-	var children []Symbol
+	children := make([]Symbol, 0, 64)
 
 	if startLine < 1 || endLine > len(lines) {
 		return children

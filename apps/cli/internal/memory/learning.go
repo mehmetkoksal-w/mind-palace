@@ -28,6 +28,9 @@ func (m *Memory) AddLearning(l Learning) (string, error) {
 	if l.Source == "" {
 		l.Source = "agent"
 	}
+	if l.Authority == "" {
+		l.Authority = string(AuthorityProposed)
+	}
 	now := time.Now().UTC()
 	if l.CreatedAt.IsZero() {
 		l.CreatedAt = now
@@ -37,9 +40,9 @@ func (m *Memory) AddLearning(l Learning) (string, error) {
 	}
 
 	_, err := m.db.ExecContext(context.Background(), `
-		INSERT INTO learnings (id, session_id, scope, scope_path, content, confidence, source, created_at, last_used, use_count)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, l.ID, l.SessionID, l.Scope, l.ScopePath, l.Content, l.Confidence, l.Source,
+		INSERT INTO learnings (id, session_id, scope, scope_path, content, confidence, source, authority, promoted_from_proposal_id, created_at, last_used, use_count)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, l.ID, l.SessionID, l.Scope, l.ScopePath, l.Content, l.Confidence, l.Source, l.Authority, l.PromotedFromProposalID,
 		l.CreatedAt.Format(time.RFC3339), l.LastUsed.Format(time.RFC3339), l.UseCount)
 	if err != nil {
 		return "", fmt.Errorf("insert learning: %w", err)
@@ -54,13 +57,13 @@ func (m *Memory) AddLearning(l Learning) (string, error) {
 // GetLearning retrieves a learning by ID.
 func (m *Memory) GetLearning(id string) (*Learning, error) {
 	row := m.db.QueryRowContext(context.Background(), `
-		SELECT id, session_id, scope, scope_path, content, confidence, source, created_at, last_used, use_count
+		SELECT id, session_id, scope, scope_path, content, confidence, source, authority, promoted_from_proposal_id, created_at, last_used, use_count
 		FROM learnings WHERE id = ?
 	`, id)
 
 	var l Learning
 	var createdAt, lastUsed string
-	err := row.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &createdAt, &lastUsed, &l.UseCount)
+	err := row.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &l.Authority, &l.PromotedFromProposalID, &createdAt, &lastUsed, &l.UseCount)
 	if err != nil {
 		return nil, fmt.Errorf("scan learning: %w", err)
 	}
@@ -71,10 +74,23 @@ func (m *Memory) GetLearning(id string) (*Learning, error) {
 }
 
 // GetLearnings retrieves learnings matching the given criteria.
+// By default, only returns authoritative records (approved or legacy_approved).
 func (m *Memory) GetLearnings(scope, scopePath string, limit int) ([]Learning, error) {
-	query := `SELECT id, session_id, scope, scope_path, content, confidence, source, created_at, last_used, use_count FROM learnings WHERE 1=1`
+	return m.GetLearningsWithAuthority(scope, scopePath, limit, true)
+}
+
+// GetLearningsWithAuthority retrieves learnings with explicit authority filtering.
+func (m *Memory) GetLearningsWithAuthority(scope, scopePath string, limit int, authoritativeOnly bool) ([]Learning, error) {
+	query := `SELECT id, session_id, scope, scope_path, content, confidence, source, authority, promoted_from_proposal_id, created_at, last_used, use_count FROM learnings WHERE 1=1`
 	args := []interface{}{}
 
+	if authoritativeOnly {
+		authVals := AuthoritativeValuesStrings()
+		query += ` AND authority IN (` + SQLPlaceholders(len(authVals)) + `)`
+		for _, v := range authVals {
+			args = append(args, v)
+		}
+	}
 	if scope != "" {
 		query += ` AND scope = ?`
 		args = append(args, scope)
@@ -99,7 +115,7 @@ func (m *Memory) GetLearnings(scope, scopePath string, limit int) ([]Learning, e
 	for rows.Next() {
 		var l Learning
 		var createdAt, lastUsed string
-		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &createdAt, &lastUsed, &l.UseCount); err != nil {
+		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &l.Authority, &l.PromotedFromProposalID, &createdAt, &lastUsed, &l.UseCount); err != nil {
 			return nil, fmt.Errorf("scan learning: %w", err)
 		}
 		l.CreatedAt = parseTimeOrZero(createdAt)
@@ -113,14 +129,31 @@ func (m *Memory) GetLearnings(scope, scopePath string, limit int) ([]Learning, e
 }
 
 // SearchLearnings searches learnings by content.
+// By default, only returns authoritative records.
 func (m *Memory) SearchLearnings(query string, limit int) ([]Learning, error) {
+	return m.SearchLearningsWithAuthority(query, limit, true)
+}
+
+// SearchLearningsWithAuthority searches learnings with explicit authority filtering.
+func (m *Memory) SearchLearningsWithAuthority(query string, limit int, authoritativeOnly bool) ([]Learning, error) {
+	// Build authority filter
+	authFilter := ""
+	authArgs := []interface{}{}
+	if authoritativeOnly {
+		authVals := AuthoritativeValuesStrings()
+		authFilter = ` AND authority IN (` + SQLPlaceholders(len(authVals)) + `)`
+		for _, v := range authVals {
+			authArgs = append(authArgs, v)
+		}
+	}
+
 	sqlQuery := `
-		SELECT id, session_id, scope, scope_path, content, confidence, source, created_at, last_used, use_count
+		SELECT id, session_id, scope, scope_path, content, confidence, source, authority, promoted_from_proposal_id, created_at, last_used, use_count
 		FROM learnings
-		WHERE content LIKE ?
+		WHERE content LIKE ?` + authFilter + `
 		ORDER BY confidence DESC, use_count DESC
 	`
-	args := []interface{}{"%" + query + "%"}
+	args := append([]interface{}{"%" + query + "%"}, authArgs...)
 	if limit > 0 {
 		sqlQuery += ` LIMIT ?`
 		args = append(args, limit)
@@ -136,7 +169,7 @@ func (m *Memory) SearchLearnings(query string, limit int) ([]Learning, error) {
 	for rows.Next() {
 		var l Learning
 		var createdAt, lastUsed string
-		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &createdAt, &lastUsed, &l.UseCount); err != nil {
+		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &l.Authority, &l.PromotedFromProposalID, &createdAt, &lastUsed, &l.UseCount); err != nil {
 			return nil, fmt.Errorf("scan learning: %w", err)
 		}
 		l.CreatedAt = parseTimeOrZero(createdAt)
@@ -241,13 +274,24 @@ func (m *Memory) GetRelevantLearnings(filePath, query string, limit int) ([]Lear
 }
 
 // GetHighConfidenceLearnings returns learnings ready for promotion to corridor.
+// Only returns authoritative records.
 func (m *Memory) GetHighConfidenceLearnings(minConfidence float64, minUseCount int) ([]Learning, error) {
-	rows, err := m.db.QueryContext(context.Background(), `
-		SELECT id, session_id, scope, scope_path, content, confidence, source, created_at, last_used, use_count
+	// Build authority filter
+	authVals := AuthoritativeValuesStrings()
+	authPlaceholders := SQLPlaceholders(len(authVals))
+
+	query := `
+		SELECT id, session_id, scope, scope_path, content, confidence, source, authority, promoted_from_proposal_id, created_at, last_used, use_count
 		FROM learnings
-		WHERE confidence >= ? AND use_count >= ?
+		WHERE confidence >= ? AND use_count >= ? AND authority IN (` + authPlaceholders + `)
 		ORDER BY confidence DESC, use_count DESC
-	`, minConfidence, minUseCount)
+	`
+	args := []interface{}{minConfidence, minUseCount}
+	for _, v := range authVals {
+		args = append(args, v)
+	}
+
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query high confidence learnings: %w", err)
 	}
@@ -257,7 +301,7 @@ func (m *Memory) GetHighConfidenceLearnings(minConfidence float64, minUseCount i
 	for rows.Next() {
 		var l Learning
 		var createdAt, lastUsed string
-		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &createdAt, &lastUsed, &l.UseCount); err != nil {
+		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &l.Authority, &l.PromotedFromProposalID, &createdAt, &lastUsed, &l.UseCount); err != nil {
 			return nil, fmt.Errorf("scan learning: %w", err)
 		}
 		l.CreatedAt = parseTimeOrZero(createdAt)
@@ -338,14 +382,22 @@ func (m *Memory) ArchiveOldLearnings(unusedDays int, maxConfidence float64) (int
 }
 
 // GetLearningsByStatus retrieves learnings by lifecycle status.
+// Only returns authoritative records.
 func (m *Memory) GetLearningsByStatus(status string, limit int) ([]Learning, error) {
+	// Build authority filter
+	authVals := AuthoritativeValuesStrings()
+	authPlaceholders := SQLPlaceholders(len(authVals))
+
 	query := `
-		SELECT id, session_id, scope, scope_path, content, confidence, source, created_at, last_used, use_count
+		SELECT id, session_id, scope, scope_path, content, confidence, source, authority, promoted_from_proposal_id, created_at, last_used, use_count
 		FROM learnings
-		WHERE status = ?
+		WHERE status = ? AND authority IN (` + authPlaceholders + `)
 		ORDER BY last_used DESC
 	`
 	args := []interface{}{status}
+	for _, v := range authVals {
+		args = append(args, v)
+	}
 	if limit > 0 {
 		query += ` LIMIT ?`
 		args = append(args, limit)
@@ -361,7 +413,7 @@ func (m *Memory) GetLearningsByStatus(status string, limit int) ([]Learning, err
 	for rows.Next() {
 		var l Learning
 		var createdAt, lastUsed string
-		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &createdAt, &lastUsed, &l.UseCount); err != nil {
+		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &l.Authority, &l.PromotedFromProposalID, &createdAt, &lastUsed, &l.UseCount); err != nil {
 			return nil, fmt.Errorf("scan learning: %w", err)
 		}
 		l.CreatedAt = parseTimeOrZero(createdAt)
@@ -401,14 +453,25 @@ func (m *Memory) UnlinkLearningFromDecision(decisionID, learningID string) error
 }
 
 // GetLearningsForDecision returns learnings linked to a decision.
+// Only returns authoritative records.
 func (m *Memory) GetLearningsForDecision(decisionID string) ([]Learning, error) {
-	rows, err := m.db.QueryContext(context.Background(), `
-		SELECT l.id, l.session_id, l.scope, l.scope_path, l.content, l.confidence, l.source, l.created_at, l.last_used, l.use_count
+	// Build authority filter
+	authVals := AuthoritativeValuesStrings()
+	authPlaceholders := SQLPlaceholders(len(authVals))
+
+	query := `
+		SELECT l.id, l.session_id, l.scope, l.scope_path, l.content, l.confidence, l.source, l.authority, l.promoted_from_proposal_id, l.created_at, l.last_used, l.use_count
 		FROM learnings l
 		JOIN decision_learnings dl ON l.id = dl.learning_id
-		WHERE dl.decision_id = ?
+		WHERE dl.decision_id = ? AND l.authority IN (` + authPlaceholders + `)
 		ORDER BY l.confidence DESC
-	`, decisionID)
+	`
+	args := []interface{}{decisionID}
+	for _, v := range authVals {
+		args = append(args, v)
+	}
+
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query learnings for decision: %w", err)
 	}
@@ -418,7 +481,7 @@ func (m *Memory) GetLearningsForDecision(decisionID string) ([]Learning, error) 
 	for rows.Next() {
 		var l Learning
 		var createdAt, lastUsed string
-		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &createdAt, &lastUsed, &l.UseCount); err != nil {
+		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &l.Authority, &l.PromotedFromProposalID, &createdAt, &lastUsed, &l.UseCount); err != nil {
 			return nil, fmt.Errorf("scan learning: %w", err)
 		}
 		l.CreatedAt = parseTimeOrZero(createdAt)
@@ -432,14 +495,25 @@ func (m *Memory) GetLearningsForDecision(decisionID string) ([]Learning, error) 
 }
 
 // GetDecisionsForLearning returns decisions linked to a learning.
+// Only returns authoritative records.
 func (m *Memory) GetDecisionsForLearning(learningID string) ([]Decision, error) {
-	rows, err := m.db.QueryContext(context.Background(), `
-		SELECT d.id, d.content, d.rationale, d.context, d.status, d.outcome, d.outcome_note, d.outcome_at, d.scope, d.scope_path, d.session_id, d.source, d.created_at, d.updated_at
+	// Build authority filter
+	authVals := AuthoritativeValuesStrings()
+	authPlaceholders := SQLPlaceholders(len(authVals))
+
+	query := `
+		SELECT d.id, d.content, d.rationale, d.context, d.status, d.outcome, d.outcome_note, d.outcome_at, d.scope, d.scope_path, d.session_id, d.source, d.authority, d.promoted_from_proposal_id, d.created_at, d.updated_at
 		FROM decisions d
 		JOIN decision_learnings dl ON d.id = dl.decision_id
-		WHERE dl.learning_id = ?
+		WHERE dl.learning_id = ? AND d.authority IN (` + authPlaceholders + `)
 		ORDER BY d.created_at DESC
-	`, learningID)
+	`
+	args := []interface{}{learningID}
+	for _, v := range authVals {
+		args = append(args, v)
+	}
+
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query decisions for learning: %w", err)
 	}
@@ -449,7 +523,7 @@ func (m *Memory) GetDecisionsForLearning(learningID string) ([]Decision, error) 
 	for rows.Next() {
 		var d Decision
 		var createdAt, updatedAt, outcomeAt string
-		if err := rows.Scan(&d.ID, &d.Content, &d.Rationale, &d.Context, &d.Status, &d.Outcome, &d.OutcomeNote, &outcomeAt, &d.Scope, &d.ScopePath, &d.SessionID, &d.Source, &createdAt, &updatedAt); err != nil {
+		if err := rows.Scan(&d.ID, &d.Content, &d.Rationale, &d.Context, &d.Status, &d.Outcome, &d.OutcomeNote, &outcomeAt, &d.Scope, &d.ScopePath, &d.SessionID, &d.Source, &d.Authority, &d.PromotedFromProposalID, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
 		d.CreatedAt = parseTimeOrZero(createdAt)
