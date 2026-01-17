@@ -390,7 +390,7 @@
     "@types/chai": "^5.2.3",
     "@types/cytoscape": "^3.31.0",
     "@types/d3": "^7.4.3",
-    "@types/minimatch": "^5.1.2",
+    "@types/minimatch": "^6.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.0.6",
     "@types/sinon": "^21.0.0",
