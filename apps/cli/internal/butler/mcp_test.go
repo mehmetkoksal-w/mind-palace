@@ -257,7 +257,7 @@ func TestMCPToolHandlersMemory(t *testing.T) {
 
 	resp := server.toolSessionStart(1, map[string]interface{}{"agentType": "cli", "goal": "test"})
 	text := toolText(t, resp)
-	sessionID := extractBetween(text, "`", "`")
+	sessionID := extractBetween(text, "`")
 	if sessionID == "" {
 		t.Fatalf("session ID missing from output: %s", text)
 	}
@@ -331,13 +331,13 @@ func TestSanitizePath(t *testing.T) {
 	}
 }
 
-func extractBetween(s, start, end string) string {
+func extractBetween(s, start string) string {
 	startIdx := strings.Index(s, start)
 	if startIdx == -1 {
 		return ""
 	}
 	startIdx += len(start)
-	endIdx := strings.Index(s[startIdx:], end)
+	endIdx := strings.Index(s[startIdx:], start)
 	if endIdx == -1 {
 		return ""
 	}
@@ -415,7 +415,7 @@ func TestMCPToolHandlersLinks(t *testing.T) {
 		"as":      "idea",
 	})
 	text := toolText(t, resp)
-	ideaID := extractBetween(text, "**ID:** `", "`")
+	ideaID := extractBetween(text, "**ID:** `")
 	if ideaID == "" {
 		t.Skipf("Could not extract idea ID from: %s", text)
 	}
@@ -429,7 +429,7 @@ func TestMCPToolHandlersLinks(t *testing.T) {
 	if text := toolText(t, resp); !strings.Contains(text, "Link Created") {
 		t.Fatalf("toolRecallLink output unexpected: %s", text)
 	}
-	linkID := extractBetween(toolText(t, resp), "**ID:** `", "`")
+	linkID := extractBetween(toolText(t, resp), "**ID:** `")
 
 	// toolRecallLinks
 	resp = server.toolRecallLinks(3, map[string]interface{}{
@@ -877,7 +877,7 @@ func TestMCPApproveRejectHumanMode(t *testing.T) {
 	}
 
 	// Get the proposal ID
-	proposalID := extractBetween(text, "**ID:** `", "`")
+	proposalID := extractBetween(text, "**ID:** `")
 	if proposalID == "" {
 		t.Skipf("Could not extract proposal ID from: %s", text)
 	}
@@ -907,7 +907,7 @@ func TestMCPApproveRejectHumanMode(t *testing.T) {
 		"as":      "decision",
 	})
 	text = toolText(t, resp)
-	proposalID2 := extractBetween(text, "**ID:** `", "`")
+	proposalID2 := extractBetween(text, "**ID:** `")
 	if proposalID2 == "" {
 		t.Skipf("Could not extract second proposal ID")
 	}

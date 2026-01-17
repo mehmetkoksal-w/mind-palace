@@ -754,8 +754,10 @@ func (s *MCPServer) toolRecallLearningsByStatus(id any, args map[string]interfac
 	}
 
 	var output strings.Builder
-	statusTitle := strings.Title(status)
-	output.WriteString(fmt.Sprintf("# %s Learnings\n\n", statusTitle))
+	if status != "" {
+		status = strings.ToUpper(status[:1]) + status[1:]
+	}
+	output.WriteString(fmt.Sprintf("# %s Learnings\n\n", status))
 	fmt.Fprintf(&output, "Found %d learnings with status '%s'\n\n", len(learnings), status)
 
 	for i := range learnings {

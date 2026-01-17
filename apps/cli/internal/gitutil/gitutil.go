@@ -10,14 +10,14 @@ import (
 
 // IsGitRepo checks if the given path is inside a git repository.
 func IsGitRepo(root string) bool {
-	cmd := exec.CommandContext(context.Background(),"git", "-C", root, "rev-parse", "--git-dir")
+	cmd := exec.CommandContext(context.Background(), "git", "-C", root, "rev-parse", "--git-dir")
 	err := cmd.Run()
 	return err == nil
 }
 
 // GetHeadCommit returns the current HEAD commit hash.
 func GetHeadCommit(root string) (string, error) {
-	cmd := exec.CommandContext(context.Background(),"git", "-C", root, "rev-parse", "HEAD")
+	cmd := exec.CommandContext(context.Background(), "git", "-C", root, "rev-parse", "HEAD")
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -27,7 +27,7 @@ func GetHeadCommit(root string) (string, error) {
 
 // IsValidCommit checks if a commit hash exists in the repository.
 func IsValidCommit(root, commit string) bool {
-	cmd := exec.CommandContext(context.Background(),"git", "-C", root, "cat-file", "-t", commit)
+	cmd := exec.CommandContext(context.Background(), "git", "-C", root, "cat-file", "-t", commit)
 	err := cmd.Run()
 	return err == nil
 }
@@ -49,7 +49,7 @@ func GetChangedFiles(root, baseCommit, headCommit string) (added, modified, dele
 	}
 
 	// Get diff between commits
-	cmd := exec.CommandContext(context.Background(),"git", "-C", root, "diff", "--name-status", baseCommit, headCommit)
+	cmd := exec.CommandContext(context.Background(), "git", "-C", root, "diff", "--name-status", baseCommit, headCommit)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, nil, nil, err
@@ -162,7 +162,7 @@ func GetChangedFilesSinceCommit(root, baseCommit string) (added, modified, delet
 // getUncommittedChanges returns files with uncommitted changes (staged + unstaged).
 func getUncommittedChanges(root string) (added, modified, deleted []string, err error) {
 	// Get status of all changed files
-	cmd := exec.CommandContext(context.Background(),"git", "-C", root, "status", "--porcelain")
+	cmd := exec.CommandContext(context.Background(), "git", "-C", root, "status", "--porcelain")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, nil, nil, err
@@ -210,7 +210,7 @@ func getUncommittedChanges(root string) (added, modified, deleted []string, err 
 
 // getAllTrackedFiles returns all files currently tracked by git.
 func getAllTrackedFiles(root string) (added, modified, deleted []string, err error) {
-	cmd := exec.CommandContext(context.Background(),"git", "-C", root, "ls-files")
+	cmd := exec.CommandContext(context.Background(), "git", "-C", root, "ls-files")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, nil, nil, err
@@ -233,7 +233,7 @@ func GetRepoRoot(path string) (string, error) {
 		return "", err
 	}
 
-	cmd := exec.CommandContext(context.Background(), "git", "-C", absPath, "rev-parse", "--show-toplevel") //nolint:gosec // absPath is sanitized by filepath.Abs
+	cmd := exec.CommandContext(context.Background(), "git", "-C", absPath, "rev-parse", "--show-toplevel")
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -244,7 +244,7 @@ func GetRepoRoot(path string) (string, error) {
 
 // IsDirtyWorkingTree checks if there are uncommitted changes.
 func IsDirtyWorkingTree(root string) bool {
-	cmd := exec.CommandContext(context.Background(),"git", "-C", root, "status", "--porcelain")
+	cmd := exec.CommandContext(context.Background(), "git", "-C", root, "status", "--porcelain")
 	out, err := cmd.Output()
 	if err != nil {
 		return false

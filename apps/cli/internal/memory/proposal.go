@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -284,9 +285,11 @@ func (m *Memory) CheckDuplicateProposal(dedupeKey string) (*Proposal, error) {
 	var p Proposal
 	var createdAt, expiresAt, reviewedAt, archivedAt string
 	err := row.Scan(&p.ID, &p.ProposedAs, &p.Content, &p.Context, &p.Rationale, &p.Scope, &p.ScopePath, &p.Source, &p.SessionID, &p.AgentType, &p.EvidenceRefs, &p.ClassificationConfidence, &p.ClassificationSignals, &p.DedupeKey, &p.Status, &p.ReviewedBy, &reviewedAt, &p.ReviewNote, &p.PromotedToID, &createdAt, &expiresAt, &archivedAt)
-	if err != nil {
-		// No duplicate found
+	if err == sql.ErrNoRows {
 		return nil, nil
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	p.CreatedAt = parseTimeOrZero(createdAt)

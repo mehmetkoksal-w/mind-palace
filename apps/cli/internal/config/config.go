@@ -187,7 +187,7 @@ func WriteTemplate(destPath, templateName string, replacements map[string]string
 	now := time.Now().UTC().Format(time.RFC3339)
 	replacements["createdAt"] = replaceZero(replacements["createdAt"], now)
 	contents := starter.Apply(tpl, replacements)
-	if err := os.WriteFile(destPath, []byte(contents), 0o644); err != nil {
+	if err := os.WriteFile(destPath, []byte(contents), 0o600); err != nil {
 		return fmt.Errorf("write %s: %w", destPath, err)
 	}
 	return nil
@@ -330,7 +330,7 @@ func CopySchemas(root string, allowOverwrite bool) error {
 				continue // already canonical
 			}
 		}
-		if err := os.WriteFile(dest, data, 0o644); err != nil {
+		if err := os.WriteFile(dest, data, 0o600); err != nil {
 			return fmt.Errorf("write %s: %w", dest, err)
 		}
 	}
@@ -346,7 +346,7 @@ func WriteJSON(path string, data any) error {
 	if err != nil {
 		return fmt.Errorf("marshal %s: %w", path, err)
 	}
-	if err := os.WriteFile(path, b, 0o644); err != nil {
+	if err := os.WriteFile(path, b, 0o600); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	return nil

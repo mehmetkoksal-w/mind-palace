@@ -558,8 +558,8 @@ func main() {}
 		t.Logf("Check before init:\n%s", output)
 	})
 
-	// Initialize
-	runPalace(t, binPath, workspace, "init", "--root", workspace)
+	// Initialize (skip auto-scan to test operations before scan)
+	runPalace(t, binPath, workspace, "init", "--root", workspace, "--no-scan")
 
 	// Try operations before scan
 	t.Run("operations_before_scan", func(t *testing.T) {

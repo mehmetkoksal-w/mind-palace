@@ -87,10 +87,13 @@ func Run(args []string) error {
 
 	default:
 		// Check for shorthand: palace "content" -> palace store "content"
-		if !strings.HasPrefix(args[0], "-") && looksLikeContent(args[0]) {
+		if len(args) > 0 && !strings.HasPrefix(args[0], "-") && looksLikeContent(args[0]) {
 			return cmdStore(args)
 		}
-		return fmt.Errorf("unknown command: %s\nRun 'palace help' for usage", args[0])
+		if len(args) > 0 {
+			return fmt.Errorf("unknown command: %s\nRun 'palace help' for usage", args[0])
+		}
+		return fmt.Errorf("unknown command\nRun 'palace help' for usage")
 	}
 }
 

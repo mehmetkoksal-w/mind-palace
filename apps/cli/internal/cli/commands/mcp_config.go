@@ -316,7 +316,7 @@ func installConfigForTool(target string, tool ToolInfo, palacePath, rootPath str
 func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, rootPath string) error {
 	// Read existing config if it exists
 	existingConfig := make(map[string]interface{})
-	data, err := os.ReadFile(configPath) //nolint:gosec // G304: configPath from getConfigPath uses user's home dir
+	data, err := os.ReadFile(configPath)
 	if err == nil {
 		if err := json.Unmarshal(data, &existingConfig); err != nil {
 			return fmt.Errorf("parse existing config %s: %w", configPath, err)
@@ -378,7 +378,7 @@ func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, roo
 func installTOMLConfig(configPath, palacePath, rootPath string) error {
 	// Read existing config if it exists
 	existingContent := ""
-	data, err := os.ReadFile(configPath) //nolint:gosec // G304: configPath from getConfigPath uses user's home dir
+	data, err := os.ReadFile(configPath)
 	if err == nil {
 		existingContent = string(data)
 	} else if !os.IsNotExist(err) {
@@ -490,14 +490,14 @@ func copyCursorRules(rootPath string) error {
 	}
 
 	// Read template
-	content, err := os.ReadFile(templatePath) //nolint:gosec // G304: templatePath from known locations
+	content, err := os.ReadFile(templatePath)
 	if err != nil {
 		return fmt.Errorf("read .cursorrules template: %w", err)
 	}
 
 	// Write to target
 	targetPath := filepath.Join(rootPath, ".cursorrules")
-	if err := os.WriteFile(targetPath, content, 0o644); err != nil {
+	if err := os.WriteFile(targetPath, content, 0o600); err != nil {
 		return fmt.Errorf("write .cursorrules: %w", err)
 	}
 

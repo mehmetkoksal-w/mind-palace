@@ -376,5 +376,5 @@ func writeMonorepoRoom(path string, room MonorepoRoom) error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }

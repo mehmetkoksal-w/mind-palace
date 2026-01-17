@@ -335,7 +335,11 @@ func storeCallRelationships(db *sql.DB, rootPath string, calls []analysis.CallIn
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
 
 	// First, delete existing LSP-extracted calls to avoid duplicates
 	_, err = tx.ExecContext(context.Background(), "DELETE FROM relationships WHERE kind = 'call' AND source_file LIKE '%.dart'")

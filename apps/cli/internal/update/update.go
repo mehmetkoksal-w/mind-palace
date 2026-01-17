@@ -273,7 +273,7 @@ func extractFromTarGz(archivePath, binaryName string) (string, error) {
 				return "", err
 			}
 
-			if err := os.Chmod(tmpFile.Name(), 0o755); err != nil { //nolint:gosec // G302: executable requires 0755 permissions
+			if err := os.Chmod(tmpFile.Name(), 0o755); err != nil {
 				tmpFile.Close()
 				os.Remove(tmpFile.Name())
 				return "", err
@@ -321,7 +321,7 @@ func extractZipFile(f *zip.File) (string, error) {
 		return "", err
 	}
 
-	if err := os.Chmod(tmpFile.Name(), 0o755); err != nil { //nolint:gosec // G302: executable requires 0755 permissions
+	if err := os.Chmod(tmpFile.Name(), 0o755); err != nil {
 		os.Remove(tmpFile.Name())
 		return "", err
 	}
@@ -424,7 +424,7 @@ func replaceExecutable(currentPath, newPath string) error {
 		}
 	}()
 
-	destFile, err := os.OpenFile(currentPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755) //nolint:gosec // G302: executable requires 0755 permissions
+	destFile, err := os.OpenFile(currentPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
 	if err != nil {
 		os.Rename(backupPath, currentPath)
 		return err
@@ -483,7 +483,7 @@ func saveCache(path string, entry cacheEntry) {
 		return
 	}
 
-	os.WriteFile(path, data, 0o644)
+	os.WriteFile(path, data, 0o600)
 }
 
 func compareVersions(a, b string) int {

@@ -95,7 +95,7 @@ func NewDartLSPClient(rootPath string) (*DartLSPClient, error) {
 	cmdArgs := []string{"language-server", "--client-id=mind-palace", "--client-version=1.0.0"}
 	logger.Debug("Starting Dart LSP: %s %s", dartPath, strings.Join(cmdArgs, " "))
 
-	cmd := exec.CommandContext(ctx, dartPath, cmdArgs...) //nolint:gosec // G204: dartPath comes from exec.LookPath which is trusted
+	cmd := exec.CommandContext(ctx, dartPath, cmdArgs...)
 	cmd.Dir = rootPath
 
 	stdin, err := cmd.StdinPipe()
