@@ -392,7 +392,7 @@
     "@types/d3": "^7.4.3",
     "@types/minimatch": "^5.1.2",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^25.0.3",
+    "@types/node": "^25.0.6",
     "@types/sinon": "^21.0.0",
     "@types/vscode": "^1.80.0",
     "@vscode/test-electron": "^2.4.1",
