@@ -218,7 +218,7 @@ func cmdMCPConfig(args []string) error {
 
 // cmdUpdate delegates to commands.RunUpdate
 func cmdUpdate(args []string) error {
-	commands.BuildVersion = buildVersion
+	commands.BuildVersion = GetVersion()
 	return commands.RunUpdate(args)
 }
 
@@ -271,7 +271,7 @@ func checkForUpdates(args []string) {
 		return
 	}
 
-	result, err := update.CheckCached(buildVersion, cacheDir)
+	result, err := update.CheckCached(GetVersion(), cacheDir)
 	if err != nil {
 		return
 	}
