@@ -26,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install & Build
         working-directory: apps/dashboard
@@ -79,12 +79,12 @@ jobs:
           DASH_VER=$(jq -r '.version' apps/dashboard/package.json)
           VSCODE_VER=$(jq -r '.version' apps/vscode/package.json)
           DOCS_VER=$(jq -r '.version' apps/docs/package.json)
-          
+
           echo "Root VERSION: $ROOT_VER"
           echo "Dashboard: $DASH_VER"
           echo "VS Code: $VSCODE_VER"
           echo "Docs: $DOCS_VER"
-          
+
           if [ "$ROOT_VER" != "$DASH_VER" ] || [ "$ROOT_VER" != "$VSCODE_VER" ] || [ "$ROOT_VER" != "$DOCS_VER" ]; then
             echo "[ERROR] Version mismatch detected!"
             exit 1
@@ -114,7 +114,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install & Build
         working-directory: apps/vscode
@@ -129,7 +129,7 @@ jobs:
           # Install xvfb for headless VS Code testing
           sudo apt-get update
           sudo apt-get install -y xvfb
-          
+
           # Run tests in virtual framebuffer
           xvfb-run -a npm test
 
@@ -195,7 +195,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Build Docs
         working-directory: apps/docs
@@ -233,7 +233,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Build Dashboard
         run: |
@@ -267,7 +267,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Build Extension
         run: |
@@ -357,7 +357,7 @@ jobs:
           if [ "${{ matrix.installer }}" = "msi" ]; then
             BINARY_NAME="palace.exe"
           fi
-          go build -ldflags="-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" \
+          go build -ldflags="-s -w -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildVersion=$VERSION -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildCommit=$COMMIT -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildDate=$DATE" \
             -o "$BINARY_NAME" ./apps/cli
           echo "Built: $BINARY_NAME"
 
@@ -388,7 +388,7 @@ jobs:
             "$VERSION" \
             "${{ matrix.goarch }}" \
             "palace-${{ matrix.platform }}.deb"
-          
+
           # Also create tar.gz for users who prefer it
           tar -czvf "palace-${{ matrix.platform }}.tar.gz" palace
 
