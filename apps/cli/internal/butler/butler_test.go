@@ -618,7 +618,7 @@ func TestButlerIntegrated(t *testing.T) {
 	})
 
 	t.Run("Learnings", func(t *testing.T) {
-		id, err := b.AddLearning(memory.Learning{Content: "Go is fast", Scope: "lang"})
+		id, err := b.AddLearning(memory.Learning{Content: "Go is fast", Scope: "lang", Authority: "legacy_approved"})
 		if err != nil {
 			t.Fatalf("AddLearning failed: %v", err)
 		}
@@ -799,8 +799,8 @@ func TestGetRelevantLearnings(t *testing.T) {
 
 	b := &Butler{memory: mem}
 
-	// Add a learning
-	mem.AddLearning(memory.Learning{Content: "testing is important", Scope: "file", ScopePath: "test.go"})
+	// Add a learning (with legacy_approved authority to simulate pre-governance data)
+	mem.AddLearning(memory.Learning{Content: "testing is important", Scope: "file", ScopePath: "test.go", Authority: "legacy_approved"})
 
 	learnings, err := b.GetRelevantLearnings("test.go", "", 10)
 	if err != nil {
@@ -860,7 +860,7 @@ func TestBrainMethods(t *testing.T) {
 	})
 
 	t.Run("AddDecision", func(t *testing.T) {
-		id, err := b.AddDecision(memory.Decision{Content: "test decision", Status: "active"})
+		id, err := b.AddDecision(memory.Decision{Content: "test decision", Status: "active", Authority: "legacy_approved"})
 		if err != nil {
 			t.Fatalf("AddDecision() error = %v", err)
 		}
@@ -890,7 +890,7 @@ func TestBrainMethods(t *testing.T) {
 	})
 
 	t.Run("RecordDecisionOutcome", func(t *testing.T) {
-		id, _ := b.AddDecision(memory.Decision{Content: "outcome decision", Status: "active"})
+		id, _ := b.AddDecision(memory.Decision{Content: "outcome decision", Status: "active", Authority: "legacy_approved"})
 		err := b.RecordDecisionOutcome(id, "successful", "it worked")
 		if err != nil {
 			t.Fatalf("RecordDecisionOutcome() error = %v", err)
@@ -1217,13 +1217,13 @@ func TestGetEnhancedContextComprehensive(t *testing.T) {
 		memory:      mem,
 	}
 
-	// Create test data for enhanced context
+	// Create test data for enhanced context (with legacy_approved authority)
 	// Add an idea
 	ideaID, _ := b.AddIdea(memory.Idea{Content: "auth implementation idea"})
 	// Add a decision
-	decisionID, _ := b.AddDecision(memory.Decision{Content: "use JWT for auth", Status: "active"})
+	decisionID, _ := b.AddDecision(memory.Decision{Content: "use JWT for auth", Status: "active", Authority: "legacy_approved"})
 	// Add a learning
-	_, _ = b.AddLearning(memory.Learning{Content: "JWT requires secret rotation"})
+	_, _ = b.AddLearning(memory.Learning{Content: "JWT requires secret rotation", Authority: "legacy_approved"})
 	// Add a link between idea and decision
 	_, _ = b.AddLink(memory.Link{
 		SourceID:   ideaID,

@@ -29,6 +29,7 @@ type InitOptions struct {
 	Force       bool
 	WithOutputs bool
 	SkipDetect  bool
+	NoScan      bool // Skip automatic scan after init
 }
 
 // RunInit initializes a new Mind Palace in the specified directory.
@@ -38,6 +39,7 @@ func RunInit(args []string) error {
 	force := flags.AddForceFlag(fs)
 	withOutputs := fs.Bool("with-outputs", false, "also create generated outputs (context-pack)")
 	skipDetect := fs.Bool("skip-detect", false, "skip auto-detection of project type")
+	noScan := fs.Bool("no-scan", false, "skip automatic scan after init (not recommended)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -47,6 +49,7 @@ func RunInit(args []string) error {
 		Force:       *force,
 		WithOutputs: *withOutputs,
 		SkipDetect:  *skipDetect,
+		NoScan:      *noScan,
 	}
 
 	return ExecuteInit(opts)
@@ -135,6 +138,38 @@ func ExecuteInit(opts InitOptions) error {
 	}
 
 	fmt.Printf("initialized palace in %s\n", filepath.Join(rootPath, ".palace"))
+
+	// Auto-scan unless explicitly disabled
+	if !opts.NoScan {
+		fmt.Printf("\nbuilding code index...\n")
+		scanErr := ExecuteScan(ScanOptions{
+			Root:    rootPath,
+			Verbose: false,
+		})
+
+		if scanErr != nil {
+			// Scan failed - provide helpful guidance based on error type
+			fmt.Fprintf(os.Stderr, "\n⚠️  Warning: Initial scan failed: %v\n", scanErr)
+			fmt.Fprintf(os.Stderr, "\nPossible causes:\n")
+			fmt.Fprintf(os.Stderr, "  • Very large workspace (>100k files) - scanning may take a while\n")
+			fmt.Fprintf(os.Stderr, "  • Complex/unconventional project structure\n")
+			fmt.Fprintf(os.Stderr, "  • Insufficient disk space or permissions\n")
+			fmt.Fprintf(os.Stderr, "  • Unsupported language/framework for deep analysis\n")
+			fmt.Fprintf(os.Stderr, "\nYou can:\n")
+			fmt.Fprintf(os.Stderr, "  1. Run 'palace scan --verbose' to see detailed progress\n")
+			fmt.Fprintf(os.Stderr, "  2. Check .palace/guardrails.jsonc to exclude problematic directories\n")
+			fmt.Fprintf(os.Stderr, "  3. Use Mind Palace without index (limited functionality)\n")
+			fmt.Fprintf(os.Stderr, "\nMind Palace will still work for knowledge storage (store, recall, sessions),\n")
+			fmt.Fprintf(os.Stderr, "but codebase exploration features (explore, symbols) won't be available.\n")
+
+			// Don't fail init if scan fails - allow partial functionality
+			// Return nil so user can still use Mind Palace for non-index features
+			return nil
+		}
+
+		fmt.Printf("✓ Code index built successfully\n")
+	}
+
 	return nil
 }
 
@@ -341,5 +376,5 @@ func writeMonorepoRoom(path string, room MonorepoRoom) error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }

@@ -1,0 +1,465 @@
+---
+title: Autonomous Agent Guide
+description: Complete guide for AI agents to use Mind Palace autonomously
+---
+
+# Autonomous Agent Guide
+
+Mind Palace is designed for **deterministic, autonomous agent workflows**. This guide shows AI agents how to use Mind Palace automatically without manual intervention.
+
+## Philosophy: Why Mind Palace for Agents?
+
+Modern AI agents work across large codebases without your institutional memory. Mind Palace provides:
+
+1. **Session Management**: Coordinate multiple agents, prevent conflicts
+2. **Deterministic Context**: No embeddings required - schema-validated, queryable knowledge
+3. **File Intelligence**: Know what breaks, what's hot, what decisions apply to each file
+4. **Failure Memory**: Learn from past mistakes automatically
+5. **Autonomous Workflows**: Agents know WHEN to use tools via priority system
+
+## Quick Start: 3-Step Autonomous Workflow
+
+Every agent task follows this pattern:
+
+```typescript
+// 1. Start session & get briefing
+await session_start({agent_name: "cursor", task: "Add authentication"})
+const context = await brief()  // Get workspace overview
+
+// 2. Get file context before editing
+const fileContext = await context_auto_inject({file_path: "auth/jwt.ts"})
+// fileContext includes: learnings, decisions, failures, hotspots
+
+// 3. End session when done
+await session_end({outcome: "success", summary: "Added JWT refresh tokens"})
+```
+
+That's it. This prevents 90% of common agent mistakes.
+
+## Priority System
+
+All 64 Mind Palace tools have priority indicators:
+
+- 🔴 **CRITICAL**: Must do these (session_start, brief, context_auto_inject, session_end)
+- 🟡 **IMPORTANT**: Should do these (store, session_log, session_conflict)
+- 🟢 **RECOMMENDED**: Optional but valuable (recall, explore, postmortems)
+- ⚪ **ADMIN**: Human-mode only (approve, reject, store_direct)
+
+Agents should **always** execute CRITICAL tools, **usually** execute IMPORTANT tools, and **conditionally** use RECOMMENDED tools.
+
+## Complete Autonomous Workflow
+
+Here's a full example for adding a feature:
+
+### 1. Session Start (🔴 CRITICAL)
+
+```typescript
+await session_start({
+  agent_name: "cursor",
+  task: "Add JWT refresh token support",
+  metadata: {user: "developer@example.com"}
+})
+```
+
+**Why:** Tracks your work, prevents conflicts, enables session analysis.
+
+### 2. Get Briefing (🔴 CRITICAL - CALL SECOND)
+
+```typescript
+const briefing = await brief()
+```
+
+**Returns:**
+- Active agents and their current work
+- Session conflicts (files being edited by others)
+- Workspace learnings and decisions
+- Hotspot files (frequently modified, high failure rate)
+- Recent failures and postmortems
+
+**Why:** You need workspace context before starting work. Working without a briefing is like coding blindfolded.
+
+### 3. Explore Codebase (🟢 RECOMMENDED)
+
+```typescript
+// Find relevant code
+const results = await explore({intent: "jwt authentication"})
+
+// Get room context
+const rooms = await explore_rooms()  // ["api", "auth", "database"]
+const authContext = await explore_context({room: "auth"})
+
+// Understand dependencies
+const impact = await explore_impact({path: "auth/jwt.ts"})
+const callers = await explore_callers({
+  symbol: "validateToken",
+  file: "auth/jwt.ts"
+})
+```
+
+**Why:** Understand codebase structure before making changes.
+
+### 4. Recall Existing Knowledge (🟢 RECOMMENDED)
+
+```typescript
+// Check for related learnings
+const learnings = await recall({query: "jwt authentication"})
+
+// Check for active decisions
+const decisions = await recall_decisions({
+  query: "token validation",
+  status: "active"
+})
+
+// Learn from past failures
+const postmortems = await get_postmortems({severity: "high"})
+```
+
+**Why:** Avoid repeating past mistakes. Leverage existing knowledge.
+
+### 5. Get File Context (🔴 CRITICAL - BEFORE EVERY EDIT)
+
+```typescript
+const context = await context_auto_inject({file_path: "auth/jwt.ts"})
+```
+
+**Returns prioritized context:**
+- File-scoped learnings ("never use X in this file")
+- File-scoped decisions ("this file must use Y pattern")  
+- Failure warnings ("this breaks 40% of the time")
+- Edit history (who changed it, when, why)
+- Related learnings from room/palace scopes
+
+**Why:** This is non-negotiable. Editing without file context is like performing surgery without reading the patient's chart.
+
+### 6. Check for Conflicts (🟡 IMPORTANT)
+
+```typescript
+const conflict = await session_conflict({path: "auth/jwt.ts"})
+if (conflict.has_conflict) {
+  console.log(`${conflict.agent_name} is already editing this file`)
+  // Coordinate or wait
+}
+```
+
+**Why:** Prevents merge conflicts and wasted work.
+
+### 7. Make Changes
+
+Now you have full context. Edit the file safely.
+
+### 8. Log Activity (🟡 IMPORTANT)
+
+```typescript
+await session_log({
+  activity: "file_edit",
+  path: "auth/jwt.ts",
+  description: "Added refresh token validation logic"
+})
+```
+
+**Why:** Creates audit trail. Enables session analysis.
+
+### 9. Store Knowledge (🟡 IMPORTANT)
+
+```typescript
+// Store learnings
+await store({
+  content: "JWT refresh tokens should expire in 7 days, access tokens in 1 hour",
+  as: "decision",
+  scope: "room",
+  scopePath: "auth",
+  rationale: "Balance security (short access tokens) with UX (longer refresh)"
+})
+
+// Store learnings from solving problems
+await store({
+  content: "JWT signature validation must happen before expiration check to prevent timing attacks",
+  as: "learning",
+  scope: "file",
+  scopePath: "auth/jwt.ts"
+})
+```
+
+**Why:** Builds institutional knowledge. Future agents (or you) can recall this.
+
+### 10. End Session (🔴 CRITICAL)
+
+```typescript
+await session_end({
+  outcome: "success",
+  summary: "Added JWT refresh token support with proper validation and expiration handling"
+})
+```
+
+**Why:** Releases locks, marks task complete, enables session analysis.
+
+## Failure Handling: Postmortems
+
+When things go wrong, create a postmortem:
+
+```typescript
+await store_postmortem({
+  title: "JWT signature bypass vulnerability",
+  what_happened: "Expired tokens were accepted due to wrong validation order",
+  root_cause: "Checked expiration before signature, allowing signature replay attacks",
+  lessons_learned: [
+    "Always validate signature first",
+    "Add integration tests for expired tokens",
+    "Review security checklist before auth changes"
+  ],
+  prevention_steps: [
+    "Reorder validation: signature → expiration → claims",
+    "Add test: test_expired_token_rejection()",
+    "Add pre-commit hook for auth file changes"
+  ],
+  severity: "critical",
+  affected_files: ["auth/jwt.ts", "middleware/authenticate.ts"],
+  related_decision: "d_abc123"
+})
+
+// Extract learnings from postmortem
+await postmortem_to_learnings({postmortemId: "pm_xyz789"})
+```
+
+This prevents repeating the same mistake.
+
+## Scope Hierarchy
+
+Knowledge has four scope levels (most specific wins):
+
+1. **File**: `scope: "file", scopePath: "auth/jwt.ts"`
+   - "This specific file should never import from parent directories"
+
+2. **Room**: `scope: "room", scopePath: "auth"`
+   - "All auth files must use bcrypt for password hashing"
+
+3. **Palace** (workspace): `scope: "palace"`
+   - "Use TypeScript strict mode across entire project"
+
+4. **Corridor** (personal/global): Requires explicit promotion
+   - "Always validate input at API boundaries" (applies to all your projects)
+
+When storing knowledge, choose the narrowest applicable scope.
+
+## Advanced Features
+
+### Semantic Search (if embeddings configured)
+
+```typescript
+// Conceptual search - finds related concepts even without keyword match
+await search_semantic({query: "retry logic with exponential backoff"})
+
+// Hybrid: keyword + semantic (best of both)
+await search_hybrid({query: "error handling"})
+
+// Find similar records
+await search_similar({recordId: "l_abc123"})
+```
+
+### Contradiction Detection
+
+```typescript
+// Find contradicting records
+await recall_contradictions({recordId: "l_abc123"})
+
+// Check if two records contradict
+await recall_contradiction_check({
+  record1Id: "l_abc123",
+  record2Id: "d_xyz789"
+})
+```
+
+### Decay Management
+
+```typescript
+// Preview what would decay
+await decay_preview()
+
+// Apply decay (reduces confidence of unused learnings)
+// NEVER do this without preview + user approval
+await decay_apply()
+```
+
+### Learning Lifecycle
+
+```typescript
+// Link learning to decision for automatic feedback
+await recall_learning_link({
+  decisionId: "d_abc123",
+  learningId: "l_xyz789"
+})
+// Now when decision outcome is recorded, learning confidence auto-updates
+
+// Record decision outcome
+await recall_outcome({
+  decisionId: "d_abc123",
+  outcome: "success",
+  note: "Reduced DB queries by 60%, no issues in production"
+})
+
+// Mark learning as obsolete
+await recall_obsolete({
+  learningId: "l_old123",
+  reason: "Superseded by new approach using Redis caching"
+})
+```
+
+### Corridor (Cross-Workspace Knowledge)
+
+```typescript
+// Get personal learnings from all your projects
+await corridor_learnings({query: "error handling"})
+
+// Promote workspace learning to personal corridor
+await corridor_promote({learningId: "l_abc123"})
+// Now this learning follows you to every project
+
+// Reinforce corridor learning when it helps
+await corridor_reinforce({learningId: "l_corridor456"})
+```
+
+## Anti-Patterns (Don't Do This)
+
+❌ Start work without `session_start`  
+❌ Edit files without `context_auto_inject`  
+❌ Forget to call `session_end`  
+❌ Work without calling `brief` first  
+❌ Ignore `session_conflict` warnings  
+❌ Store vague learnings ("this is good" - too generic)  
+❌ Never log activities (breaks audit trail)  
+❌ Apply decay without preview + approval  
+
+## Best Practices
+
+✅ Start with `session_start`, `brief`  
+✅ Get context before every file edit  
+✅ Check conflicts before editing  
+✅ Store specific, actionable learnings  
+✅ Log major activities  
+✅ End session when done  
+✅ Learn from postmortems  
+✅ Use explore tools to understand codebase  
+✅ Check decisions before implementing  
+✅ Choose appropriate scope for knowledge  
+
+## Configuration for Agents
+
+### Claude Desktop
+
+When you run `palace mcp-config --for claude-desktop --install`, Mind Palace automatically adds `globalRules` to your config with autonomous workflow instructions.
+
+### Cursor
+
+When you run `palace mcp-config --for cursor --install`, Mind Palace automatically copies `.cursorrules` to your workspace with complete autonomous workflow guide.
+
+### Other Agents
+
+Check the [MCP Configuration](/reference/mcp-configuration) guide for your specific agent.
+
+## Tool Categories
+
+Mind Palace has 64 tools across 10 categories:
+
+1. **Explore** (12 tools): Search codebase, find symbols, analyze impact
+2. **Session** (7 tools): Session management, logging, conflict detection  
+3. **Store** (4 tools): Store ideas, decisions, learnings  
+4. **Recall** (12 tools): Retrieve knowledge, check outcomes, manage links  
+5. **Brief** (4 tools): Get briefings, file intelligence, smart analysis  
+6. **Conversation** (3 tools): Store/search conversations, extract insights  
+7. **Corridor** (5 tools): Cross-workspace personal knowledge  
+8. **Postmortem** (5 tools): Failure documentation and learning  
+9. **Learning Lifecycle** (8 tools): Decay, obsolescence, archival  
+10. **Advanced** (4 tools): Semantic search, contradiction detection, embeddings  
+
+See the [API Reference](/reference/mcp-tools) for complete tool documentation.
+
+## Example: Complete Feature Implementation
+
+```typescript
+// 1. Start & Brief
+await session_start({agent_name: "claude", task: "Add rate limiting to API"})
+const briefing = await brief()
+
+// 2. Explore
+const apiFiles = await explore_context({room: "api"})
+const rateLimitCode = await explore({intent: "rate limiting middleware"})
+
+// 3. Recall Knowledge
+const learnings = await recall({query: "rate limiting"})
+const decisions = await recall_decisions({query: "api security", status: "active"})
+const failures = await get_postmortems({severity: "high"})
+
+// 4. Get File Context
+const context = await context_auto_inject({file_path: "api/middleware/rateLimit.ts"})
+
+// 5. Check Conflicts
+await session_conflict({path: "api/middleware/rateLimit.ts"})
+
+// 6. Make Changes
+// [Edit file with full context]
+
+// 7. Log Activity
+await session_log({
+  activity: "file_edit",
+  path: "api/middleware/rateLimit.ts",
+  description: "Implemented token bucket rate limiting"
+})
+
+// 8. Store Knowledge
+await store({
+  content: "Use token bucket algorithm for API rate limiting - allows bursts while maintaining average rate",
+  as: "decision",
+  scope: "room",
+  scopePath: "api",
+  rationale: "More flexible than fixed window, prevents thundering herd"
+})
+
+await store({
+  content: "Rate limit counters should use Redis with TTL, not in-memory - enables multi-instance deployment",
+  as: "learning",
+  scope: "file",
+  scopePath: "api/middleware/rateLimit.ts"
+})
+
+// 9. End Session
+await session_end({
+  outcome: "success",
+  summary: "Implemented token bucket rate limiting with Redis backend"
+})
+```
+
+## FAQ
+
+**Q: Do I need to call session_start for every task?**  
+A: Yes. Sessions enable conflict detection, activity tracking, and session analysis.
+
+**Q: Can I skip context_auto_inject if I'm making a small change?**  
+A: No. Small changes can have big impacts. Always get file context.
+
+**Q: When should I store knowledge?**  
+A: After solving problems, making decisions, or discovering patterns. Be specific and actionable.
+
+**Q: What's the difference between learning and decision?**  
+A: Decisions are choices with rationale. Learnings are observations or patterns. Ideas are proposals.
+
+**Q: Should I use semantic search or keyword search?**  
+A: Use `explore` (keyword) first. Use `search_semantic` or `search_hybrid` for conceptual queries if embeddings are configured.
+
+**Q: How do I handle multi-agent scenarios?**  
+A: Call `brief()` to see active agents. Use `session_conflict()` before editing. Coordinate via session logs.
+
+**Q: What if I forget to call session_end?**  
+A: Session persists as "active", potentially blocking other agents. Always end sessions.
+
+**Q: Can I use Mind Palace without autonomous features?**  
+A: Yes, but you miss the point. Mind Palace is designed for autonomous agent workflows.
+
+## Next Steps
+
+1. Run `palace mcp-config --for <your-agent> --install`
+2. Read the `.cursorrules` or `globalRules` in your config  
+3. Start using the 3-step workflow: session → brief → context → work → end
+4. Store knowledge as you work
+5. Learn from postmortems
+
+See [API Reference](/reference/mcp-tools) for complete tool documentation.

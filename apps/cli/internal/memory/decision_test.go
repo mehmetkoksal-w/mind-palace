@@ -86,12 +86,12 @@ func TestGetDecisions(t *testing.T) {
 	mem, _ := Open(tmpDir)
 	defer mem.Close()
 
-	// Add multiple decisions
+	// Add multiple decisions (with legacy_approved authority to simulate pre-governance data)
 	decisions := []Decision{
-		{Content: "Decision 1", Status: DecisionStatusActive, Outcome: DecisionOutcomeUnknown},
-		{Content: "Decision 2", Status: DecisionStatusActive, Outcome: DecisionOutcomeSuccessful},
-		{Content: "Decision 3", Status: DecisionStatusSuperseded, Outcome: DecisionOutcomeUnknown},
-		{Content: "Decision 4", Status: DecisionStatusActive, Outcome: DecisionOutcomeFailed, Scope: "room", ScopePath: "api"},
+		{Content: "Decision 1", Status: DecisionStatusActive, Outcome: DecisionOutcomeUnknown, Authority: "legacy_approved"},
+		{Content: "Decision 2", Status: DecisionStatusActive, Outcome: DecisionOutcomeSuccessful, Authority: "legacy_approved"},
+		{Content: "Decision 3", Status: DecisionStatusSuperseded, Outcome: DecisionOutcomeUnknown, Authority: "legacy_approved"},
+		{Content: "Decision 4", Status: DecisionStatusActive, Outcome: DecisionOutcomeFailed, Scope: "room", ScopePath: "api", Authority: "legacy_approved"},
 	}
 	for _, dec := range decisions {
 		_, err := mem.AddDecision(dec)
@@ -140,11 +140,11 @@ func TestSearchDecisions(t *testing.T) {
 	mem, _ := Open(tmpDir)
 	defer mem.Close()
 
-	// Add decisions with different content
+	// Add decisions with different content (with legacy_approved authority)
 	decisions := []Decision{
-		{Content: "Use PostgreSQL for the database", Rationale: "ACID compliance needed"},
-		{Content: "Use Redis for caching", Rationale: "Fast in-memory store"},
-		{Content: "Implement rate limiting", Context: "API security"},
+		{Content: "Use PostgreSQL for the database", Rationale: "ACID compliance needed", Authority: "legacy_approved"},
+		{Content: "Use Redis for caching", Rationale: "Fast in-memory store", Authority: "legacy_approved"},
+		{Content: "Implement rate limiting", Context: "API security", Authority: "legacy_approved"},
 	}
 	for _, dec := range decisions {
 		mem.AddDecision(dec)
@@ -332,13 +332,13 @@ func TestGetDecisionsAwaitingReview(t *testing.T) {
 	mem, _ := Open(tmpDir)
 	defer mem.Close()
 
-	// Add a decision and manually backdate it
-	id, _ := mem.AddDecision(Decision{Content: "Old decision"})
+	// Add a decision and manually backdate it (with legacy_approved authority)
+	id, _ := mem.AddDecision(Decision{Content: "Old decision", Authority: "legacy_approved"})
 	oldDate := time.Now().AddDate(0, 0, -45).Format(time.RFC3339)
 	mem.db.ExecContext(context.Background(), "UPDATE decisions SET created_at = ? WHERE id = ?", oldDate, id)
 
-	// Add a recent decision
-	mem.AddDecision(Decision{Content: "Recent decision"})
+	// Add a recent decision (with legacy_approved authority)
+	mem.AddDecision(Decision{Content: "Recent decision", Authority: "legacy_approved"})
 
 	// Get decisions awaiting review (older than 30 days)
 	awaiting, err := mem.GetDecisionsAwaitingReview(30, 10)
@@ -363,8 +363,9 @@ func TestGetDecisionsSince(t *testing.T) {
 	cutoffTime := time.Now().UTC().Add(-1 * time.Hour)
 
 	// Add decisions (all will be after the cutoff since they use time.Now().UTC())
-	mem.AddDecision(Decision{Content: "Decision 1"})
-	mem.AddDecision(Decision{Content: "Decision 2"})
+	// Use legacy_approved authority to simulate pre-governance data
+	mem.AddDecision(Decision{Content: "Decision 1", Authority: "legacy_approved"})
+	mem.AddDecision(Decision{Content: "Decision 2", Authority: "legacy_approved"})
 
 	// Get decisions since cutoff (should find all)
 	since, err := mem.GetDecisionsSince(cutoffTime, 10)
@@ -414,10 +415,11 @@ func TestDecisionFTSIntegration(t *testing.T) {
 	mem, _ := Open(tmpDir)
 	defer mem.Close()
 
-	// Add decision
+	// Add decision (with legacy_approved authority)
 	id, _ := mem.AddDecision(Decision{
 		Content:   "Use MongoDB for the document store",
 		Rationale: "Schema flexibility needed",
+		Authority: "legacy_approved",
 	})
 
 	// Update decision (should update FTS via trigger)
@@ -481,9 +483,9 @@ func TestSearchDecisionsLikeFallback(t *testing.T) {
 	mem, _ := Open(tmpDir)
 	defer mem.Close()
 
-	// Add decisions
-	mem.AddDecision(Decision{Content: "Use PostgreSQL for database", Rationale: "ACID compliance needed"})
-	mem.AddDecision(Decision{Content: "Implement caching with Redis", Context: "Performance improvement"})
+	// Add decisions (with legacy_approved authority)
+	mem.AddDecision(Decision{Content: "Use PostgreSQL for database", Rationale: "ACID compliance needed", Authority: "legacy_approved"})
+	mem.AddDecision(Decision{Content: "Implement caching with Redis", Context: "Performance improvement", Authority: "legacy_approved"})
 
 	// Test the searchDecisionsLike function directly
 	results, err := mem.searchDecisionsLike("PostgreSQL", 10)
@@ -519,12 +521,12 @@ func TestGetSchemaVersion(t *testing.T) {
 	mem, _ := Open(tmpDir)
 	defer mem.Close()
 
-	// After opening, schema version should be 3 (v0, v1, v2, and v3 for postmortems)
+	// After opening, schema version should be 7 (v0-v6 + v7 for authoritative views)
 	version, err := mem.GetSchemaVersion()
 	if err != nil {
 		t.Fatalf("GetSchemaVersion failed: %v", err)
 	}
-	if version != 3 {
-		t.Errorf("Expected schema version 3, got %d", version)
+	if version != 7 {
+		t.Errorf("Expected schema version 7, got %d", version)
 	}
 }

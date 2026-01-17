@@ -123,6 +123,33 @@ func (s *MCPServer) toolSessionEnd(id any, args map[string]interface{}) jsonRPCR
 
 // toolRecall retrieves learnings, optionally filtered by scope or search query.
 func (s *MCPServer) toolRecall(id any, args map[string]interface{}) jsonRPCResponse {
+	// Support direct lookup by ID for route fetch_ref compatibility
+	if idArg, ok := args["id"].(string); ok && idArg != "" {
+		l, err := s.butler.memory.GetLearning(idArg)
+		if err != nil {
+			return s.toolError(id, fmt.Sprintf("get learning failed: %v", err))
+		}
+
+		var output strings.Builder
+		scopeInfo := l.Scope
+		if l.ScopePath != "" {
+			scopeInfo = fmt.Sprintf("%s:%s", l.Scope, l.ScopePath)
+		}
+		fmt.Fprintf(&output, "# Learning `%s`\n\n", l.ID)
+		fmt.Fprintf(&output, "- **Scope:** %s\n", scopeInfo)
+		fmt.Fprintf(&output, "- **Confidence:** %.0f%%\n", l.Confidence*100)
+		fmt.Fprintf(&output, "- **Source:** %s | Used: %d times\n", l.Source, l.UseCount)
+		fmt.Fprintf(&output, "- **Content:** %s\n", l.Content)
+
+		return jsonRPCResponse{
+			JSONRPC: "2.0",
+			ID:      id,
+			Result: mcpToolResult{
+				Content: []mcpContent{{Type: "text", Text: output.String()}},
+			},
+		}
+	}
+
 	query, _ := args["query"].(string)
 	scope, _ := args["scope"].(string)
 	scopePath, _ := args["scopePath"].(string)

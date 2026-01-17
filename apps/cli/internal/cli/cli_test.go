@@ -804,8 +804,8 @@ func TestCmdSessionLifecycle(t *testing.T) {
 
 func TestCmdStoreRecallBrief(t *testing.T) {
 	root := t.TempDir()
-	// Force as learning since auto-classification might not detect this as a learning
-	if err := cmdStore([]string{"--root", root, "--scope", "file", "--path", "src/main.go", "--confidence", "0.7", "--as", "learning", "Remember to test"}); err != nil {
+	// Force as learning with --direct since auto-classification might not detect this as a learning
+	if err := cmdStore([]string{"--root", root, "--scope", "file", "--path", "src/main.go", "--confidence", "0.7", "--as", "learning", "--direct", "Remember to test"}); err != nil {
 		t.Fatalf("cmdStore() error: %v", err)
 	}
 	if err := cmdRecall([]string{"--root", root, "--scope", "file", "--path", "src/main.go"}); err != nil {

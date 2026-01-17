@@ -316,7 +316,7 @@ func installConfigForTool(target string, tool ToolInfo, palacePath, rootPath str
 func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, rootPath string) error {
 	// Read existing config if it exists
 	existingConfig := make(map[string]interface{})
-	data, err := os.ReadFile(configPath) //nolint:gosec // G304: configPath from getConfigPath uses user's home dir
+	data, err := os.ReadFile(configPath)
 	if err == nil {
 		if err := json.Unmarshal(data, &existingConfig); err != nil {
 			return fmt.Errorf("parse existing config %s: %w", configPath, err)
@@ -342,6 +342,11 @@ func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, roo
 	}
 	existingConfig[tool.ConfigKey] = existingServers
 
+	// Add globalRules for Claude Desktop to enable autonomous behavior
+	if target == "claude-desktop" {
+		addClaudeGlobalRules(&existingConfig)
+	}
+
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(configPath), 0o700); err != nil {
 		return fmt.Errorf("create config directory: %w", err)
@@ -358,6 +363,14 @@ func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, roo
 	}
 
 	fmt.Fprintf(os.Stderr, "Installed mind-palace MCP server to %s\n", configPath)
+
+	// Copy .cursorrules to rootPath for Cursor
+	if target == "cursor" {
+		if err := copyCursorRules(rootPath); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to copy .cursorrules: %v\n", err)
+		}
+	}
+
 	return nil
 }
 
@@ -365,7 +378,7 @@ func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, roo
 func installTOMLConfig(configPath, palacePath, rootPath string) error {
 	// Read existing config if it exists
 	existingContent := ""
-	data, err := os.ReadFile(configPath) //nolint:gosec // G304: configPath from getConfigPath uses user's home dir
+	data, err := os.ReadFile(configPath)
 	if err == nil {
 		existingContent = string(data)
 	} else if !os.IsNotExist(err) {
@@ -408,6 +421,87 @@ func installTOMLConfig(configPath, palacePath, rootPath string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "Installed mind-palace MCP server to %s\n", configPath)
+	return nil
+}
+
+// addClaudeGlobalRules adds autonomous agent instructions to Claude Desktop config.
+func addClaudeGlobalRules(config *map[string]interface{}) {
+	globalRules := []string{
+		"# Mind Palace Autonomous Workflow",
+		"",
+		"## Critical Session Management:",
+		"1. ALWAYS start with: session_start({agent_name: 'claude', task: 'description'})",
+		"2. IMMEDIATELY call brief() to get workspace context",
+		"3. MUST call context_auto_inject({file_path: 'path'}) before editing ANY file",
+		"4. MUST call session_end({outcome: 'success|failed', summary: '...'}) when done",
+		"",
+		"## Required Before Editing:",
+		"- context_auto_inject() provides file-specific learnings, decisions, and failure warnings",
+		"- session_conflict() checks if another agent is working on the file",
+		"- Never edit without these safety checks",
+		"",
+		"## Store Knowledge:",
+		"- After solving problems: store({content: '...', as: 'learning'})",
+		"- After making decisions: store({content: '...', as: 'decision', rationale: '...'})",
+		"- After failures: store_postmortem({title: '...', what_happened: '...', root_cause: '...'})",
+		"",
+		"## Exploration:",
+		"- explore({intent: 'description'}) - find relevant code",
+		"- recall({query: 'topic'}) - search learnings",
+		"- recall_decisions({query: 'topic'}) - search decisions",
+		"",
+		"Priority Indicators:",
+		"🔴 CRITICAL: Must do (session_start, brief, context_auto_inject, session_end)",
+		"🟡 IMPORTANT: Should do (store, session_log, session_conflict)",
+		"🟢 RECOMMENDED: Optional but valuable (recall, explore)",
+		"",
+		"See .cursorrules in workspace for complete workflow guide.",
+	}
+
+	(*config)["globalRules"] = globalRules
+}
+
+// copyCursorRules copies the .cursorrules template to the target workspace.
+func copyCursorRules(rootPath string) error {
+	// Find the .cursorrules template in starter directory
+	// Try to find it relative to the palace binary
+	palacePath, err := findPalaceBinary()
+	if err != nil {
+		return err
+	}
+
+	binDir := filepath.Dir(palacePath)
+	templatePath := filepath.Join(binDir, "..", "starter", ".cursorrules")
+
+	// Check if template exists
+	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+		// Try alternative location (when running from source)
+		execPath, err := os.Executable()
+		if err != nil {
+			return fmt.Errorf("locate executable: %w", err)
+		}
+		projectRoot := filepath.Join(filepath.Dir(execPath), "..", "..", "..")
+		templatePath = filepath.Join(projectRoot, "apps", "cli", "starter", ".cursorrules")
+
+		if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+			// Return nil - not an error if template doesn't exist
+			return nil
+		}
+	}
+
+	// Read template
+	content, err := os.ReadFile(templatePath)
+	if err != nil {
+		return fmt.Errorf("read .cursorrules template: %w", err)
+	}
+
+	// Write to target
+	targetPath := filepath.Join(rootPath, ".cursorrules")
+	if err := os.WriteFile(targetPath, content, 0o600); err != nil {
+		return fmt.Errorf("write .cursorrules: %w", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "Copied .cursorrules to %s\n", targetPath)
 	return nil
 }
 

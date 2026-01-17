@@ -257,7 +257,7 @@ func TestMCPToolHandlersMemory(t *testing.T) {
 
 	resp := server.toolSessionStart(1, map[string]interface{}{"agentType": "cli", "goal": "test"})
 	text := toolText(t, resp)
-	sessionID := extractBetween(text, "`", "`")
+	sessionID := extractBetween(text, "**Session ID:** `", "`")
 	if sessionID == "" {
 		t.Fatalf("session ID missing from output: %s", text)
 	}
@@ -283,7 +283,8 @@ func TestMCPToolHandlersMemory(t *testing.T) {
 		"scope":   "palace",
 		"as":      "learning",
 	})
-	if text := toolText(t, resp); !strings.Contains(text, "Remembered") {
+	// Phase 2: Learnings go through proposal workflow
+	if text := toolText(t, resp); !strings.Contains(text, "Proposal Created") {
 		t.Fatalf("store learning output unexpected: %s", text)
 	}
 
@@ -379,14 +380,14 @@ func TestMCPToolHandlersBrain(t *testing.T) {
 		t.Fatalf("toolStore idea output unexpected: %s", text)
 	}
 
-	// toolStore - stores a decision
+	// toolStore - stores a decision (Phase 2: goes through proposal workflow)
 	resp = server.toolStore(2, map[string]interface{}{
 		"content":   "Test decision content",
 		"as":        "decision",
 		"status":    "active",
 		"rationale": "Because testing",
 	})
-	if text := toolText(t, resp); !strings.Contains(text, "Remembered") {
+	if text := toolText(t, resp); !strings.Contains(text, "Proposal Created") {
 		t.Fatalf("toolStore decision output unexpected: %s", text)
 	}
 
@@ -396,27 +397,13 @@ func TestMCPToolHandlersBrain(t *testing.T) {
 		t.Fatalf("toolRecallIdeas output unexpected: %s", text)
 	}
 
-	// toolRecallDecisions
+	// toolRecallDecisions - Phase 2: decisions from toolStore are proposals,
+	// so they won't show up in recallDecisions until approved
 	resp = server.toolRecallDecisions(4, map[string]interface{}{"limit": float64(10)})
-	if text := toolText(t, resp); !strings.Contains(text, "Test decision") || !strings.Contains(text, "Decisions") {
+	if text := toolText(t, resp); !strings.Contains(text, "Decisions") {
 		t.Fatalf("toolRecallDecisions output unexpected: %s", text)
 	}
-
-	// toolRecallOutcome
-	// First get a decision ID from the previous response
-	resp = server.toolRecallDecisions(5, map[string]interface{}{"limit": float64(1)})
-	text := toolText(t, resp)
-	decisionID := extractBetween(text, "**ID:** ", "\n")
-	if decisionID != "" {
-		resp = server.toolRecallOutcome(6, map[string]interface{}{
-			"decisionId": decisionID,
-			"outcome":    "successful",
-			"notes":      "Testing outcome",
-		})
-		if text := toolText(t, resp); !strings.Contains(text, "Outcome Recorded") {
-			t.Fatalf("toolRecallOutcome output unexpected: %s", text)
-		}
-	}
+	// Note: We don't check for "Test decision" here because it's now a proposal, not an approved decision
 }
 
 func TestMCPToolHandlersLinks(t *testing.T) {
@@ -653,5 +640,348 @@ func TestMCPToolCorridorPromote(t *testing.T) {
 		if !strings.Contains(text, "not found") && !strings.Contains(text, "Error") {
 			t.Log("toolCorridorPromote with nonexistent: unexpected success")
 		}
+	}
+}
+
+// ============================================================
+// MCP Mode Tests - Phase 3 Governance
+// ============================================================
+
+// setupMCPServerWithMode creates a test MCP server with the specified mode.
+func setupMCPServerWithMode(t *testing.T, mode MCPMode) (*MCPServer, *Butler) {
+	t.Helper()
+
+	root := t.TempDir()
+	if jsonCDecode == nil {
+		SetJSONCDecoder(jsonc.DecodeFile)
+	}
+	roomsDir := filepath.Join(root, ".palace", "rooms")
+	if err := os.MkdirAll(roomsDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	room := `{"name":"core","summary":"Core room","entryPoints":["main.go"]}`
+	roomPath := filepath.Join(roomsDir, "core.jsonc")
+	if err := os.WriteFile(roomPath, []byte(room), 0o644); err != nil {
+		t.Fatalf("WriteFile(room) error = %v", err)
+	}
+
+	dbPath := filepath.Join(root, ".palace", "index", "palace.db")
+	db, err := index.Open(dbPath)
+	if err != nil {
+		t.Fatalf("index.Open() error = %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	if err := seedIndex(db); err != nil {
+		t.Fatalf("seedIndex() error = %v", err)
+	}
+
+	b, err := New(db, root)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = b.Close() })
+
+	server := &MCPServer{
+		butler: b,
+		reader: bufio.NewReader(strings.NewReader("")),
+		writer: &bytes.Buffer{},
+		mode:   mode,
+	}
+
+	return server, b
+}
+
+func TestMCPModeEnumValidation(t *testing.T) {
+	// Test valid modes
+	if !IsValidMCPMode("agent") {
+		t.Error("'agent' should be a valid mode")
+	}
+	if !IsValidMCPMode("human") {
+		t.Error("'human' should be a valid mode")
+	}
+
+	// Test invalid modes
+	if IsValidMCPMode("invalid") {
+		t.Error("'invalid' should not be a valid mode")
+	}
+	if IsValidMCPMode("") {
+		t.Error("empty string should not be a valid mode")
+	}
+}
+
+func TestMCPAdminOnlyToolsFiltering(t *testing.T) {
+	// Verify admin-only tools are correctly identified
+	adminTools := GetAdminOnlyTools()
+	expectedAdminTools := []string{"store_direct", "approve", "reject"}
+
+	for _, tool := range expectedAdminTools {
+		if !adminTools[tool] {
+			t.Errorf("Tool %q should be marked as admin-only", tool)
+		}
+	}
+
+	// Verify IsAdminOnlyTool works
+	for _, tool := range expectedAdminTools {
+		if !IsAdminOnlyTool(tool) {
+			t.Errorf("IsAdminOnlyTool(%q) should return true", tool)
+		}
+	}
+
+	// Regular tools should not be admin-only
+	regularTools := []string{"explore", "store", "recall", "brief"}
+	for _, tool := range regularTools {
+		if IsAdminOnlyTool(tool) {
+			t.Errorf("IsAdminOnlyTool(%q) should return false", tool)
+		}
+	}
+}
+
+func TestMCPToolsListFilteringByMode(t *testing.T) {
+	// Agent mode should filter out admin-only tools
+	agentServer, _ := setupMCPServerWithMode(t, MCPModeAgent)
+
+	agentResp := agentServer.handleToolsList(jsonRPCRequest{JSONRPC: "2.0", ID: 1})
+	if agentResp.Error != nil {
+		t.Fatalf("handleToolsList error: %v", agentResp.Error)
+	}
+
+	agentResult := agentResp.Result.(map[string]interface{})
+	agentTools := agentResult["tools"].([]mcpTool)
+
+	// Check that admin-only tools are NOT in agent mode
+	for _, tool := range agentTools {
+		if IsAdminOnlyTool(tool.Name) {
+			t.Errorf("Admin-only tool %q should not be in agent mode tools list", tool.Name)
+		}
+	}
+
+	// Human mode should include all tools
+	humanServer, _ := setupMCPServerWithMode(t, MCPModeHuman)
+
+	humanResp := humanServer.handleToolsList(jsonRPCRequest{JSONRPC: "2.0", ID: 2})
+	if humanResp.Error != nil {
+		t.Fatalf("handleToolsList error: %v", humanResp.Error)
+	}
+
+	humanResult := humanResp.Result.(map[string]interface{})
+	humanTools := humanResult["tools"].([]mcpTool)
+
+	// Check that admin-only tools ARE in human mode
+	adminToolsFound := map[string]bool{}
+	for _, tool := range humanTools {
+		if IsAdminOnlyTool(tool.Name) {
+			adminToolsFound[tool.Name] = true
+		}
+	}
+
+	expectedAdminTools := []string{"store_direct", "approve", "reject"}
+	for _, expected := range expectedAdminTools {
+		if !adminToolsFound[expected] {
+			t.Errorf("Admin tool %q should be in human mode tools list", expected)
+		}
+	}
+
+	// Human mode should have more tools than agent mode
+	if len(humanTools) <= len(agentTools) {
+		t.Errorf("Human mode should have more tools than agent mode: human=%d, agent=%d",
+			len(humanTools), len(agentTools))
+	}
+}
+
+func TestMCPToolCallModeEnforcement(t *testing.T) {
+	agentServer, _ := setupMCPServerWithMode(t, MCPModeAgent)
+
+	// Agent should be blocked from calling admin-only tools
+	adminTools := []string{"store_direct", "approve", "reject"}
+	for _, tool := range adminTools {
+		resp := agentServer.handleToolsCall(jsonRPCRequest{
+			JSONRPC: "2.0",
+			ID:      1,
+			Params: mustMarshal(t, mcpToolCallParams{
+				Name:      tool,
+				Arguments: map[string]interface{}{},
+			}),
+		})
+
+		if resp.Error == nil {
+			t.Errorf("Agent mode should block %q tool, but it succeeded", tool)
+			continue
+		}
+
+		if !strings.Contains(resp.Error.Message, "not available in agent mode") {
+			t.Errorf("Error message for %q should mention 'not available in agent mode', got: %s",
+				tool, resp.Error.Message)
+		}
+	}
+}
+
+func TestMCPStoreDirectHumanMode(t *testing.T) {
+	humanServer, _ := setupMCPServerWithMode(t, MCPModeHuman)
+
+	// Store a decision directly
+	resp := humanServer.toolStoreDirect(1, map[string]interface{}{
+		"content":   "Direct decision from human",
+		"as":        "decision",
+		"scope":     "palace",
+		"rationale": "Testing direct write",
+		"actorId":   "test-human",
+	})
+
+	if resp.Error != nil {
+		t.Fatalf("toolStoreDirect error: %v", resp.Error)
+	}
+
+	text := toolText(t, resp)
+	if !strings.Contains(text, "Direct Write Successful") {
+		t.Errorf("toolStoreDirect output should contain 'Direct Write Successful', got: %s", text)
+	}
+	if !strings.Contains(text, "decision") {
+		t.Errorf("toolStoreDirect output should contain 'decision', got: %s", text)
+	}
+	if !strings.Contains(text, "audit") {
+		t.Errorf("toolStoreDirect output should mention audit, got: %s", text)
+	}
+
+	// Store a learning directly
+	resp = humanServer.toolStoreDirect(2, map[string]interface{}{
+		"content":    "Direct learning from human",
+		"as":         "learning",
+		"scope":      "palace",
+		"confidence": 0.9,
+	})
+
+	if resp.Error != nil {
+		t.Fatalf("toolStoreDirect learning error: %v", resp.Error)
+	}
+
+	text = toolText(t, resp)
+	if !strings.Contains(text, "Direct Write Successful") {
+		t.Errorf("toolStoreDirect learning output unexpected: %s", text)
+	}
+}
+
+func TestMCPApproveRejectHumanMode(t *testing.T) {
+	humanServer, butler := setupMCPServerWithMode(t, MCPModeHuman)
+	mem := butler.Memory()
+
+	// Create a proposal via the store tool (which creates proposals for decisions)
+	resp := humanServer.toolStore(1, map[string]interface{}{
+		"content": "Test decision for approval",
+		"as":      "decision",
+	})
+	text := toolText(t, resp)
+	if !strings.Contains(text, "Proposal Created") {
+		t.Skipf("Could not create proposal: %s", text)
+	}
+
+	// Get the proposal ID
+	proposalID := extractBetween(text, "**ID:** `", "`")
+	if proposalID == "" {
+		t.Skipf("Could not extract proposal ID from: %s", text)
+	}
+
+	// Approve the proposal
+	resp = humanServer.toolApprove(2, map[string]interface{}{
+		"proposalId": proposalID,
+		"by":         "test-human",
+		"note":       "Approved for testing",
+	})
+
+	if resp.Error != nil {
+		t.Fatalf("toolApprove error: %v", resp.Error)
+	}
+
+	text = toolText(t, resp)
+	if !strings.Contains(text, "Proposal Approved") {
+		t.Errorf("toolApprove output should contain 'Proposal Approved', got: %s", text)
+	}
+	if !strings.Contains(text, "Promoted To") {
+		t.Errorf("toolApprove output should contain 'Promoted To', got: %s", text)
+	}
+
+	// Create another proposal for rejection test
+	resp = humanServer.toolStore(3, map[string]interface{}{
+		"content": "Test decision for rejection",
+		"as":      "decision",
+	})
+	text = toolText(t, resp)
+	proposalID2 := extractBetween(text, "**ID:** `", "`")
+	if proposalID2 == "" {
+		t.Skipf("Could not extract second proposal ID")
+	}
+
+	// Reject the proposal
+	resp = humanServer.toolReject(4, map[string]interface{}{
+		"proposalId": proposalID2,
+		"by":         "test-human",
+		"note":       "Rejected for testing",
+	})
+
+	if resp.Error != nil {
+		t.Fatalf("toolReject error: %v", resp.Error)
+	}
+
+	text = toolText(t, resp)
+	if !strings.Contains(text, "Proposal Rejected") {
+		t.Errorf("toolReject output should contain 'Proposal Rejected', got: %s", text)
+	}
+
+	// Verify audit logs were created
+	auditLogs, err := mem.GetAuditLogs("", "", 10)
+	if err != nil {
+		t.Fatalf("GetAuditLogs error: %v", err)
+	}
+
+	// Should have at least 2 audit entries (approve and reject)
+	if len(auditLogs) < 2 {
+		t.Errorf("Expected at least 2 audit logs, got %d", len(auditLogs))
+	}
+}
+
+func TestMCPServerModeGetter(t *testing.T) {
+	agentServer, _ := setupMCPServerWithMode(t, MCPModeAgent)
+	if agentServer.Mode() != MCPModeAgent {
+		t.Errorf("Mode() = %q, want %q", agentServer.Mode(), MCPModeAgent)
+	}
+
+	humanServer, _ := setupMCPServerWithMode(t, MCPModeHuman)
+	if humanServer.Mode() != MCPModeHuman {
+		t.Errorf("Mode() = %q, want %q", humanServer.Mode(), MCPModeHuman)
+	}
+}
+
+func TestMCPDefaultModeIsAgent(t *testing.T) {
+	// NewMCPServer should default to agent mode for security
+	// Note: setupMCPServer creates the server directly without mode set,
+	// so we test with a properly created server instead.
+
+	root := t.TempDir()
+	if jsonCDecode == nil {
+		SetJSONCDecoder(jsonc.DecodeFile)
+	}
+	roomsDir := filepath.Join(root, ".palace", "rooms")
+	if err := os.MkdirAll(roomsDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	dbPath := filepath.Join(root, ".palace", "index", "palace.db")
+	db, err := index.Open(dbPath)
+	if err != nil {
+		t.Fatalf("index.Open() error = %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	b, err := New(db, root)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = b.Close() })
+
+	// Use NewMCPServer which should default to agent mode
+	server := NewMCPServer(b)
+	if server.Mode() != MCPModeAgent {
+		t.Errorf("NewMCPServer() should default to agent mode, got %q", server.Mode())
 	}
 }

@@ -174,11 +174,11 @@ func TestLearnings(t *testing.T) {
 	}
 	defer mem.Close()
 
-	// Add learnings
+	// Add learnings (with legacy_approved authority to simulate pre-governance data)
 	learnings := []Learning{
-		{Scope: "palace", Content: "Always run tests before committing", Confidence: 0.8, Source: "user"},
-		{Scope: "file", ScopePath: "auth/login.go", Content: "This file requires special handling", Confidence: 0.7, Source: "agent"},
-		{Scope: "room", ScopePath: "authentication", Content: "Use bcrypt for password hashing", Confidence: 0.9, Source: "user"},
+		{Scope: "palace", Content: "Always run tests before committing", Confidence: 0.8, Source: "user", Authority: "legacy_approved"},
+		{Scope: "file", ScopePath: "auth/login.go", Content: "This file requires special handling", Confidence: 0.7, Source: "agent", Authority: "legacy_approved"},
+		{Scope: "room", ScopePath: "authentication", Content: "Use bcrypt for password hashing", Confidence: 0.9, Source: "user", Authority: "legacy_approved"},
 	}
 
 	for _, l := range learnings {
@@ -360,10 +360,10 @@ func TestRelevantLearnings(t *testing.T) {
 	}
 	defer mem.Close()
 
-	// Add learnings with different scopes
-	mem.AddLearning(Learning{Scope: "file", ScopePath: "auth/login.go", Content: "Specific to login.go", Confidence: 0.9})
-	mem.AddLearning(Learning{Scope: "room", ScopePath: "auth", Content: "Auth room learning", Confidence: 0.8})
-	mem.AddLearning(Learning{Scope: "palace", Content: "Global learning", Confidence: 0.7})
+	// Add learnings with different scopes (with legacy_approved authority)
+	mem.AddLearning(Learning{Scope: "file", ScopePath: "auth/login.go", Content: "Specific to login.go", Confidence: 0.9, Authority: "legacy_approved"})
+	mem.AddLearning(Learning{Scope: "room", ScopePath: "auth", Content: "Auth room learning", Confidence: 0.8, Authority: "legacy_approved"})
+	mem.AddLearning(Learning{Scope: "palace", Content: "Global learning", Confidence: 0.7, Authority: "legacy_approved"})
 
 	// Get relevant learnings for auth/login.go
 	relevant, err := mem.GetRelevantLearnings("auth/login.go", "auth", 10)
@@ -519,8 +519,8 @@ func TestHighConfidenceLearningsAndDecay(t *testing.T) {
 	mem, _ := Open(tmpDir)
 	defer mem.Close()
 
-	mem.AddLearning(Learning{Content: "high", Confidence: 0.95, UseCount: 10})
-	mem.AddLearning(Learning{Content: "low", Confidence: 0.4, UseCount: 1})
+	mem.AddLearning(Learning{Content: "high", Confidence: 0.95, UseCount: 10, Authority: "legacy_approved"})
+	mem.AddLearning(Learning{Content: "low", Confidence: 0.4, UseCount: 1, Authority: "legacy_approved"})
 
 	high, _ := mem.GetHighConfidenceLearnings(0.9, 5)
 	if len(high) != 1 || high[0].Content != "high" {

@@ -8,20 +8,22 @@ import (
 
 // Decision represents a commitment with rationale and outcome tracking.
 type Decision struct {
-	ID          string    `json:"id"`                    // Prefix: "d_"
-	Content     string    `json:"content"`               // What was decided
-	Rationale   string    `json:"rationale,omitempty"`   // Why this decision was made
-	Context     string    `json:"context,omitempty"`     // Surrounding context
-	Status      string    `json:"status"`                // "active", "superseded", "reversed"
-	Outcome     string    `json:"outcome"`               // "unknown", "successful", "failed", "mixed"
-	OutcomeNote string    `json:"outcomeNote,omitempty"` // Details about the outcome
-	OutcomeAt   time.Time `json:"outcomeAt,omitempty"`   // When outcome was recorded
-	Scope       string    `json:"scope"`                 // "file", "room", "palace"
-	ScopePath   string    `json:"scopePath,omitempty"`   // e.g., "auth/login.go" or "auth"
-	SessionID   string    `json:"sessionId,omitempty"`   // Optional session link
-	Source      string    `json:"source"`                // "cli", "api", "auto-extract"
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt,omitempty"`
+	ID                     string    `json:"id"`                               // Prefix: "d_"
+	Content                string    `json:"content"`                          // What was decided
+	Rationale              string    `json:"rationale,omitempty"`              // Why this decision was made
+	Context                string    `json:"context,omitempty"`                // Surrounding context
+	Status                 string    `json:"status"`                           // "active", "superseded", "reversed"
+	Outcome                string    `json:"outcome"`                          // "unknown", "successful", "failed", "mixed"
+	OutcomeNote            string    `json:"outcomeNote,omitempty"`            // Details about the outcome
+	OutcomeAt              time.Time `json:"outcomeAt,omitempty"`              // When outcome was recorded
+	Scope                  string    `json:"scope"`                            // "file", "room", "palace"
+	ScopePath              string    `json:"scopePath,omitempty"`              // e.g., "auth/login.go" or "auth"
+	SessionID              string    `json:"sessionId,omitempty"`              // Optional session link
+	Source                 string    `json:"source"`                           // "cli", "api", "auto-extract"
+	Authority              string    `json:"authority"`                        // "proposed", "approved", "legacy_approved"
+	PromotedFromProposalID string    `json:"promotedFromProposalId,omitempty"` // ID of proposal that was promoted to create this
+	CreatedAt              time.Time `json:"createdAt"`
+	UpdatedAt              time.Time `json:"updatedAt,omitempty"`
 }
 
 // DecisionStatus constants
@@ -56,6 +58,9 @@ func (m *Memory) AddDecision(dec Decision) (string, error) {
 	if dec.Source == "" {
 		dec.Source = "cli"
 	}
+	if dec.Authority == "" {
+		dec.Authority = string(AuthorityProposed)
+	}
 	now := time.Now().UTC()
 	if dec.CreatedAt.IsZero() {
 		dec.CreatedAt = now
@@ -70,10 +75,10 @@ func (m *Memory) AddDecision(dec Decision) (string, error) {
 	}
 
 	_, err := m.db.ExecContext(context.Background(), `
-		INSERT INTO decisions (id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO decisions (id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, dec.ID, dec.Content, dec.Rationale, dec.Context, dec.Status, dec.Outcome, dec.OutcomeNote, outcomeAt,
-		dec.Scope, dec.ScopePath, dec.SessionID, dec.Source,
+		dec.Scope, dec.ScopePath, dec.SessionID, dec.Source, dec.Authority, dec.PromotedFromProposalID,
 		dec.CreatedAt.Format(time.RFC3339), dec.UpdatedAt.Format(time.RFC3339))
 	if err != nil {
 		return "", fmt.Errorf("insert decision: %w", err)
@@ -88,14 +93,14 @@ func (m *Memory) AddDecision(dec Decision) (string, error) {
 // GetDecision retrieves a decision by ID.
 func (m *Memory) GetDecision(id string) (*Decision, error) {
 	row := m.db.QueryRowContext(context.Background(), `
-		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, created_at, updated_at
+		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at
 		FROM decisions WHERE id = ?
 	`, id)
 
 	var dec Decision
 	var createdAt, updatedAt, outcomeAt string
 	err := row.Scan(&dec.ID, &dec.Content, &dec.Rationale, &dec.Context, &dec.Status, &dec.Outcome,
-		&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &createdAt, &updatedAt)
+		&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &dec.Authority, &dec.PromotedFromProposalID, &createdAt, &updatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("scan decision: %w", err)
 	}
@@ -107,10 +112,24 @@ func (m *Memory) GetDecision(id string) (*Decision, error) {
 }
 
 // GetDecisions retrieves decisions matching the given criteria.
+// By default, only returns authoritative records (approved or legacy_approved).
+// Pass authoritativeOnly=false to include proposed records.
 func (m *Memory) GetDecisions(status, outcome, scope, scopePath string, limit int) ([]Decision, error) {
-	query := `SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, created_at, updated_at FROM decisions WHERE 1=1`
+	return m.GetDecisionsWithAuthority(status, outcome, scope, scopePath, limit, true)
+}
+
+// GetDecisionsWithAuthority retrieves decisions with explicit authority filtering.
+func (m *Memory) GetDecisionsWithAuthority(status, outcome, scope, scopePath string, limit int, authoritativeOnly bool) ([]Decision, error) {
+	query := `SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at FROM decisions WHERE 1=1`
 	args := []interface{}{}
 
+	if authoritativeOnly {
+		authVals := AuthoritativeValuesStrings()
+		query += ` AND authority IN (` + SQLPlaceholders(len(authVals)) + `)`
+		for _, v := range authVals {
+			args = append(args, v)
+		}
+	}
 	if status != "" {
 		query += ` AND status = ?`
 		args = append(args, status)
@@ -144,7 +163,7 @@ func (m *Memory) GetDecisions(status, outcome, scope, scopePath string, limit in
 		var dec Decision
 		var createdAt, updatedAt, outcomeAt string
 		if err := rows.Scan(&dec.ID, &dec.Content, &dec.Rationale, &dec.Context, &dec.Status, &dec.Outcome,
-			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &createdAt, &updatedAt); err != nil {
+			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &dec.Authority, &dec.PromotedFromProposalID, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
 		dec.CreatedAt = parseTimeOrZero(createdAt)
@@ -156,15 +175,32 @@ func (m *Memory) GetDecisions(status, outcome, scope, scopePath string, limit in
 }
 
 // SearchDecisions searches decisions by content using FTS5.
+// By default, only returns authoritative records.
 func (m *Memory) SearchDecisions(query string, limit int) ([]Decision, error) {
+	return m.SearchDecisionsWithAuthority(query, limit, true)
+}
+
+// SearchDecisionsWithAuthority searches decisions with explicit authority filtering.
+func (m *Memory) SearchDecisionsWithAuthority(query string, limit int, authoritativeOnly bool) ([]Decision, error) {
+	// Build authority filter
+	authFilter := ""
+	authArgs := []interface{}{}
+	if authoritativeOnly {
+		authVals := AuthoritativeValuesStrings()
+		authFilter = ` AND d.authority IN (` + SQLPlaceholders(len(authVals)) + `)`
+		for _, v := range authVals {
+			authArgs = append(authArgs, v)
+		}
+	}
+
 	sqlQuery := `
-		SELECT d.id, d.content, d.rationale, d.context, d.status, d.outcome, d.outcome_note, d.outcome_at, d.scope, d.scope_path, d.session_id, d.source, d.created_at, d.updated_at
+		SELECT d.id, d.content, d.rationale, d.context, d.status, d.outcome, d.outcome_note, d.outcome_at, d.scope, d.scope_path, d.session_id, d.source, d.authority, d.promoted_from_proposal_id, d.created_at, d.updated_at
 		FROM decisions d
 		JOIN decisions_fts fts ON d.rowid = fts.rowid
-		WHERE decisions_fts MATCH ?
+		WHERE decisions_fts MATCH ?` + authFilter + `
 		ORDER BY rank
 	`
-	args := []interface{}{query}
+	args := append([]interface{}{query}, authArgs...)
 	if limit > 0 {
 		sqlQuery += ` LIMIT ?`
 		args = append(args, limit)
@@ -173,7 +209,7 @@ func (m *Memory) SearchDecisions(query string, limit int) ([]Decision, error) {
 	rows, err := m.db.QueryContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		// Fall back to LIKE search if FTS fails
-		return m.searchDecisionsLike(query, limit)
+		return m.searchDecisionsLikeWithAuthority(query, limit, authoritativeOnly)
 	}
 	defer rows.Close()
 
@@ -182,7 +218,7 @@ func (m *Memory) SearchDecisions(query string, limit int) ([]Decision, error) {
 		var dec Decision
 		var createdAt, updatedAt, outcomeAt string
 		if err := rows.Scan(&dec.ID, &dec.Content, &dec.Rationale, &dec.Context, &dec.Status, &dec.Outcome,
-			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &createdAt, &updatedAt); err != nil {
+			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &dec.Authority, &dec.PromotedFromProposalID, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
 		dec.CreatedAt = parseTimeOrZero(createdAt)
@@ -195,14 +231,30 @@ func (m *Memory) SearchDecisions(query string, limit int) ([]Decision, error) {
 
 // searchDecisionsLike is a fallback search using LIKE.
 func (m *Memory) searchDecisionsLike(query string, limit int) ([]Decision, error) {
+	return m.searchDecisionsLikeWithAuthority(query, limit, true)
+}
+
+// searchDecisionsLikeWithAuthority is a fallback search with explicit authority filtering.
+func (m *Memory) searchDecisionsLikeWithAuthority(query string, limit int, authoritativeOnly bool) ([]Decision, error) {
+	// Build authority filter
+	authFilter := ""
+	authArgs := []interface{}{}
+	if authoritativeOnly {
+		authVals := AuthoritativeValuesStrings()
+		authFilter = ` AND authority IN (` + SQLPlaceholders(len(authVals)) + `)`
+		for _, v := range authVals {
+			authArgs = append(authArgs, v)
+		}
+	}
+
 	sqlQuery := `
-		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, created_at, updated_at
+		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at
 		FROM decisions
-		WHERE content LIKE ? OR rationale LIKE ? OR context LIKE ?
+		WHERE (content LIKE ? OR rationale LIKE ? OR context LIKE ?)` + authFilter + `
 		ORDER BY created_at DESC
 	`
 	pattern := "%" + query + "%"
-	args := []interface{}{pattern, pattern, pattern}
+	args := append([]interface{}{pattern, pattern, pattern}, authArgs...)
 	if limit > 0 {
 		sqlQuery += ` LIMIT ?`
 		args = append(args, limit)
@@ -219,7 +271,7 @@ func (m *Memory) searchDecisionsLike(query string, limit int) ([]Decision, error
 		var dec Decision
 		var createdAt, updatedAt, outcomeAt string
 		if err := rows.Scan(&dec.ID, &dec.Content, &dec.Rationale, &dec.Context, &dec.Status, &dec.Outcome,
-			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &createdAt, &updatedAt); err != nil {
+			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &dec.Authority, &dec.PromotedFromProposalID, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
 		dec.CreatedAt = parseTimeOrZero(createdAt)
@@ -333,15 +385,24 @@ func (m *Memory) CountDecisions(status, outcome string) (int, error) {
 }
 
 // GetDecisionsAwaitingReview returns decisions older than the given age with unknown outcome.
+// Only returns authoritative records.
 func (m *Memory) GetDecisionsAwaitingReview(olderThanDays, limit int) ([]Decision, error) {
 	cutoff := time.Now().AddDate(0, 0, -olderThanDays).Format(time.RFC3339)
+
+	// Build authority filter
+	authVals := AuthoritativeValuesStrings()
+	authPlaceholders := SQLPlaceholders(len(authVals))
+
 	query := `
-		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, created_at, updated_at
+		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at
 		FROM decisions
-		WHERE outcome = 'unknown' AND status = 'active' AND created_at < ?
+		WHERE outcome = 'unknown' AND status = 'active' AND created_at < ? AND authority IN (` + authPlaceholders + `)
 		ORDER BY created_at ASC
 	`
 	args := []interface{}{cutoff}
+	for _, v := range authVals {
+		args = append(args, v)
+	}
 	if limit > 0 {
 		query += ` LIMIT ?`
 		args = append(args, limit)
@@ -358,7 +419,7 @@ func (m *Memory) GetDecisionsAwaitingReview(olderThanDays, limit int) ([]Decisio
 		var dec Decision
 		var createdAt, updatedAt, outcomeAt string
 		if err := rows.Scan(&dec.ID, &dec.Content, &dec.Rationale, &dec.Context, &dec.Status, &dec.Outcome,
-			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &createdAt, &updatedAt); err != nil {
+			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &dec.Authority, &dec.PromotedFromProposalID, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
 		dec.CreatedAt = parseTimeOrZero(createdAt)
@@ -370,14 +431,22 @@ func (m *Memory) GetDecisionsAwaitingReview(olderThanDays, limit int) ([]Decisio
 }
 
 // GetDecisionsSince returns decisions created after the given time.
+// Only returns authoritative records.
 func (m *Memory) GetDecisionsSince(since time.Time, limit int) ([]Decision, error) {
+	// Build authority filter
+	authVals := AuthoritativeValuesStrings()
+	authPlaceholders := SQLPlaceholders(len(authVals))
+
 	query := `
-		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, created_at, updated_at
+		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at
 		FROM decisions
-		WHERE outcome = 'unknown' AND status = 'active' AND created_at >= ?
+		WHERE outcome = 'unknown' AND status = 'active' AND created_at >= ? AND authority IN (` + authPlaceholders + `)
 		ORDER BY created_at ASC
 	`
 	args := []interface{}{since.Format(time.RFC3339)}
+	for _, v := range authVals {
+		args = append(args, v)
+	}
 	if limit > 0 {
 		query += ` LIMIT ?`
 		args = append(args, limit)
@@ -394,7 +463,7 @@ func (m *Memory) GetDecisionsSince(since time.Time, limit int) ([]Decision, erro
 		var dec Decision
 		var createdAt, updatedAt, outcomeAt string
 		if err := rows.Scan(&dec.ID, &dec.Content, &dec.Rationale, &dec.Context, &dec.Status, &dec.Outcome,
-			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &createdAt, &updatedAt); err != nil {
+			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &dec.Authority, &dec.PromotedFromProposalID, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
 		dec.CreatedAt = parseTimeOrZero(createdAt)
@@ -563,13 +632,21 @@ func (m *Memory) GetDecisionChain(id string) (*DecisionChain, error) {
 }
 
 // GetDecisionTimeline returns all decisions ordered by creation date for timeline visualization.
+// Only returns authoritative records.
 func (m *Memory) GetDecisionTimeline(scope, scopePath string, limit int) ([]Decision, error) {
+	// Build authority filter
+	authVals := AuthoritativeValuesStrings()
+	authPlaceholders := SQLPlaceholders(len(authVals))
+
 	query := `
-		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, created_at, updated_at
+		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at
 		FROM decisions
-		WHERE 1=1
+		WHERE authority IN (` + authPlaceholders + `)
 	`
 	args := []interface{}{}
+	for _, v := range authVals {
+		args = append(args, v)
+	}
 
 	if scope != "" {
 		query += ` AND scope = ?`
@@ -598,7 +675,7 @@ func (m *Memory) GetDecisionTimeline(scope, scopePath string, limit int) ([]Deci
 		var dec Decision
 		var createdAt, updatedAt, outcomeAt string
 		if err := rows.Scan(&dec.ID, &dec.Content, &dec.Rationale, &dec.Context, &dec.Status, &dec.Outcome,
-			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &createdAt, &updatedAt); err != nil {
+			&dec.OutcomeNote, &outcomeAt, &dec.Scope, &dec.ScopePath, &dec.SessionID, &dec.Source, &dec.Authority, &dec.PromotedFromProposalID, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
 		dec.CreatedAt = parseTimeOrZero(createdAt)

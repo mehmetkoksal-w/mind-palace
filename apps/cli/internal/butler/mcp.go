@@ -9,11 +9,69 @@ import (
 	"strings"
 )
 
+// MCPMode represents the operational mode of the MCP server.
+// Mode determines which tools are available and what security restrictions apply.
+type MCPMode string
+
+const (
+	// MCPModeAgent is restricted mode - no admin tools, no direct write.
+	// Agents can only create proposals; they cannot bypass governance.
+	MCPModeAgent MCPMode = "agent"
+
+	// MCPModeHuman is full access mode - admin tools and direct write available.
+	// Only use when the MCP client is a human-operated interface.
+	MCPModeHuman MCPMode = "human"
+)
+
+// ValidMCPModes returns all valid MCP mode values.
+func ValidMCPModes() []MCPMode {
+	return []MCPMode{MCPModeAgent, MCPModeHuman}
+}
+
+// IsValidMCPMode returns true if the mode is valid.
+func IsValidMCPMode(mode string) bool {
+	for _, m := range ValidMCPModes() {
+		if string(m) == mode {
+			return true
+		}
+	}
+	return false
+}
+
+// adminOnlyTools lists tools that are only available in human mode.
+// These tools can bypass the proposal system, perform privileged operations,
+// or mutate memory state (outcomes, links, archival, obsolescence).
+var adminOnlyTools = map[string]bool{
+	"store_direct":    true, // Bypasses proposal system
+	"approve":         true, // Approves proposals
+	"reject":          true, // Rejects proposals
+	"recall_outcome":  true, // Marks decisions with outcomes
+	"recall_link":     true, // Links ideas/decisions/learnings
+	"recall_unlink":   true, // Removes links
+	"recall_obsolete": true, // Marks learnings obsolete
+	"recall_archive":  true, // Archives learnings
+}
+
+// IsAdminOnlyTool returns true if the tool requires human mode.
+func IsAdminOnlyTool(toolName string) bool {
+	return adminOnlyTools[toolName]
+}
+
+// GetAdminOnlyTools returns a copy of the admin-only tools map.
+func GetAdminOnlyTools() map[string]bool {
+	result := make(map[string]bool, len(adminOnlyTools))
+	for k, v := range adminOnlyTools {
+		result[k] = v
+	}
+	return result
+}
+
 // MCPServer handles Model Context Protocol communication.
 type MCPServer struct {
 	butler *Butler
 	reader *bufio.Reader
 	writer io.Writer
+	mode   MCPMode // Operational mode (agent or human)
 }
 
 // JSON-RPC types
@@ -102,12 +160,39 @@ type mcpResourceContent struct {
 }
 
 // NewMCPServer creates a new MCP server backed by the given Butler.
+// Defaults to agent mode (restricted) for security.
 func NewMCPServer(butler *Butler) *MCPServer {
 	return &MCPServer{
 		butler: butler,
 		reader: bufio.NewReader(os.Stdin),
 		writer: os.Stdout,
+		mode:   MCPModeAgent, // Default to restricted mode
 	}
+}
+
+// NewMCPServerWithMode creates a new MCP server with the specified mode.
+func NewMCPServerWithMode(butler *Butler, mode MCPMode) *MCPServer {
+	return &MCPServer{
+		butler: butler,
+		reader: bufio.NewReader(os.Stdin),
+		writer: os.Stdout,
+		mode:   mode,
+	}
+}
+
+// NewMCPServerWithIO creates a new MCP server with custom reader/writer (for testing).
+func NewMCPServerWithIO(butler *Butler, mode MCPMode, reader *bufio.Reader, writer io.Writer) *MCPServer {
+	return &MCPServer{
+		butler: butler,
+		reader: reader,
+		writer: writer,
+		mode:   mode,
+	}
+}
+
+// Mode returns the current operational mode of the server.
+func (s *MCPServer) Mode() MCPMode {
+	return s.mode
 }
 
 // Serve runs the MCP server, reading JSON-RPC requests from stdin.
@@ -182,9 +267,20 @@ func (s *MCPServer) handleInitialize(req jsonRPCRequest) jsonRPCResponse {
 	return jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: result}
 }
 
-// handleToolsList returns the list of available tools.
+// handleToolsList returns the list of available tools filtered by mode.
 func (s *MCPServer) handleToolsList(req jsonRPCRequest) jsonRPCResponse {
-	tools := buildToolsList()
+	allTools := buildToolsList()
+
+	// Filter tools based on mode
+	var tools []mcpTool
+	for _, tool := range allTools {
+		// Skip admin-only tools in agent mode
+		if s.mode == MCPModeAgent && IsAdminOnlyTool(tool.Name) {
+			continue
+		}
+		tools = append(tools, tool)
+	}
+
 	return jsonRPCResponse{
 		JSONRPC: "2.0",
 		ID:      req.ID,
@@ -200,6 +296,15 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 			JSONRPC: "2.0",
 			ID:      req.ID,
 			Error:   &rpcError{Code: -32602, Message: "Invalid params", Data: err.Error()},
+		}
+	}
+
+	// Enforce mode restrictions - reject admin-only tools in agent mode
+	if s.mode == MCPModeAgent && IsAdminOnlyTool(params.Name) {
+		return jsonRPCResponse{
+			JSONRPC: "2.0",
+			ID:      req.ID,
+			Error:   &rpcError{Code: -32602, Message: fmt.Sprintf("Tool %q not available in agent mode", params.Name)},
 		}
 	}
 
@@ -227,10 +332,20 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 		return s.toolExploreCallees(req.ID, params.Arguments)
 	case "explore_graph":
 		return s.toolExploreGraph(req.ID, params.Arguments)
+	case "get_route":
+		return s.toolGetRoute(req.ID, params.Arguments)
 
 	// Store tools - store ideas, decisions, learnings
 	case "store":
 		return s.toolStore(req.ID, params.Arguments)
+	case "store_direct":
+		return s.toolStoreDirect(req.ID, params.Arguments)
+
+	// Governance tools - approve/reject proposals (human mode only)
+	case "approve":
+		return s.toolApprove(req.ID, params.Arguments)
+	case "reject":
+		return s.toolReject(req.ID, params.Arguments)
 
 	// Recall tools - retrieve knowledge and manage relationships
 	case "recall":

@@ -254,7 +254,7 @@ func loadFromCache(cacheDir string) (*model.ContextPack, []model.Room, error) {
 
 func cacheContextPack(cacheDir string, data []byte) error {
 	path := filepath.Join(cacheDir, "context-pack.json")
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 func cacheRooms(cacheDir string, rooms []model.Room) error {
@@ -277,7 +277,7 @@ func cacheRooms(cacheDir string, rooms []model.Room) error {
 			continue
 		}
 		path := filepath.Join(roomsDir, room.Name+".json")
-		if err := os.WriteFile(path, data, 0o644); err != nil {
+		if err := os.WriteFile(path, data, 0o600); err != nil {
 			lastErr = err
 			continue
 		}
@@ -358,7 +358,7 @@ func writeCacheMeta(cacheDir string, meta CacheMeta) error {
 		return err
 	}
 	path := filepath.Join(cacheDir, ".meta.json")
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 func parseTTL(ttlStr string) time.Duration {

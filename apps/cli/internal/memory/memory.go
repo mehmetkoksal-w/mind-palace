@@ -45,16 +45,18 @@ type Activity struct {
 
 // Learning represents an emerged pattern or heuristic.
 type Learning struct {
-	ID         string    `json:"id"`
-	SessionID  string    `json:"sessionId,omitempty"` // Optional - can be manual
-	Scope      string    `json:"scope"`               // "file", "room", "palace", "corridor"
-	ScopePath  string    `json:"scopePath"`           // e.g., "auth/login.go" or "auth" or ""
-	Content    string    `json:"content"`             // The learning itself
-	Confidence float64   `json:"confidence"`          // 0.0-1.0, increases with reinforcement
-	Source     string    `json:"source"`              // "agent", "user", "inferred"
-	CreatedAt  time.Time `json:"createdAt"`
-	LastUsed   time.Time `json:"lastUsed"`
-	UseCount   int       `json:"useCount"`
+	ID                     string    `json:"id"`
+	SessionID              string    `json:"sessionId,omitempty"`              // Optional - can be manual
+	Scope                  string    `json:"scope"`                            // "file", "room", "palace", "corridor"
+	ScopePath              string    `json:"scopePath"`                        // e.g., "auth/login.go" or "auth" or ""
+	Content                string    `json:"content"`                          // The learning itself
+	Confidence             float64   `json:"confidence"`                       // 0.0-1.0, increases with reinforcement
+	Source                 string    `json:"source"`                           // "agent", "user", "inferred"
+	Authority              string    `json:"authority"`                        // "proposed", "approved", "legacy_approved"
+	PromotedFromProposalID string    `json:"promotedFromProposalId,omitempty"` // ID of proposal that was promoted to create this
+	CreatedAt              time.Time `json:"createdAt"`
+	LastUsed               time.Time `json:"lastUsed"`
+	UseCount               int       `json:"useCount"`
 }
 
 // FileIntel represents intelligence gathered about a specific file.

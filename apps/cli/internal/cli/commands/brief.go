@@ -81,7 +81,7 @@ func ExecuteBrief(opts BriefOptions) error {
 
 	// Show index statistics from scan.json
 	scanPath := filepath.Join(rootPath, ".palace", "index", "scan.json")
-	if scanData, err := os.ReadFile(scanPath); err == nil { //nolint:gosec // G304: path is constructed from validated root
+	if scanData, err := os.ReadFile(scanPath); err == nil {
 		var scanInfo ScanInfo
 		if json.Unmarshal(scanData, &scanInfo) == nil && scanInfo.FileCount > 0 {
 			fmt.Printf("\n📊 Index Statistics:\n")
