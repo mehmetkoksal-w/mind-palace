@@ -230,8 +230,8 @@ func (m *Memory) SearchDecisionsWithAuthority(query string, limit int, authorita
 }
 
 // searchDecisionsLike is a fallback search using LIKE.
-func (m *Memory) searchDecisionsLike(query string, _ int) ([]Decision, error) {
-	return m.searchDecisionsLikeWithAuthority(query, 10, true)
+func (m *Memory) searchDecisionsLike(query string, limit int) ([]Decision, error) {
+	return m.searchDecisionsLikeWithAuthority(query, limit, true)
 }
 
 // searchDecisionsLikeWithAuthority is a fallback search with explicit authority filtering.
