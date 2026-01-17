@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	buildVersion = "0.3.0-alpha"
+	buildVersion = "0.3.1-alpha"
 	buildCommit  = "unknown"
 	buildDate    = "unknown"
 )
