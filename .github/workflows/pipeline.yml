@@ -185,7 +185,7 @@ jobs:
   deploy-docs:
     name: "Deploy: Docs"
     needs: check
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.check.outputs.docs_changed == 'true' || needs.check.outputs.release_needed == 'true')
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && (needs.check.outputs.docs_changed == 'true' || needs.check.outputs.release_needed == 'true')
     runs-on: ubuntu-latest
     environment:
       name: production-docs
@@ -221,7 +221,7 @@ jobs:
     needs: [check, deploy-docs]
     if: |
       always() &&
-      github.event_name == 'push' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref == 'refs/heads/main' &&
       needs.check.result == 'success' &&
       needs.check.outputs.release_needed == 'true' &&
@@ -233,7 +233,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: '20'
 
       - name: Build Dashboard
         run: |
@@ -255,7 +255,7 @@ jobs:
     needs: [check, deploy-docs]
     if: |
       always() &&
-      github.event_name == 'push' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref == 'refs/heads/main' &&
       needs.check.result == 'success' &&
       needs.check.outputs.release_needed == 'true' &&
@@ -287,7 +287,7 @@ jobs:
     needs: [check, deploy-docs, release-dashboard]
     if: |
       always() &&
-      github.event_name == 'push' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref == 'refs/heads/main' &&
       needs.check.result == 'success' &&
       needs.check.outputs.release_needed == 'true' &&
