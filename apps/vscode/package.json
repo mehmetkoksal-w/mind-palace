@@ -394,7 +394,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.0.6",
     "@types/sinon": "^21.0.0",
-    "@types/vscode": "^1.80.0",
+    "@types/vscode": "^1.108.1",
     "@vscode/test-electron": "^2.4.1",
     "chai": "^6.2.2",
     "cross-env": "^10.1.0",
