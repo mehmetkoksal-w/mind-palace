@@ -10,10 +10,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/llm"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/llm"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
 )
 
 // Butler provides high-level access to the Mind Palace index and memory.

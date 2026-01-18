@@ -34,7 +34,7 @@ Section: devel
 Priority: optional
 Architecture: $DEB_ARCH
 Maintainer: Mind Palace <hello@mindpalace.dev>
-Homepage: https://github.com/koksalmehmet/mind-palace
+Homepage: https://github.com/The-PatientZero/mind-palace
 Description: AI-Friendly Codebase Context Manager
  Mind Palace is a CLI tool that helps you manage your codebase context
  for AI-assisted development. It provides intelligent code analysis,
@@ -53,7 +53,7 @@ cat > "$PKG_DIR/usr/share/doc/palace/copyright" << COPYRIGHT_EOF
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: palace
 Upstream-Contact: Mind Palace <hello@mindpalace.dev>
-Source: https://github.com/koksalmehmet/mind-palace
+Source: https://github.com/The-PatientZero/mind-palace
 
 Files: *
 Copyright: 2024 Mind Palace

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/butler"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/butler"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
 )
 
 // handleContextPreview returns auto-injection context preview for a file.

@@ -51,8 +51,8 @@ linters:
         - (*database/sql.Stmt).Close
         - (*database/sql.Tx).Rollback
         - (*os.Process).Kill
-        - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.GoLSPClient).sendNotification
-        - (*github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis.DartLSPClient).sendNotification
+        - (*github.com/The-PatientZero/mind-palace/apps/cli/internal/analysis.GoLSPClient).sendNotification
+        - (*github.com/The-PatientZero/mind-palace/apps/cli/internal/analysis.DartLSPClient).sendNotification
         - filepath.Glob
         - filepath.Match
     govet:

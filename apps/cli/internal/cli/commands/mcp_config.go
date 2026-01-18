@@ -224,7 +224,7 @@ func findPalaceBinary() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("palace binary not found. Install with: go install github.com/koksalmehmet/mind-palace/apps/cli@latest")
+	return "", fmt.Errorf("palace binary not found. Install with: go install github.com/The-PatientZero/mind-palace/apps/cli@latest")
 }
 
 // printConfigForTool outputs the configuration for a specific tool.

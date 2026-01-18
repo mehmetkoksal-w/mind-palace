@@ -44,7 +44,7 @@ export const metadata = {
 
 const banner = (
   <Banner storageKey={`mind-palace-${version}`}>
-    <a href="https://github.com/koksalmehmet/mind-palace/releases" target="_blank">
+    <a href="https://github.com/The-PatientZero/mind-palace/releases" target="_blank">
       Mind Palace {version} is out. Check it out →
     </a>
   </Banner>
@@ -81,7 +81,7 @@ const Logo = () => (
 const navbar = (
   <Navbar
     logo={<Logo />}
-    projectLink="https://github.com/koksalmehmet/mind-palace"
+    projectLink="https://github.com/The-PatientZero/mind-palace"
   />
 )
 
@@ -103,7 +103,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           banner={banner}
           navbar={navbar}
           pageMap={await getPageMap()}
-          docsRepositoryBase="https://github.com/koksalmehmet/mind-palace/tree/main/apps/docs/content"
+          docsRepositoryBase="https://github.com/The-PatientZero/mind-palace/tree/main/apps/docs/content"
           footer={footer}
           editLink="Edit this page on GitHub →"
           feedback={{ content: 'Question? Give us feedback →', labels: 'feedback' }}

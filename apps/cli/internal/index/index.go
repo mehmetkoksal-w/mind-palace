@@ -14,9 +14,9 @@ import (
 
 	_ "modernc.org/sqlite" // sqlite driver for database/sql
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/analysis"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/fsutil"
 )
 
 // FileRecord represents an indexed file with its content and analysis.

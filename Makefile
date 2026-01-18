@@ -4,7 +4,7 @@
 VERSION ?= $(shell cat VERSION 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS := -ldflags="-s -w -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildVersion=$(VERSION) -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildCommit=$(COMMIT) -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildDate=$(DATE)"
+LDFLAGS := -ldflags="-s -w -X github.com/The-PatientZero/mind-palace/apps/cli/internal/cli.buildVersion=$(VERSION) -X github.com/The-PatientZero/mind-palace/apps/cli/internal/cli.buildCommit=$(COMMIT) -X github.com/The-PatientZero/mind-palace/apps/cli/internal/cli.buildDate=$(DATE)"
 
 # Default target
 all: build

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/logger"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/logger"
 )
 
 // DartAnalyzer provides deep analysis of Dart files using the Dart Analysis Server

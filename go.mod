@@ -1,4 +1,4 @@
-module github.com/koksalmehmet/mind-palace
+module github.com/The-PatientZero/mind-palace
 
 go 1.24.0
 

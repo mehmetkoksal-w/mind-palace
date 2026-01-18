@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
 )
 
 func TestRouteRuleVersion(t *testing.T) {

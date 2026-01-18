@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/butler"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/butler"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
 )
 
 // handleSearch performs a unified search.

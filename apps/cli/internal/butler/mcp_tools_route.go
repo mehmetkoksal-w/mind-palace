@@ -3,7 +3,7 @@ package butler
 import (
 	"encoding/json"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
 )
 
 // toolGetRoute handles the get_route MCP tool call.

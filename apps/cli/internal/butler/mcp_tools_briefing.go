@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/llm"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/llm"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
 )
 
 // SmartBriefingRequest contains parameters for generating a smart briefing.

@@ -8,11 +8,11 @@ Mind Palace is a deterministic context system for codebases. Unlike RAG or embed
 
 ```sh
 # Apple Silicon (M1/M2/M3)
-curl -LO https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-arm64.pkg
+curl -LO https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-darwin-arm64.pkg
 sudo installer -pkg palace-darwin-arm64.pkg -target /
 
 # Intel Mac
-curl -LO https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-amd64.pkg
+curl -LO https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-darwin-amd64.pkg
 sudo installer -pkg palace-darwin-amd64.pkg -target /
 ```
 
@@ -20,26 +20,26 @@ sudo installer -pkg palace-darwin-amd64.pkg -target /
 
 ```sh
 # Debian/Ubuntu (x64)
-curl -LO https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-linux-amd64.deb
+curl -LO https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-linux-amd64.deb
 sudo dpkg -i palace-linux-amd64.deb
 
 # Debian/Ubuntu (ARM64)
-curl -LO https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-linux-arm64.deb
+curl -LO https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-linux-arm64.deb
 sudo dpkg -i palace-linux-arm64.deb
 
 # Other Linux (manual)
-curl -LO https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-linux-amd64.tar.gz
+curl -LO https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-linux-amd64.tar.gz
 tar xzf palace-linux-amd64.tar.gz
 sudo mv palace /usr/local/bin/
 ```
 
 ### Windows
 
-Download and run the MSI installer from the [releases page](https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-windows-amd64.msi).
+Download and run the MSI installer from the [releases page](https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-windows-amd64.msi).
 
 Or via PowerShell:
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-windows-amd64.msi" -OutFile palace.msi
+Invoke-WebRequest -Uri "https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-windows-amd64.msi" -OutFile palace.msi
 Start-Process msiexec.exe -Wait -ArgumentList '/i palace.msi /quiet'
 ```
 

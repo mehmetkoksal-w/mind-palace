@@ -2,7 +2,7 @@
 
 <!-- TODO: Add logo/icon here -->
 
-VS Code extension for the [Mind Palace](https://github.com/koksalmehmet/mind-palace) ecosystem.
+VS Code extension for the [Mind Palace](https://github.com/The-PatientZero/mind-palace) ecosystem.
 
 ## Features
 
@@ -17,11 +17,11 @@ This extension requires the Mind Palace CLI. Install it first:
 
 ```sh
 # macOS
-curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
+curl -L https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
 chmod +x palace && sudo mv palace /usr/local/bin/
 
 # Linux
-curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-linux-amd64 -o palace
+curl -L https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-linux-amd64 -o palace
 chmod +x palace && sudo mv palace /usr/local/bin/
 ```
 
@@ -64,10 +64,10 @@ Project config takes precedence over VS Code settings.
 
 Full documentation lives in the CLI repository:
 
-- [Ecosystem Overview](https://github.com/koksalmehmet/mind-palace/blob/main/docs/ecosystem.md)
-- [Extension Guide](https://github.com/koksalmehmet/mind-palace/blob/main/docs/extension.md)
-- [Compatibility Matrix](https://github.com/koksalmehmet/mind-palace/blob/main/docs/COMPATIBILITY.md)
-- [Workflows](https://github.com/koksalmehmet/mind-palace/blob/main/docs/workflows.md)
+- [Ecosystem Overview](https://github.com/The-PatientZero/mind-palace/blob/main/docs/ecosystem.md)
+- [Extension Guide](https://github.com/The-PatientZero/mind-palace/blob/main/docs/extension.md)
+- [Compatibility Matrix](https://github.com/The-PatientZero/mind-palace/blob/main/docs/COMPATIBILITY.md)
+- [Workflows](https://github.com/The-PatientZero/mind-palace/blob/main/docs/workflows.md)
 
 ## Version Compatibility
 
@@ -79,7 +79,7 @@ The extension checks CLI version on startup and warns if incompatible.
 
 ## Related Projects
 
-- [Mind Palace CLI](https://github.com/koksalmehmet/mind-palace) - Core engine
+- [Mind Palace CLI](https://github.com/The-PatientZero/mind-palace) - Core engine
 
 ## License
 

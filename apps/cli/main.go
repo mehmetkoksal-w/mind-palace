@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli"
 )
 
 func main() {

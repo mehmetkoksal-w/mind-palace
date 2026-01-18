@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/util"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/flags"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/util"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
 )
 
 // ScanInfo represents the scan.json structure for reading index stats.

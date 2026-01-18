@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/llm"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/llm"
 )
 
 // Extractor defines the interface for extracting records from conversations.

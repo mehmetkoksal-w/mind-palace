@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/schemas"
+	"github.com/The-PatientZero/mind-palace/apps/cli/schemas"
 )
 
 func TestLoadGuardrailsMergeExtendsDefaults(t *testing.T) {

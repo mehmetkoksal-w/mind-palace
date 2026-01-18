@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/jsonc"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/jsonc"
 )
 
 func setupMCPServer(t *testing.T) (*MCPServer, *Butler) {

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/jsonc"
-	"github.com/koksalmehmet/mind-palace/apps/cli/schemas"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/jsonc"
+	"github.com/The-PatientZero/mind-palace/apps/cli/schemas"
 )
 
 // JSONC validates a JSONC file against an embedded schema.

@@ -25,9 +25,9 @@
 package corridor
 
 import (
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/corridor"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
-	"github.com/koksalmehmet/mind-palace/apps/cli/pkg/types"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/corridor"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/pkg/types"
 )
 
 // Re-export types for convenience
