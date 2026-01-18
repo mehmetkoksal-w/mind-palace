@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
 )
 
 // toolStore stores a thought with auto-classification.

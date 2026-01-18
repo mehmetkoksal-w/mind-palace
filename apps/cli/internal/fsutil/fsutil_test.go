@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/fsutil"
 )
 
 func TestMatchesGuardrailEdgeCases(t *testing.T) {

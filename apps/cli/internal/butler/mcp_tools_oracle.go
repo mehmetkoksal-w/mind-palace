@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
 )
 
 // toolExploreContext gets complete context for a task (the ORACLE query).

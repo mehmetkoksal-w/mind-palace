@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/util"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/collect"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/lint"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/signal"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/verify"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/flags"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/util"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/collect"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/lint"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/signal"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/verify"
 )
 
 func init() {

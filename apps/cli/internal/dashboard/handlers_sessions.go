@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
 )
 
 // handleSessions returns session list.

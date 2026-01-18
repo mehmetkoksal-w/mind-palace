@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/validate"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/fsutil"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/validate"
 )
 
 func Generate(root, diffRange string) (model.ChangeSignal, error) {

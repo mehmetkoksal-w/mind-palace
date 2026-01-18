@@ -7,11 +7,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/signal"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/stale"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/fsutil"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/signal"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/stale"
 )
 
 type Mode string

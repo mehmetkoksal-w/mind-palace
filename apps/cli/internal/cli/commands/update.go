@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/update"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/update"
 )
 
 // BuildVersion is set by the main package to provide version info

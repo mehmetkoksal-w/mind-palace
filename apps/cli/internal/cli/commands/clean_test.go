@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/commands"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/commands"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
 )
 
 func TestRunCleanInvalidFlag(t *testing.T) {

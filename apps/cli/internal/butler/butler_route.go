@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
 )
 
 // RouteRuleVersion is the version of the route derivation rules.

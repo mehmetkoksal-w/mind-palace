@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/logger"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/logger"
 )
 
 // DartLSPClient communicates with the Dart Analysis Server via LSP protocol

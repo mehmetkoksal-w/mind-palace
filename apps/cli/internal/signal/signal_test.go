@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/fsutil"
 )
 
 func TestGenerateChangeSignal(t *testing.T) {

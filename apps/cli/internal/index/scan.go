@@ -10,9 +10,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/analysis"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/fsutil"
 )
 
 // FileChange represents a detected change to a file

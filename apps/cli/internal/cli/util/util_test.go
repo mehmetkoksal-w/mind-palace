@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
 )
 
 func TestMustAbs(t *testing.T) {

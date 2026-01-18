@@ -88,7 +88,7 @@ UNINSTALLATION
 To uninstall, run:
   sudo rm /usr/local/bin/palace
 
-For more information, visit: https://github.com/koksalmehmet/mind-palace
+For more information, visit: https://github.com/The-PatientZero/mind-palace
 README_EOF
 
 # Create DMG

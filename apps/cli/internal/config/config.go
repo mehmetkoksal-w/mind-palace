@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/jsonc"
-	"github.com/koksalmehmet/mind-palace/apps/cli/schemas"
-	"github.com/koksalmehmet/mind-palace/apps/cli/starter"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/jsonc"
+	"github.com/The-PatientZero/mind-palace/apps/cli/schemas"
+	"github.com/The-PatientZero/mind-palace/apps/cli/starter"
 )
 
 type Guardrails struct {

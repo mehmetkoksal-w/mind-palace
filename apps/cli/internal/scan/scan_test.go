@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
 )
 
 func TestRunRequiresPalaceLayout(t *testing.T) {

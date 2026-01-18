@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
-	"github.com/koksalmehmet/mind-palace/apps/cli/schemas"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/schemas"
 )
 
 func TestContextPackJSONSchemaRoundTrip(t *testing.T) {

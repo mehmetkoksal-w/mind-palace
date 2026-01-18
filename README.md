@@ -2,10 +2,10 @@
 
 A deterministic context system for codebases, inspired by the [Method of Loci](https://en.wikipedia.org/wiki/Method_of_loci).
 
-[![Pipeline](https://github.com/koksalmehmet/mind-palace/actions/workflows/pipeline.yml/badge.svg)](https://github.com/koksalmehmet/mind-palace/actions/workflows/pipeline.yml)
-[![PR Validation](https://github.com/koksalmehmet/mind-palace/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/koksalmehmet/mind-palace/actions/workflows/pr-validation.yml)
-[![codecov](https://codecov.io/gh/koksalmehmet/mind-palace/branch/main/graph/badge.svg)](https://codecov.io/gh/koksalmehmet/mind-palace)
-[![Go Report Card](https://goreportcard.com/badge/github.com/koksalmehmet/mind-palace)](https://goreportcard.com/report/github.com/koksalmehmet/mind-palace)
+[![Pipeline](https://github.com/The-PatientZero/mind-palace/actions/workflows/pipeline.yml/badge.svg)](https://github.com/The-PatientZero/mind-palace/actions/workflows/pipeline.yml)
+[![PR Validation](https://github.com/The-PatientZero/mind-palace/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/The-PatientZero/mind-palace/actions/workflows/pr-validation.yml)
+[![codecov](https://codecov.io/gh/The-PatientZero/mind-palace/branch/main/graph/badge.svg)](https://codecov.io/gh/The-PatientZero/mind-palace)
+[![Go Report Card](https://goreportcard.com/badge/github.com/The-PatientZero/mind-palace)](https://goreportcard.com/report/github.com/The-PatientZero/mind-palace)
 
 ## Overview
 
@@ -31,7 +31,7 @@ Mind Palace provides a **deterministic, schema-validated index** for codebases t
 
 ```sh
 # Install
-curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
+curl -L https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
 chmod +x palace && sudo mv palace /usr/local/bin/
 
 # Initialize and scan
@@ -47,7 +47,7 @@ palace dashboard
 
 ## Documentation
 
-Full documentation is available at [koksalmehmet.github.io/mind-palace](https://koksalmehmet.github.io/mind-palace).
+Full documentation is available at [The-PatientZero.github.io/mind-palace](https://The-PatientZero.github.io/mind-palace).
 
 ## Repository Structure
 
@@ -86,7 +86,7 @@ mind-palace/
 
 ```sh
 # Clone the repository
-git clone https://github.com/koksalmehmet/mind-palace.git
+git clone https://github.com/The-PatientZero/mind-palace.git
 cd mind-palace
 
 # Install all dependencies
@@ -210,7 +210,7 @@ See [.github/workflows/](.github/workflows/) for workflow configurations.
 ### Via Go
 
 ```sh
-go install github.com/koksalmehmet/mind-palace/apps/cli@latest
+go install github.com/The-PatientZero/mind-palace/apps/cli@latest
 ```
 
 ### Binary Releases
@@ -218,29 +218,29 @@ go install github.com/koksalmehmet/mind-palace/apps/cli@latest
 - **macOS (Apple Silicon)**:
 
   ```sh
-  curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
+  curl -L https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-darwin-arm64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
 
 - **macOS (Intel)**:
 
   ```sh
-  curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-darwin-amd64 -o palace
+  curl -L https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-darwin-amd64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
 
 - **Linux (amd64)**:
 
   ```sh
-  curl -L https://github.com/koksalmehmet/mind-palace/releases/latest/download/palace-linux-amd64 -o palace
+  curl -L https://github.com/The-PatientZero/mind-palace/releases/latest/download/palace-linux-amd64 -o palace
   chmod +x palace && sudo mv palace /usr/local/bin/
   ```
 
-- **Windows**: Download `palace-windows-amd64.exe` from [releases](https://github.com/koksalmehmet/mind-palace/releases).
+- **Windows**: Download `palace-windows-amd64.exe` from [releases](https://github.com/The-PatientZero/mind-palace/releases).
 
 ### VS Code Extension
 
-Download the `.vsix` file from [releases](https://github.com/koksalmehmet/mind-palace/releases) and install:
+Download the `.vsix` file from [releases](https://github.com/The-PatientZero/mind-palace/releases) and install:
 
 ```sh
 code --install-extension mind-palace-vscode-*.vsix
@@ -276,9 +276,9 @@ External tools can import Mind Palace packages:
 
 ```go
 import (
-    "github.com/koksalmehmet/mind-palace/apps/cli/pkg/memory"
-    "github.com/koksalmehmet/mind-palace/apps/cli/pkg/corridor"
-    "github.com/koksalmehmet/mind-palace/apps/cli/pkg/types"
+    "github.com/The-PatientZero/mind-palace/apps/cli/pkg/memory"
+    "github.com/The-PatientZero/mind-palace/apps/cli/pkg/corridor"
+    "github.com/The-PatientZero/mind-palace/apps/cli/pkg/types"
 )
 
 // Open workspace memory

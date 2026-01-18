@@ -1,9 +1,9 @@
 package verify
 
 import (
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/stale"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/stale"
 )
 
 func detectStale(

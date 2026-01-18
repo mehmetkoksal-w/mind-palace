@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/corridor"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/corridor"
 )
 
 // handleCorridors returns corridor overview.

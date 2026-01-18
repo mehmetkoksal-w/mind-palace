@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/commands"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/commands"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
 )
 
 func TestBoolFlag(t *testing.T) {

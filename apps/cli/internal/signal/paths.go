@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/validate"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/fsutil"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/validate"
 )
 
 // Paths returns changed paths for a diff range, preferring a matching change signal when available.

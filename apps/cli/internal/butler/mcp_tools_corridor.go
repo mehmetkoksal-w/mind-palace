@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/corridor"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/corridor"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
 )
 
 // toolCorridorLearnings retrieves personal learnings from the global corridor.

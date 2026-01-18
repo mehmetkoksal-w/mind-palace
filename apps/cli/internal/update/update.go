@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	GitHubOwner     = "koksalmehmet"
+	GitHubOwner     = "The-PatientZero"
 	GitHubRepo      = "mind-palace"
 	releasesAPIURL  = "https://api.github.com/repos/%s/%s/releases/latest"
 	cacheFileName   = "update-check.json"

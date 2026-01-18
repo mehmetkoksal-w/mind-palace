@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/memory"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/memory"
 )
 
 // toolStoreDirect stores a record directly, bypassing the proposal system.

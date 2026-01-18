@@ -8,15 +8,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/corridor"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/jsonc"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/signal"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/stale"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/validate"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/corridor"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/fsutil"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/jsonc"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/signal"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/stale"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/validate"
 )
 
 // Options configures the context collection behavior.

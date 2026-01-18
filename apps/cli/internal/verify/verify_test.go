@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/fsutil"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/fsutil"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
 )
 
 func TestDetectStaleIgnoresUnchangedFiles(t *testing.T) {

@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 $VERSION = if (Test-Path VERSION) { (Get-Content VERSION).Trim() } else { "dev" }
 $COMMIT = try { git rev-parse --short HEAD 2>$null } catch { "unknown" }
 $DATE = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ" -AsUTC
-$LDFLAGS = "-s -w -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildVersion=$VERSION -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildCommit=$COMMIT -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildDate=$DATE"
+$LDFLAGS = "-s -w -X github.com/The-PatientZero/mind-palace/apps/cli/internal/cli.buildVersion=$VERSION -X github.com/The-PatientZero/mind-palace/apps/cli/internal/cli.buildCommit=$COMMIT -X github.com/The-PatientZero/mind-palace/apps/cli/internal/cli.buildDate=$DATE"
 
 function Build-Dashboard {
     Write-Host "Building dashboard..." -ForegroundColor Cyan

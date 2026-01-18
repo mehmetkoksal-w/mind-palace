@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/analysis"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/logger"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/scan"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/analysis"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/flags"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/logger"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/scan"
 )
 
 func init() {

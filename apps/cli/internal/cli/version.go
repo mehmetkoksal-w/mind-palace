@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/update"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/update"
 )
 
 var (

@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/jsonc"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/jsonc"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
 )
 
 type CacheMeta struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/llm"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/llm"
 )
 
 // ContradictionAnalyzer defines the interface for detecting contradictions.

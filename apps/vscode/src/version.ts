@@ -161,7 +161,7 @@ export async function warnIfIncompatible(): Promise<void> {
       // Open installation docs
       vscode.env.openExternal(
         vscode.Uri.parse(
-          "https://github.com/koksalmehmet/mind-palace#install-no-go-toolchain-required"
+          "https://github.com/The-PatientZero/mind-palace#install-no-go-toolchain-required"
         )
       );
     }

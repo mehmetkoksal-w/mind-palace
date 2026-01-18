@@ -6,13 +6,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/butler"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/commands"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/util"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/jsonc"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/update"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/butler"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/commands"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/flags"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/util"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/jsonc"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/update"
 )
 
 func init() {

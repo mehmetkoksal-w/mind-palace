@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
 )
 
 // MustAbs returns the absolute path, or the original path if resolution fails.

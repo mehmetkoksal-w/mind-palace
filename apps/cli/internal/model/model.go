@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/jsonc"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/jsonc"
 )
 
 // Capability defines a task or tool that can be executed within a room.

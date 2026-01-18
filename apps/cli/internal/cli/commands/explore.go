@@ -10,14 +10,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/butler"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/flags"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/cli/util"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/config"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/index"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/jsonc"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/model"
-	"github.com/koksalmehmet/mind-palace/apps/cli/internal/validate"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/butler"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/flags"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/cli/util"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/config"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/index"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/jsonc"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/model"
+	"github.com/The-PatientZero/mind-palace/apps/cli/internal/validate"
 )
 
 func init() {

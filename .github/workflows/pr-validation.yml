@@ -215,9 +215,9 @@ jobs:
           
           go build -v \
             -ldflags="-s -w \
-              -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildVersion=$VERSION \
-              -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildCommit=$COMMIT \
-              -X github.com/koksalmehmet/mind-palace/apps/cli/internal/cli.buildDate=$DATE" \
+              -X github.com/The-PatientZero/mind-palace/apps/cli/internal/cli.buildVersion=$VERSION \
+              -X github.com/The-PatientZero/mind-palace/apps/cli/internal/cli.buildCommit=$COMMIT \
+              -X github.com/The-PatientZero/mind-palace/apps/cli/internal/cli.buildDate=$DATE" \
             -o palace \
             ./apps/cli
 
