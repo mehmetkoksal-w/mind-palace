@@ -36,6 +36,10 @@ func (s *MCPServer) toolSessionInit(id any, args map[string]interface{}) jsonRPC
 		return s.toolError(id, fmt.Sprintf("start session failed: %v", err))
 	}
 
+	// Track this session in the server (for auto-session detection)
+	s.currentSessionID = session.ID
+	s.autoSessionUsed = false
+
 	output.WriteString("# Session Initialized\n\n")
 	output.WriteString("## Session Info\n\n")
 	fmt.Fprintf(&output, "- **Session ID:** `%s`\n", session.ID)

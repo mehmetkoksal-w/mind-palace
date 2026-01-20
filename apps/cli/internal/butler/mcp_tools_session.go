@@ -23,6 +23,10 @@ func (s *MCPServer) toolSessionStart(id any, args map[string]interface{}) jsonRP
 		return s.toolError(id, fmt.Sprintf("start session failed: %v", err))
 	}
 
+	// Track this session in the server (for auto-session detection)
+	s.currentSessionID = session.ID
+	s.autoSessionUsed = false
+
 	var output strings.Builder
 	output.WriteString("# Session Started\n\n")
 	fmt.Fprintf(&output, "**Session ID:** `%s`\n", session.ID)
@@ -110,6 +114,12 @@ func (s *MCPServer) toolSessionEnd(id any, args map[string]interface{}) jsonRPCR
 
 	if err := s.butler.EndSession(sessionID, state, summary); err != nil {
 		return s.toolError(id, fmt.Sprintf("end session failed: %v", err))
+	}
+
+	// Clear the tracked session if this was the current one
+	if s.currentSessionID == sessionID {
+		s.currentSessionID = ""
+		s.autoSessionUsed = false
 	}
 
 	return jsonRPCResponse{
