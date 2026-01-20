@@ -1,0 +1,233 @@
+---
+title: Agent Rules
+description: Configure AI agent rules for different tools to enable autonomous Mind Palace workflows
+---
+
+# Agent Rules
+
+Mind Palace provides preset rules files that teach AI agents how to use the MCP tools autonomously. These rules are loaded into the agent's context at session start, enabling proper workflow without consuming tokens on every MCP response.
+
+## Supported Rule Formats
+
+| Tool | Rule File | Location | Auto-Install |
+|------|-----------|----------|--------------|
+| Claude Code | `CLAUDE.md` | Project root | Yes |
+| Cursor | `.cursorrules` | Project root | Yes |
+| Windsurf | `.windsurfrules` | Project root | Yes |
+| GitHub Copilot | `copilot-instructions.md` | `.github/` | Yes |
+| Gemini CLI | `GEMINI.md` | Project root | Yes |
+| Cline | `.cursorrules` | Project root | Yes |
+| Zed | `.cursorrules` | Project root | Yes |
+| JetBrains | `.cursorrules` | Project root | Yes |
+| OpenCode | `.cursorrules` | Project root | Yes |
+| Codex | `.cursorrules` | Project root | Yes |
+| Antigravity | `.cursorrules` | Project root | Yes |
+
+## Automatic Installation
+
+When you install Mind Palace MCP configuration for a tool, the appropriate rules file is automatically copied to your workspace:
+
+```sh
+# Install for Claude Code (copies CLAUDE.md)
+palace mcp-config --for claude-code --install
+
+# Install for Cursor (copies .cursorrules)
+palace mcp-config --for cursor --install
+
+# Install for Windsurf (copies .windsurfrules)
+palace mcp-config --for windsurf --install
+
+# Install for VS Code Copilot (copies .github/copilot-instructions.md)
+palace mcp-config --for vscode --install
+```
+
+## Manual Installation
+
+You can also manually copy the rules files from the Mind Palace installation:
+
+```sh
+# Find starter templates location
+palace --version  # Shows installation path
+
+# Copy rules manually
+cp /path/to/palace/starter/CLAUDE.md ./CLAUDE.md
+cp /path/to/palace/starter/.cursorrules ./.cursorrules
+cp /path/to/palace/starter/.windsurfrules ./.windsurfrules
+mkdir -p .github && cp /path/to/palace/starter/.github/copilot-instructions.md ./.github/
+```
+
+## Rules File Content
+
+All rules files contain the same core instructions adapted for each agent's naming conventions:
+
+### Core Workflow
+
+```
+Session → Brief → Context → Work → End
+```
+
+1. **session_start**: Start every task with a session
+2. **brief**: Get workspace context immediately
+3. **context_auto_inject**: Get file context before editing
+4. **session_conflict**: Check for other agents working on same files
+5. **store**: Save learnings, decisions, and ideas
+6. **session_log**: Log activities for audit trail
+7. **session_end**: End session when task is complete
+
+### Priority System
+
+- **CRITICAL**: Must do (session_start, brief, context_auto_inject, session_end)
+- **IMPORTANT**: Should do (store, session_log, session_conflict)
+- **RECOMMENDED**: Optional but valuable (recall, explore, postmortems)
+- **ADMIN**: Human-mode only (approve, reject, store_direct)
+
+## Claude Code Configuration
+
+For Claude Code, the rules are read from `CLAUDE.md` in your project root:
+
+```sh
+# Install MCP config and rules
+palace mcp-config --for claude-code --install
+```
+
+This creates:
+- `.mcp.json` - MCP server configuration
+- `CLAUDE.md` - Agent rules file
+
+The rules teach Claude Code to:
+- Start sessions before any work
+- Get file context before editing
+- Store knowledge as discoveries are made
+- End sessions properly
+
+## Cursor Configuration
+
+For Cursor, the rules are read from `.cursorrules` in your project root:
+
+```sh
+# Install MCP config and rules
+palace mcp-config --for cursor --install
+```
+
+This creates:
+- `~/.cursor/mcp.json` - MCP server configuration
+- `.cursorrules` - Agent rules file (in workspace)
+
+## Windsurf Configuration
+
+For Windsurf, the rules are read from `.windsurfrules` in your project root:
+
+```sh
+# Install MCP config and rules
+palace mcp-config --for windsurf --install
+```
+
+This creates:
+- `~/.codeium/windsurf/mcp_config.json` - MCP server configuration
+- `.windsurfrules` - Agent rules file (in workspace)
+
+## GitHub Copilot Configuration
+
+For GitHub Copilot in VS Code, the rules are read from `.github/copilot-instructions.md`:
+
+```sh
+# Install MCP config and rules
+palace mcp-config --for vscode --install
+```
+
+This creates:
+- `.vscode/mcp.json` - MCP server configuration
+- `.github/copilot-instructions.md` - Agent rules file
+
+## Customizing Rules
+
+You can customize the rules files after installation. Common customizations:
+
+### Add Project-Specific Instructions
+
+```markdown
+# Mind Palace - Autonomous Agent Instructions
+
+[... existing content ...]
+
+## Project-Specific Rules
+
+### Architecture
+- Use repository pattern for data access
+- All API endpoints must have OpenAPI documentation
+- Follow domain-driven design principles
+
+### Testing
+- Write unit tests for all new functions
+- Integration tests required for API endpoints
+- Use mocks for external services
+```
+
+### Adjust Priority Levels
+
+Modify the priority system based on your team's needs:
+
+```markdown
+## Priority System
+
+- **CRITICAL**: session_start, brief, context_auto_inject, session_end, store (for our team, always store learnings)
+- **IMPORTANT**: session_log, session_conflict, recall
+- **RECOMMENDED**: explore, postmortems, semantic search
+```
+
+## Combining with Existing Rules
+
+If you already have rules files in your project, you can append Mind Palace instructions:
+
+```sh
+# Append Mind Palace rules to existing .cursorrules
+cat /path/to/palace/starter/.cursorrules >> .cursorrules
+```
+
+Or include Mind Palace rules as a separate section:
+
+```markdown
+# Existing Project Rules
+
+[Your existing rules...]
+
+---
+
+# Mind Palace Integration
+
+[Mind Palace rules content...]
+```
+
+## Troubleshooting
+
+### Rules Not Being Applied
+
+1. Verify the rules file exists in the correct location
+2. Check that the agent supports the rules file format
+3. Some agents require restarting after adding rules files
+
+### Agent Not Using Mind Palace Tools
+
+1. Verify MCP configuration is correct: `palace mcp-config --for <tool>`
+2. Check that the MCP server is running: `palace serve --root .`
+3. Verify the rules file is being read by the agent
+
+### Conflicts with Other Rules
+
+If Mind Palace rules conflict with existing project rules:
+1. Place Mind Palace rules in a clearly marked section
+2. Use consistent priority language
+3. Remove duplicate or conflicting instructions
+
+## Best Practices
+
+1. **Commit rules files** to version control so all team members have the same agent behavior
+2. **Keep rules concise** - agents have limited context windows
+3. **Review rules periodically** as your workflow evolves
+4. **Test with new agents** before deploying to production
+
+## See Also
+
+- [Autonomous Agent Guide](/autonomous-agents) - Complete workflow documentation
+- [MCP Integration](/features/agents) - MCP server configuration
+- [CLI Reference](/reference/cli) - `palace mcp-config` command details

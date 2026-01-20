@@ -344,17 +344,45 @@ await corridor_reinforce({learningId: "l_corridor456"})
 
 ## Configuration for Agents
 
-### Claude Desktop
+Mind Palace provides preset rules files for all major AI coding tools. When you install MCP configuration, the appropriate rules file is automatically copied to your workspace.
 
-When you run `palace mcp-config --for claude-desktop --install`, Mind Palace automatically adds `globalRules` to your config with autonomous workflow instructions.
+### Supported Tools
 
-### Cursor
+| Tool | Rule File | Command |
+|------|-----------|---------|
+| Claude Code | `CLAUDE.md` | `palace mcp-config --for claude-code --install` |
+| Cursor | `.cursorrules` | `palace mcp-config --for cursor --install` |
+| Windsurf | `.windsurfrules` | `palace mcp-config --for windsurf --install` |
+| VS Code Copilot | `.github/copilot-instructions.md` | `palace mcp-config --for vscode --install` |
+| Gemini CLI | `GEMINI.md` | `palace mcp-config --for gemini-cli --install` |
+| Claude Desktop | `globalRules` in config | `palace mcp-config --for claude-desktop --install` |
 
-When you run `palace mcp-config --for cursor --install`, Mind Palace automatically copies `.cursorrules` to your workspace with complete autonomous workflow guide.
+### Example: Setting Up Claude Code
 
-### Other Agents
+```sh
+# Initialize Mind Palace in your project
+palace init
+palace scan
 
-Check the [MCP Configuration](/reference/mcp-configuration) guide for your specific agent.
+# Install MCP config and agent rules
+palace mcp-config --for claude-code --install
+```
+
+This creates:
+- `.mcp.json` - MCP server configuration
+- `CLAUDE.md` - Agent rules file with autonomous workflow instructions
+
+### Example: Setting Up Cursor
+
+```sh
+palace mcp-config --for cursor --install
+```
+
+This creates:
+- `~/.cursor/mcp.json` - MCP server configuration
+- `.cursorrules` - Agent rules file in your workspace
+
+See the [Agent Rules Reference](/reference/agent-rules) for complete documentation on customizing rules for your team.
 
 ## Tool Categories
 

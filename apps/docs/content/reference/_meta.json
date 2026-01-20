@@ -1,6 +1,7 @@
 {
   "cli": "CLI Reference",
   "extension": "VS Code Extension",
+  "agent-rules": "Agent Rules",
   "governance-quick-reference": "Governance Quick Reference",
   "public-api": "Public API",
   "errors": "Error Reference",

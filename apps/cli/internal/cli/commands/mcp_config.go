@@ -43,6 +43,8 @@ type ToolInfo struct {
 	Description string
 	ConfigKey   string // The key used for MCP servers in config (mcpServers, servers, mcp, context_servers)
 	Format      string // json, toml
+	RulesFile   string // Rules file to copy to workspace (e.g., ".cursorrules", "CLAUDE.md")
+	RulesDir    string // Directory to create for rules file (e.g., ".github")
 }
 
 // supportedTools lists all supported AI tools with their configuration details.
@@ -52,6 +54,7 @@ var supportedTools = map[string]ToolInfo{
 		Description: "Anthropic's Claude Code CLI",
 		ConfigKey:   "mcpServers",
 		Format:      "json",
+		RulesFile:   "CLAUDE.md",
 	},
 	"claude-desktop": {
 		Name:        "Claude Desktop",
@@ -64,60 +67,71 @@ var supportedTools = map[string]ToolInfo{
 		Description: "Cursor AI editor",
 		ConfigKey:   "mcpServers",
 		Format:      "json",
+		RulesFile:   ".cursorrules",
 	},
 	"vscode": {
 		Name:        "VS Code Copilot",
 		Description: "GitHub Copilot in VS Code",
 		ConfigKey:   "servers",
 		Format:      "json",
+		RulesFile:   "copilot-instructions.md",
+		RulesDir:    ".github",
 	},
 	"windsurf": {
 		Name:        "Windsurf",
 		Description: "Codeium's Windsurf IDE",
 		ConfigKey:   "mcpServers",
 		Format:      "json",
+		RulesFile:   ".windsurfrules",
 	},
 	"cline": {
 		Name:        "Cline",
 		Description: "Cline VS Code extension",
 		ConfigKey:   "mcpServers",
 		Format:      "json",
+		RulesFile:   ".cursorrules",
 	},
 	"zed": {
 		Name:        "Zed",
 		Description: "Zed editor",
 		ConfigKey:   "context_servers",
 		Format:      "json",
+		RulesFile:   ".cursorrules",
 	},
 	"codex": {
 		Name:        "OpenAI Codex",
 		Description: "OpenAI's Codex CLI",
 		ConfigKey:   "mcp_servers",
 		Format:      "toml",
+		RulesFile:   ".cursorrules",
 	},
 	"antigravity": {
 		Name:        "Antigravity",
 		Description: "Google's Antigravity IDE",
 		ConfigKey:   "mcpServers",
 		Format:      "json",
+		RulesFile:   ".cursorrules",
 	},
 	"opencode": {
 		Name:        "OpenCode",
 		Description: "OpenCode terminal AI assistant",
 		ConfigKey:   "mcp",
 		Format:      "json",
+		RulesFile:   ".cursorrules",
 	},
 	"jetbrains": {
 		Name:        "JetBrains",
 		Description: "JetBrains IDEs (IntelliJ, PyCharm, etc.)",
 		ConfigKey:   "mcpServers",
 		Format:      "json",
+		RulesFile:   ".cursorrules",
 	},
 	"gemini-cli": {
 		Name:        "Gemini CLI",
 		Description: "Google's Gemini CLI",
 		ConfigKey:   "mcpServers",
 		Format:      "json",
+		RulesFile:   "GEMINI.md",
 	},
 }
 
@@ -306,7 +320,7 @@ func installConfigForTool(target string, tool ToolInfo, palacePath, rootPath str
 
 	switch tool.Format {
 	case "toml":
-		return installTOMLConfig(configPath, palacePath, rootPath)
+		return installTOMLConfig(tool, configPath, palacePath, rootPath)
 	default:
 		return installJSONConfig(target, tool, configPath, palacePath, rootPath)
 	}
@@ -364,10 +378,10 @@ func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, roo
 
 	fmt.Fprintf(os.Stderr, "Installed mind-palace MCP server to %s\n", configPath)
 
-	// Copy .cursorrules to rootPath for Cursor
-	if target == "cursor" {
-		if err := copyCursorRules(rootPath); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: Failed to copy .cursorrules: %v\n", err)
+	// Copy agent rules file to workspace
+	if tool.RulesFile != "" {
+		if err := copyAgentRules(tool, rootPath); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to copy %s: %v\n", tool.RulesFile, err)
 		}
 	}
 
@@ -375,7 +389,7 @@ func installJSONConfig(target string, tool ToolInfo, configPath, palacePath, roo
 }
 
 // installTOMLConfig installs TOML configuration for OpenAI Codex.
-func installTOMLConfig(configPath, palacePath, rootPath string) error {
+func installTOMLConfig(tool ToolInfo, configPath, palacePath, rootPath string) error {
 	// Read existing config if it exists
 	existingContent := ""
 	data, err := os.ReadFile(configPath)
@@ -421,6 +435,14 @@ func installTOMLConfig(configPath, palacePath, rootPath string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "Installed mind-palace MCP server to %s\n", configPath)
+
+	// Copy agent rules file to workspace
+	if tool.RulesFile != "" {
+		if err := copyAgentRules(tool, rootPath); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to copy %s: %v\n", tool.RulesFile, err)
+		}
+	}
+
 	return nil
 }
 
@@ -461,48 +483,88 @@ func addClaudeGlobalRules(config *map[string]interface{}) {
 	(*config)["globalRules"] = globalRules
 }
 
-// copyCursorRules copies the .cursorrules template to the target workspace.
-func copyCursorRules(rootPath string) error {
-	// Find the .cursorrules template in starter directory
-	// Try to find it relative to the palace binary
-	palacePath, err := findPalaceBinary()
-	if err != nil {
-		return err
+// copyAgentRules copies the agent rules template to the target workspace.
+func copyAgentRules(tool ToolInfo, rootPath string) error {
+	if tool.RulesFile == "" {
+		return nil
 	}
 
-	binDir := filepath.Dir(palacePath)
-	templatePath := filepath.Join(binDir, "..", "starter", ".cursorrules")
+	// Determine source template path in starter directory
+	sourceFile := tool.RulesFile
+	sourceDir := ""
+	if tool.RulesDir != "" {
+		sourceDir = tool.RulesDir
+	}
 
-	// Check if template exists
-	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
-		// Try alternative location (when running from source)
-		execPath, err := os.Executable()
-		if err != nil {
-			return fmt.Errorf("locate executable: %w", err)
-		}
-		projectRoot := filepath.Join(filepath.Dir(execPath), "..", "..", "..")
-		templatePath = filepath.Join(projectRoot, "apps", "cli", "starter", ".cursorrules")
-
-		if _, err := os.Stat(templatePath); os.IsNotExist(err) {
-			// Return nil - not an error if template doesn't exist
-			return nil
-		}
+	// Find template in starter directory
+	templatePath, err := findRulesTemplate(sourceDir, sourceFile)
+	if err != nil {
+		return nil // Not an error if template doesn't exist
 	}
 
 	// Read template
 	content, err := os.ReadFile(templatePath)
 	if err != nil {
-		return fmt.Errorf("read .cursorrules template: %w", err)
+		return fmt.Errorf("read %s template: %w", tool.RulesFile, err)
 	}
+
+	// Determine target path
+	targetPath := rootPath
+	if tool.RulesDir != "" {
+		targetPath = filepath.Join(rootPath, tool.RulesDir)
+		// Ensure target directory exists
+		if err := os.MkdirAll(targetPath, 0o755); err != nil {
+			return fmt.Errorf("create directory %s: %w", targetPath, err)
+		}
+	}
+	targetPath = filepath.Join(targetPath, tool.RulesFile)
 
 	// Write to target
-	targetPath := filepath.Join(rootPath, ".cursorrules")
-	if err := os.WriteFile(targetPath, content, 0o600); err != nil {
-		return fmt.Errorf("write .cursorrules: %w", err)
+	if err := os.WriteFile(targetPath, content, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", tool.RulesFile, err)
 	}
 
-	fmt.Fprintf(os.Stderr, "Copied .cursorrules to %s\n", targetPath)
+	fmt.Fprintf(os.Stderr, "Copied %s to %s\n", tool.RulesFile, targetPath)
 	return nil
+}
+
+// findRulesTemplate finds the rules template file in the starter directory.
+func findRulesTemplate(subDir, fileName string) (string, error) {
+	// Try to find it relative to the palace binary
+	palacePath, err := findPalaceBinary()
+	if err != nil {
+		return "", err
+	}
+
+	binDir := filepath.Dir(palacePath)
+	templatePath := filepath.Join(binDir, "..", "starter")
+	if subDir != "" {
+		templatePath = filepath.Join(templatePath, subDir)
+	}
+	templatePath = filepath.Join(templatePath, fileName)
+
+	// Check if template exists
+	if _, err := os.Stat(templatePath); err == nil {
+		return templatePath, nil
+	}
+
+	// Try alternative location (when running from source)
+	execPath, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("locate executable: %w", err)
+	}
+	projectRoot := filepath.Join(filepath.Dir(execPath), "..", "..", "..")
+	templatePath = filepath.Join(projectRoot, "apps", "cli", "starter")
+	if subDir != "" {
+		templatePath = filepath.Join(templatePath, subDir)
+	}
+	templatePath = filepath.Join(templatePath, fileName)
+
+	if _, err := os.Stat(templatePath); err == nil {
+		return templatePath, nil
+	}
+
+	return "", fmt.Errorf("template not found: %s", fileName)
 }
 
 // getConfigPath returns the configuration file path for the given target.

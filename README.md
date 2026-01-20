@@ -255,20 +255,28 @@ palace version --check # Check for updates
 
 ## MCP Integration
 
-Add to your MCP client configuration:
+Install MCP configuration and agent rules for your AI tool:
 
-```json
-{
-  "mcpServers": {
-    "mind-palace": {
-      "command": "palace",
-      "args": ["serve", "--root", "/path/to/your/project"]
-    }
-  }
-}
+```sh
+# For Claude Code
+palace mcp-config --for claude-code --install
+
+# For Cursor
+palace mcp-config --for cursor --install
+
+# For Windsurf
+palace mcp-config --for windsurf --install
+
+# For VS Code Copilot
+palace mcp-config --for vscode --install
+
+# List all supported tools
+palace mcp-config --list
 ```
 
-Compatible with Claude Desktop, Cursor, and other MCP-enabled agents.
+This installs both the MCP server configuration and agent rules that teach AI agents how to use Mind Palace autonomously.
+
+Compatible with Claude Code, Claude Desktop, Cursor, Windsurf, VS Code Copilot, Gemini CLI, Cline, Zed, JetBrains, and other MCP-enabled agents.
 
 ## Public API
 
