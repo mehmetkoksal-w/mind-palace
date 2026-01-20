@@ -25,10 +25,10 @@ jobs:
     name: "Trivy: Filesystem Scan"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -44,7 +44,7 @@ jobs:
           category: 'trivy-filesystem'
 
       - name: Generate HTML Report
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -67,14 +67,14 @@ jobs:
     name: "Gosec: Go Security Scan"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
+        uses: securego/gosec@v2.22.11
         with:
           args: '-fmt sarif -out gosec-results.sarif ./apps/cli/...'
 
@@ -95,7 +95,7 @@ jobs:
       matrix:
         app: [dashboard, vscode, docs]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
@@ -137,7 +137,7 @@ jobs:
           - language: javascript-typescript
             path: apps
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -167,7 +167,7 @@ jobs:
     name: "Gitleaks: Secret Scan"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
