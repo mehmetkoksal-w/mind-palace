@@ -17,14 +17,17 @@ Modern AI agents work across large codebases without your institutional memory. 
 4. **Failure Memory**: Learn from past mistakes automatically
 5. **Autonomous Workflows**: Agents know WHEN to use tools via priority system
 
-## Quick Start: 3-Step Autonomous Workflow
+## Quick Start: Single-Call Initialization
 
-Every agent task follows this pattern:
+Every agent task starts with one call:
 
 ```typescript
-// 1. Start session & get briefing
-await session_start({agent_name: "cursor", task: "Add authentication"})
-const context = await brief()  // Get workspace overview
+// 1. Initialize with full context (RECOMMENDED - ONE CALL DOES IT ALL)
+const init = await session_init({
+  agent_name: "cursor",
+  task: "Add authentication"
+})
+// Returns: session ID, workspace briefing, project structure, pending handoffs
 
 // 2. Get file context before editing
 const fileContext = await context_auto_inject({file_path: "auth/jwt.ts"})
@@ -34,15 +37,15 @@ const fileContext = await context_auto_inject({file_path: "auth/jwt.ts"})
 await session_end({outcome: "success", summary: "Added JWT refresh tokens"})
 ```
 
-That's it. This prevents 90% of common agent mistakes.
+That's it. `session_init` combines session_start + brief + explore_rooms into a single call and shows any pending handoffs waiting for you.
 
 ## Priority System
 
-All 64 Mind Palace tools have priority indicators:
+All 77+ Mind Palace tools have priority indicators:
 
-- 🔴 **CRITICAL**: Must do these (session_start, brief, context_auto_inject, session_end)
-- 🟡 **IMPORTANT**: Should do these (store, session_log, session_conflict)
-- 🟢 **RECOMMENDED**: Optional but valuable (recall, explore, postmortems)
+- 🔴 **CRITICAL**: Must do these (session_init, context_auto_inject, session_end)
+- 🟡 **IMPORTANT**: Should do these (store, session_log, session_conflict, handoff_create)
+- 🟢 **RECOMMENDED**: Optional but valuable (recall, explore, analytics_health, context_focus)
 - ⚪ **ADMIN**: Human-mode only (approve, reject, store_direct)
 
 Agents should **always** execute CRITICAL tools, **usually** execute IMPORTANT tools, and **conditionally** use RECOMMENDED tools.
@@ -51,32 +54,37 @@ Agents should **always** execute CRITICAL tools, **usually** execute IMPORTANT t
 
 Here's a full example for adding a feature:
 
-### 1. Session Start (🔴 CRITICAL)
+### 1. Session Initialize (🔴 CRITICAL - THE FIRST CALL)
 
 ```typescript
-await session_start({
+const init = await session_init({
   agent_name: "cursor",
-  task: "Add JWT refresh token support",
-  metadata: {user: "developer@example.com"}
+  task: "Add JWT refresh token support"
 })
 ```
 
-**Why:** Tracks your work, prevents conflicts, enables session analysis.
-
-### 2. Get Briefing (🔴 CRITICAL - CALL SECOND)
-
-```typescript
-const briefing = await brief()
-```
-
 **Returns:**
+- Session ID (use for all subsequent calls)
 - Active agents and their current work
-- Session conflicts (files being edited by others)
 - Workspace learnings and decisions
 - Hotspot files (frequently modified, high failure rate)
 - Recent failures and postmortems
+- **Pending handoffs** (tasks waiting to be picked up)
+- Project structure (rooms and entry points)
 
-**Why:** You need workspace context before starting work. Working without a briefing is like coding blindfolded.
+**Why:** This single call replaces session_start + brief + explore_rooms. It tracks your work, prevents conflicts, and gives you full context immediately.
+
+### 1b. (Alternative) Resume Previous Session
+
+If continuing previous work:
+
+```typescript
+const resumed = await session_resume({
+  sessionId: "sess_abc123"  // Or use agentType to find latest
+})
+```
+
+**Why:** Picks up where you left off with full context restoration.
 
 ### 3. Explore Codebase (🟢 RECOMMENDED)
 
@@ -241,6 +249,122 @@ Knowledge has four scope levels (most specific wins):
 
 When storing knowledge, choose the narrowest applicable scope.
 
+## Context Management
+
+### Set Task Focus
+
+Focus context retrieval on your current task:
+
+```typescript
+await context_focus({
+  task: "Implement rate limiting for API endpoints",
+  pin: ["l_ratelimit123", "d_api456"]  // Pin specific records
+})
+```
+
+Now all context retrievals will prioritize rate-limiting related knowledge.
+
+### Get Focused Context
+
+```typescript
+const context = await context_get({
+  file: "api/middleware.ts",  // Optional: file-specific
+  maxTokens: 2000
+})
+```
+
+Returns prioritized learnings, pinned records, active decisions, and warnings.
+
+### Pin Important Records
+
+```typescript
+// Pin a crucial learning for this session
+await context_pin({id: "l_important123"})
+
+// Unpin when no longer needed
+await context_pin({id: "l_important123", unpin: true})
+```
+
+---
+
+## Multi-Agent Handoffs
+
+### Create a Handoff
+
+When you can't complete a task, hand it off:
+
+```typescript
+await handoff_create({
+  task: "Complete API rate limiting implementation",
+  to: "claude-code",  // Or "any" for any agent
+  context: "Started implementing token bucket algorithm. Redis backend configured.",
+  pending: [
+    "Add rate limit headers to responses",
+    "Implement per-user limits",
+    "Add monitoring dashboard"
+  ],
+  pin: ["l_ratelimit123"],  // Include relevant learnings
+  priority: "high"
+})
+```
+
+### Check for Pending Handoffs
+
+```typescript
+const handoffs = await handoff_list({status: "pending"})
+```
+
+**Note:** `session_init` automatically shows pending handoffs at session start.
+
+### Accept a Handoff
+
+```typescript
+const handoff = await handoff_accept({id: "hoff_12345678"})
+// Automatically sets your context focus to the handoff task
+// Pins the handoff's records to your context
+```
+
+### Complete a Handoff
+
+```typescript
+await handoff_complete({
+  id: "hoff_12345678",
+  summary: "Implemented all rate limiting features with Redis backend"
+})
+```
+
+---
+
+## Analytics & Health
+
+### Check Workspace Health
+
+```typescript
+const health = await analytics_health()
+// Returns: health score (0-100), knowledge health, contradictions,
+// session success rates, failure tracking, handoff status
+```
+
+### Session Analytics
+
+```typescript
+const stats = await analytics_sessions({days: 30})
+// Returns: session counts, completion rates, average duration,
+// activity outcomes, agent breakdown
+```
+
+### Learning Effectiveness
+
+```typescript
+const effectiveness = await analytics_learnings({
+  limit: 20,
+  sort: "use_count"  // or "confidence" or "combined"
+})
+// Shows which learnings are most used and effective
+```
+
+---
+
 ## Advanced Features
 
 ### Semantic Search (if embeddings configured)
@@ -386,27 +510,34 @@ See the [Agent Rules Reference](/reference/agent-rules) for complete documentati
 
 ## Tool Categories
 
-Mind Palace has 64 tools across 10 categories:
+Mind Palace has 77+ tools across 13 categories:
 
-1. **Explore** (12 tools): Search codebase, find symbols, analyze impact
-2. **Session** (7 tools): Session management, logging, conflict detection  
-3. **Store** (4 tools): Store ideas, decisions, learnings  
-4. **Recall** (12 tools): Retrieve knowledge, check outcomes, manage links  
-5. **Brief** (4 tools): Get briefings, file intelligence, smart analysis  
-6. **Conversation** (3 tools): Store/search conversations, extract insights  
-7. **Corridor** (5 tools): Cross-workspace personal knowledge  
-8. **Postmortem** (5 tools): Failure documentation and learning  
-9. **Learning Lifecycle** (8 tools): Decay, obsolescence, archival  
-10. **Advanced** (4 tools): Semantic search, contradiction detection, embeddings  
+1. **Composite** (1 tool): `session_init` - single-call initialization
+2. **Explore** (12 tools): Search codebase, find symbols, analyze impact
+3. **Session** (9 tools): Session management, logging, conflict detection, resume, status
+4. **Store** (4 tools): Store ideas, decisions, learnings
+5. **Recall** (12 tools): Retrieve knowledge, check outcomes, manage links
+6. **Brief** (4 tools): Get briefings, file intelligence, smart analysis
+7. **Context** (3 tools): Task focus, prioritized context, pinning
+8. **Handoff** (4 tools): Multi-agent task handoff and coordination
+9. **Analytics** (3 tools): Session stats, learning effectiveness, health dashboard
+10. **Conversation** (3 tools): Store/search conversations, extract insights
+11. **Corridor** (5 tools): Cross-workspace personal knowledge
+12. **Postmortem** (5 tools): Failure documentation and learning
+13. **Learning Lifecycle** (8 tools): Decay, obsolescence, archival
+14. **Advanced** (4 tools): Semantic search, contradiction detection, embeddings
 
 See the [API Reference](/reference/mcp-tools) for complete tool documentation.
 
 ## Example: Complete Feature Implementation
 
 ```typescript
-// 1. Start & Brief
-await session_start({agent_name: "claude", task: "Add rate limiting to API"})
-const briefing = await brief()
+// 1. Initialize (single call replaces session_start + brief + explore_rooms)
+const init = await session_init({
+  agent_name: "claude",
+  task: "Add rate limiting to API"
+})
+// Check init.pendingHandoffs for any waiting tasks
 
 // 2. Explore
 const apiFiles = await explore_context({room: "api"})
@@ -458,28 +589,37 @@ await session_end({
 
 ## FAQ
 
-**Q: Do I need to call session_start for every task?**  
-A: Yes. Sessions enable conflict detection, activity tracking, and session analysis.
+**Q: Should I use session_init or session_start?**
+A: Use `session_init` - it's a single call that combines session_start + brief + explore_rooms and shows pending handoffs.
 
-**Q: Can I skip context_auto_inject if I'm making a small change?**  
+**Q: Can I skip context_auto_inject if I'm making a small change?**
 A: No. Small changes can have big impacts. Always get file context.
 
-**Q: When should I store knowledge?**  
+**Q: When should I store knowledge?**
 A: After solving problems, making decisions, or discovering patterns. Be specific and actionable.
 
-**Q: What's the difference between learning and decision?**  
+**Q: What's the difference between learning and decision?**
 A: Decisions are choices with rationale. Learnings are observations or patterns. Ideas are proposals.
 
-**Q: Should I use semantic search or keyword search?**  
+**Q: Should I use semantic search or keyword search?**
 A: Use `explore` (keyword) first. Use `search_semantic` or `search_hybrid` for conceptual queries if embeddings are configured.
 
-**Q: How do I handle multi-agent scenarios?**  
-A: Call `brief()` to see active agents. Use `session_conflict()` before editing. Coordinate via session logs.
+**Q: How do I handle multi-agent scenarios?**
+A: `session_init` shows active agents. Use `session_conflict()` before editing. Use handoffs to pass work between agents.
 
-**Q: What if I forget to call session_end?**  
+**Q: What if I can't complete a task?**
+A: Create a handoff with `handoff_create` including context, pending items, and relevant learnings. Another agent can pick it up.
+
+**Q: How do I continue work from a previous session?**
+A: Use `session_resume({sessionId: "..."})` or `session_resume({agentType: "..."})` to find and resume the latest session.
+
+**Q: What if I forget to call session_end?**
 A: Session persists as "active", potentially blocking other agents. Always end sessions.
 
-**Q: Can I use Mind Palace without autonomous features?**  
+**Q: How do I check workspace health?**
+A: Call `analytics_health()` for an overall health score and issue list. Good practice at session start.
+
+**Q: Can I use Mind Palace without autonomous features?**
 A: Yes, but you miss the point. Mind Palace is designed for autonomous agent workflows.
 
 ## Next Steps

@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0-alpha] - 2026-01-20
+
+### Added
+
+- **Composite Tools**: New `session_init` tool combines session_start + brief + explore_rooms into a single initialization call
+- **Auto-Session**: MCP server auto-creates sessions for agents that forget to initialize
+- **Retry Logic**: Transient failure retry with exponential backoff for store operations
+- **Autonomy Configuration**: New `AutonomyConfig` settings for auto-decay, auto-postmortem, and lifecycle management
+- **Auto-Decay**: Configurable automatic confidence decay for unused learnings
+- **Timed Session Cleanup**: Automatic cleanup of abandoned/timed-out sessions
+- **Pre-Store Contradiction Check**: Automatically check for contradictions before storing new knowledge
+- **Classification-Based Storage**: AI-powered classification of store content (learning vs decision vs idea)
+- **Recent Activity Tracking**: New `GetLearningsSince`, `GetDecisionsSince`, `GetPostmortemsSince` methods for proactive briefings
+- **Smart Briefing Updates**: Briefings now include recent postmortems, decisions, and activity patterns
+- **Auto-Approve Proposals**: High-confidence proposals with no contradictions can be auto-approved (configurable threshold)
+- **Session Summaries**: Comprehensive session summary on `session_end` with activity counts, files edited, and proposals created
+- **Smart Context Management**: New `context_focus`, `context_get`, `context_pin` tools for task-focused context prioritization
+- **Multi-Agent Handoffs**: Full handoff system with `handoff_create`, `handoff_list`, `handoff_accept`, `handoff_complete`
+- **Handoff Integration**: `session_init` now displays pending handoffs at session start
+- **Enhanced Briefings**: `briefing_smart` includes pending handoffs, recent postmortems, and decision outcomes
+- **Session Continuity**: New `session_resume` and `session_status` tools for seamless session continuation
+- **Session Analytics**: New `analytics_sessions` tool for aggregate session statistics over time
+- **Learning Effectiveness**: New `analytics_learnings` tool to track which learnings are most useful
+- **Workspace Health Dashboard**: New `analytics_health` tool with overall health score (0-100) and issue tracking
+
+### New MCP Tools
+
+| Tool | Category | Description |
+|------|----------|-------------|
+| `session_init` | Composite | Initialize session with full context (session + brief + rooms) |
+| `session_resume` | Session | Resume a previous session for continuation |
+| `session_status` | Session | Get current session status and context |
+| `context_focus` | Context | Set task focus for context prioritization |
+| `context_get` | Context | Get prioritized context based on current focus |
+| `context_pin` | Context | Pin/unpin records for guaranteed context inclusion |
+| `handoff_create` | Handoff | Create a task handoff for another agent |
+| `handoff_list` | Handoff | List available handoffs by status |
+| `handoff_accept` | Handoff | Accept a handoff and receive full context |
+| `handoff_complete` | Handoff | Mark a handoff as completed |
+| `analytics_sessions` | Analytics | Session statistics and trends |
+| `analytics_learnings` | Analytics | Learning effectiveness tracking |
+| `analytics_health` | Analytics | Workspace health dashboard |
+
+### Changed
+
+- **MCPServer**: Added context management fields (`currentTaskFocus`, `focusKeywords`, `contextPriorityUp`)
+- **Session End**: Now generates comprehensive session summary with activity breakdown
+- **Briefings**: Include more actionable intelligence (handoffs, postmortems, decisions)
+- **Memory**: Added `UpdateSessionState`, `GetProposalsBySession`, `GetLearningsByEffectiveness` methods
+
+---
+
 ## [0.3.1-alpha] - 2026-01-17
 
 ### Fixed

@@ -239,6 +239,51 @@ func (m *Memory) AutoCheckContradictions(recordID, kind, content string, analyze
 	return contradictions, nil
 }
 
+// PreCheckContradictions checks content for potential contradictions BEFORE creating a record.
+// This is useful for proposals where we want to warn about contradictions before storing.
+// Unlike AutoCheckContradictions, this doesn't require a record ID and never auto-links.
+func (m *Memory) PreCheckContradictions(content, kind string, analyzer ContradictionAnalyzer, embedder Embedder) ([]ContradictionResult, error) {
+	// Create a temporary record for analysis (with synthetic ID)
+	record := RecordForAnalysis{
+		ID:        "pre_check_" + kind,
+		Kind:      kind,
+		Content:   content,
+		CreatedAt: time.Now(),
+	}
+
+	// Find potential candidates using semantic search
+	opts := DefaultContradictionOptions()
+	// Focus on learnings and decisions for pre-check
+	opts.IncludeIdeas = false
+	opts.IncludeLearnings = true
+	opts.IncludeDecisions = true
+
+	candidates, err := m.FindPotentialContradictions(content, embedder, opts)
+	if err != nil {
+		return nil, fmt.Errorf("find candidates: %w", err)
+	}
+
+	if len(candidates) == 0 {
+		return []ContradictionResult{}, nil
+	}
+
+	// Analyze with LLM
+	contradictions, err := analyzer.FindContradictions(record, candidates)
+	if err != nil {
+		return nil, fmt.Errorf("analyze: %w", err)
+	}
+
+	// Filter to only high-confidence contradictions
+	var filtered []ContradictionResult
+	for _, c := range contradictions {
+		if c.IsContradiction && c.Confidence >= 0.7 {
+			filtered = append(filtered, c)
+		}
+	}
+
+	return filtered, nil
+}
+
 // GetRecordForAnalysis retrieves a record for contradiction analysis (exported wrapper).
 func (m *Memory) GetRecordForAnalysis(id, kind string) (*RecordForAnalysis, error) {
 	return m.getRecordForAnalysis(id, kind)

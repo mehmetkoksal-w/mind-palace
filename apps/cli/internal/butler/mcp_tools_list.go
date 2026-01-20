@@ -1253,6 +1253,62 @@ Provides visibility into workspace activity and helps diagnose coordination issu
 				},
 			},
 		},
+		{
+			Name: "session_resume",
+			Description: `🟢 **RECOMMENDED** Resume a previous session to continue work.
+
+**WHEN TO USE:**
+- When continuing work from a previous conversation
+- When the agent was interrupted mid-task
+- To pick up where a timed-out session left off
+- When user says 'continue what we were doing' or 'resume'
+
+**AUTONOMOUS BEHAVIOR:**
+Offer to resume if a recent unfinished session exists for this agent type. Check for active handoffs associated with the session.
+
+**WHAT IT DOES:**
+- Reactivates a previous session
+- Restores context focus and tracked files
+- Shows previous activity and any active handoffs
+- Sets the resumed session as current`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"sessionId": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the session to resume. If not provided, finds the most recent resumable session.",
+					},
+					"agentType": map[string]interface{}{
+						"type":        "string",
+						"description": "Agent type to find a resumable session for (if sessionId not provided).",
+					},
+				},
+			},
+		},
+		{
+			Name: "session_status",
+			Description: `🟢 **RECOMMENDED** Get the current session status and context.
+
+**WHEN TO USE:**
+- To check if a session is active
+- To see current context focus and tracked files
+- When debugging session issues
+- To understand current working state
+
+**AUTONOMOUS BEHAVIOR:**
+Use when uncertain about current session state. Quick way to see what's active.
+
+**RETURNS:**
+- Current session info (ID, agent, task, duration)
+- Context focus and keywords
+- Tracked files
+- Activity summary
+- Active handoffs`,
+			InputSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
 
 		// ============================================================
 		// CONVERSATION TOOLS - Store and search conversations
@@ -1968,6 +2024,93 @@ Understanding how scope inheritance works and why certain context is included fo
 				"required": []string{"file_path"},
 			},
 		},
+		{
+			Name: "context_focus",
+			Description: `🟢 **RECOMMENDED** Set your current task focus for smart context prioritization.
+
+**WHEN TO USE:**
+- At the start of a complex task to get focused context
+- When switching between different aspects of work
+- To ensure context is relevant to your current goal
+
+**WHAT IT DOES:**
+- Extracts keywords from your task description
+- Prioritizes learnings and decisions based on relevance to task
+- Allows pinning specific records for guaranteed inclusion
+
+**AUTONOMOUS BEHAVIOR:**
+Call this when starting a non-trivial task to improve context quality.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task": map[string]interface{}{
+						"type":        "string",
+						"description": "Description of your current task/goal. Leave empty to see current focus.",
+					},
+					"pin": map[string]interface{}{
+						"type":        "array",
+						"items":       map[string]interface{}{"type": "string"},
+						"description": "Optional list of record IDs to always include in context.",
+					},
+				},
+			},
+		},
+		{
+			Name: "context_get",
+			Description: `🟢 **RECOMMENDED** Get prioritized context based on current task focus.
+
+**WHEN TO USE:**
+- After setting context_focus to get relevant knowledge
+- When you need focused, prioritized context for the current task
+- Before starting work on a complex feature
+
+**WHAT IT RETURNS:**
+- Pinned learnings (always included)
+- Relevant learnings prioritized by task keywords
+- Active decisions
+- Warnings about contradictions or issues
+- Token usage estimate`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"file": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional file path to include file-specific context.",
+					},
+					"maxTokens": map[string]interface{}{
+						"type":        "integer",
+						"description": "Maximum tokens for context (default: 2000).",
+						"default":     2000,
+					},
+				},
+			},
+		},
+		{
+			Name: "context_pin",
+			Description: `🟡 **UTILITY** Pin or unpin specific records to always include in context.
+
+**WHEN TO USE:**
+- To ensure critical learnings are always visible
+- To pin a decision that affects all work in the session
+- To unpin records that are no longer relevant
+
+**AUTONOMOUS BEHAVIOR:**
+Use when you discover a learning or decision that's critical to the current work.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "Record ID to pin/unpin. Leave empty to list pinned records.",
+					},
+					"unpin": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Set to true to unpin the record.",
+						"default":     false,
+					},
+				},
+			},
+		},
 
 		// ============================================================
 		// POSTMORTEM TOOLS - Failure memory and analysis
@@ -2164,6 +2307,238 @@ Transforms postmortem insights into queryable, reusable learnings. Prevents same
 					"id": map[string]interface{}{
 						"type":        "string",
 						"description": "ID of the postmortem to convert lessons from.",
+					},
+				},
+				"required": []string{"id"},
+			},
+		},
+
+		// ============================================================
+		// ANALYTICS TOOLS - Workspace insights and metrics
+		// ============================================================
+		{
+			Name: "analytics_sessions",
+			Description: `🟢 **RECOMMENDED** Get aggregate statistics about sessions over time.
+
+**WHEN TO USE:**
+- When analyzing workspace activity patterns
+- When user asks about session history or trends
+- For understanding agent productivity
+- When debugging coordination issues
+
+**RETURNS:**
+- Session counts (total, completed, abandoned, active)
+- Average session duration
+- Sessions by agent type
+- Activity success rates
+- Handoff statistics`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"days": map[string]interface{}{
+						"type":        "integer",
+						"description": "Number of days to analyze. Default: 30.",
+						"default":     30,
+					},
+				},
+			},
+		},
+		{
+			Name: "analytics_learnings",
+			Description: `🟢 **RECOMMENDED** Track learning effectiveness and usage patterns.
+
+**WHEN TO USE:**
+- When reviewing knowledge quality
+- When user asks which learnings are most useful
+- For identifying unused or low-value learnings
+- To optimize the knowledge base
+
+**RETURNS:**
+- Learning usage statistics
+- High/low confidence distribution
+- Most effective learnings (by usage)
+- Suggestions for improvement`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"limit": map[string]interface{}{
+						"type":        "integer",
+						"description": "Maximum learnings to analyze. Default: 20.",
+						"default":     20,
+					},
+					"sort": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"use_count", "confidence", "combined"},
+						"description": "Sort order. Default: 'combined' (use_count + confidence).",
+					},
+				},
+			},
+		},
+		{
+			Name: "analytics_health",
+			Description: `🟢 **RECOMMENDED** Get overall workspace health dashboard.
+
+**WHEN TO USE:**
+- For quick workspace status overview
+- When user asks 'how healthy is this workspace?'
+- At the start of a work session
+- When monitoring workspace quality
+
+**RETURNS:**
+- Knowledge health (active vs at-risk learnings)
+- Contradiction health
+- Session success rates
+- Failure tracking (postmortems)
+- Handoff status
+- Overall health score (0-100)`,
+			InputSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+
+		// ============================================================
+		// HANDOFF TOOLS - Multi-agent task handoff
+		// ============================================================
+		{
+			Name: "handoff_create",
+			Description: `🟡 **IMPORTANT** Create a handoff to pass a task to another agent or future session.
+
+**WHEN TO USE:**
+- When ending work but task isn't complete
+- To delegate part of a task to a specialist agent
+- When context needs to be preserved for continuation
+- For shift handoffs between agent sessions
+
+**AUTONOMOUS BEHAVIOR:**
+Offer to create a handoff when session ends with pending work. Include relevant context and pinned learnings.
+
+**WHAT IT DOES:**
+- Creates a handoff record with task description
+- Includes context, pending work items, and priority
+- Pins relevant learnings/decisions for the next agent
+- Sets expiration time (default 24 hours)`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task": map[string]interface{}{
+						"type":        "string",
+						"description": "Description of the task to hand off.",
+					},
+					"to": map[string]interface{}{
+						"type":        "string",
+						"description": "Target agent type (or 'any' for any agent). Default: 'any'.",
+					},
+					"context": map[string]interface{}{
+						"type":        "string",
+						"description": "Relevant context for the task (findings, approach, etc.).",
+					},
+					"pending": map[string]interface{}{
+						"type":        "array",
+						"description": "List of pending work items (strings).",
+						"items": map[string]interface{}{
+							"type": "string",
+						},
+					},
+					"pin": map[string]interface{}{
+						"type":        "array",
+						"description": "Record IDs to pin (learnings/decisions to include).",
+						"items": map[string]interface{}{
+							"type": "string",
+						},
+					},
+					"priority": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"low", "normal", "high", "urgent"},
+						"description": "Priority level. Default: 'normal'.",
+					},
+					"expires_in_hours": map[string]interface{}{
+						"type":        "number",
+						"description": "Hours until handoff expires. Default: 24.",
+					},
+				},
+				"required": []string{"task"},
+			},
+		},
+		{
+			Name: "handoff_list",
+			Description: `🟢 **RECOMMENDED** List available handoffs waiting to be picked up.
+
+**WHEN TO USE:**
+- At session start to check for pending work
+- When looking for tasks to continue
+- To see what work is waiting for attention
+
+**AUTONOMOUS BEHAVIOR:**
+Check for pending handoffs during session_init. Notify user if high-priority handoffs exist.
+
+**RETURNS:**
+List of handoffs with ID, task summary, priority, and age.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"status": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"pending", "accepted", "completed"},
+						"description": "Filter by status. Default: 'pending'.",
+					},
+				},
+			},
+		},
+		{
+			Name: "handoff_accept",
+			Description: `🟡 **IMPORTANT** Accept a handoff and receive full context.
+
+**WHEN TO USE:**
+- To take ownership of a pending handoff
+- When continuing work from another agent
+- To get full task context including pinned learnings
+
+**AUTONOMOUS BEHAVIOR:**
+After listing handoffs, offer to accept relevant ones. Accepting sets your context focus automatically.
+
+**WHAT IT DOES:**
+- Marks handoff as accepted
+- Sets your task focus to the handoff task
+- Pins the handoff's records to your context
+- Returns full task details and pending work`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the handoff to accept.",
+					},
+				},
+				"required": []string{"id"},
+			},
+		},
+		{
+			Name: "handoff_complete",
+			Description: `🟢 **RECOMMENDED** Mark a handoff as completed.
+
+**WHEN TO USE:**
+- After finishing all pending work from a handoff
+- To signal task completion to the creating agent
+- When handoff work is done
+
+**AUTONOMOUS BEHAVIOR:**
+Mark handoffs complete when their pending items are done. Include a summary of what was accomplished.
+
+**WHAT IT DOES:**
+- Updates handoff status to completed
+- Stores completion summary
+- Clears the handoff from the pending queue`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the handoff to complete.",
+					},
+					"summary": map[string]interface{}{
+						"type":        "string",
+						"description": "Summary of what was accomplished.",
 					},
 				},
 				"required": []string{"id"},

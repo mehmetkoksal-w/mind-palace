@@ -105,6 +105,10 @@ func (s *MCPServer) toolSessionEnd(id any, args map[string]interface{}) jsonRPCR
 		state = "abandoned"
 	}
 
+	// Get session info before ending
+	mem := s.butler.Memory()
+	session, _ := mem.GetSession(sessionID)
+
 	// Record outcome if provided
 	if outcome != "" {
 		if err := s.butler.RecordOutcome(sessionID, outcome, summary); err != nil {
@@ -122,13 +126,127 @@ func (s *MCPServer) toolSessionEnd(id any, args map[string]interface{}) jsonRPCR
 		s.autoSessionUsed = false
 	}
 
+	// Generate session summary
+	var output strings.Builder
+	output.WriteString("# Session Ended\n\n")
+	fmt.Fprintf(&output, "**Session ID:** `%s`\n", sessionID)
+	fmt.Fprintf(&output, "**State:** %s\n", state)
+
+	if session != nil {
+		fmt.Fprintf(&output, "**Agent:** %s\n", session.AgentType)
+		if session.Goal != "" {
+			fmt.Fprintf(&output, "**Goal:** %s\n", session.Goal)
+		}
+		duration := time.Since(session.StartedAt)
+		fmt.Fprintf(&output, "**Duration:** %s\n", formatDuration(duration))
+	}
+
+	if summary != "" {
+		fmt.Fprintf(&output, "\n**Summary:** %s\n", summary)
+	}
+
+	// Get activities summary
+	activities, _ := mem.GetActivities(sessionID, "", 100)
+	if len(activities) > 0 {
+		output.WriteString("\n## Activity Summary\n\n")
+
+		// Count activities by kind
+		activityCounts := make(map[string]int)
+		successCount := 0
+		failureCount := 0
+		var filesEdited []string
+		filesSeen := make(map[string]bool)
+
+		for i := range activities {
+			act := &activities[i]
+			activityCounts[act.Kind]++
+			if act.Outcome == "success" {
+				successCount++
+			} else if act.Outcome == "failure" {
+				failureCount++
+			}
+			if act.Kind == "file_edit" && act.Target != "" && !filesSeen[act.Target] {
+				filesEdited = append(filesEdited, act.Target)
+				filesSeen[act.Target] = true
+			}
+		}
+
+		fmt.Fprintf(&output, "- **Total activities:** %d\n", len(activities))
+		fmt.Fprintf(&output, "- **Successful:** %d | **Failed:** %d\n", successCount, failureCount)
+
+		if len(activityCounts) > 0 {
+			output.WriteString("- **By type:** ")
+			first := true
+			for kind, count := range activityCounts {
+				if !first {
+					output.WriteString(", ")
+				}
+				fmt.Fprintf(&output, "%s (%d)", kind, count)
+				first = false
+			}
+			output.WriteString("\n")
+		}
+
+		if len(filesEdited) > 0 {
+			output.WriteString("\n### Files Edited\n\n")
+			for i, f := range filesEdited {
+				if i >= 5 {
+					fmt.Fprintf(&output, "- ... and %d more\n", len(filesEdited)-5)
+					break
+				}
+				fmt.Fprintf(&output, "- `%s`\n", f)
+			}
+		}
+	}
+
+	// Get proposals created during session
+	proposals, _ := mem.GetProposalsBySession(sessionID)
+	if len(proposals) > 0 {
+		output.WriteString("\n## Proposals Created\n\n")
+
+		pendingCount := 0
+		approvedCount := 0
+		for i := range proposals {
+			p := &proposals[i]
+			statusIcon := "⏳"
+			switch p.Status {
+			case memory.ProposalStatusApproved:
+				statusIcon = "✅"
+				approvedCount++
+			case memory.ProposalStatusRejected:
+				statusIcon = "❌"
+			case memory.ProposalStatusPending:
+				pendingCount++
+			}
+			fmt.Fprintf(&output, "- %s `%s` (%s): %s\n", statusIcon, p.ID, p.ProposedAs, truncateString(p.Content, 60))
+		}
+
+		if pendingCount > 0 {
+			fmt.Fprintf(&output, "\n⚠️ **%d proposal(s) pending review** - use `palace proposals` to review.\n", pendingCount)
+		}
+	}
+
+	output.WriteString("\n---\n")
+	output.WriteString("Session data has been preserved for future reference.\n")
+
 	return jsonRPCResponse{
 		JSONRPC: "2.0",
 		ID:      id,
 		Result: mcpToolResult{
-			Content: []mcpContent{{Type: "text", Text: fmt.Sprintf("Session %s ended (state: %s)", sessionID, state)}},
+			Content: []mcpContent{{Type: "text", Text: output.String()}},
 		},
 	}
+}
+
+// formatDuration formats a duration in a human-readable way.
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm %ds", int(d.Minutes()), int(d.Seconds())%60)
+	}
+	return fmt.Sprintf("%dh %dm", int(d.Hours()), int(d.Minutes())%60)
 }
 
 // toolRecall retrieves learnings, optionally filtered by scope or search query.
@@ -198,6 +316,47 @@ func (s *MCPServer) toolRecall(id any, args map[string]interface{}) jsonRPCRespo
 			fmt.Fprintf(&output, "- **Scope:** %s\n", scopeInfo)
 			fmt.Fprintf(&output, "- **Source:** %s | Used: %d times\n", l.Source, l.UseCount)
 			fmt.Fprintf(&output, "- **Content:** %s\n\n", l.Content)
+		}
+	}
+
+	// Related Knowledge Suggestions: when querying, also suggest related decisions and ideas
+	if query != "" {
+		cfg := s.butler.Config()
+		// Check if proactive briefing (which includes related suggestions) is enabled
+		if cfg != nil && cfg.Autonomy != nil && cfg.Autonomy.ProactiveBriefing {
+			var relatedAdded bool
+
+			// Find related decisions (max 3)
+			if decisions, dErr := s.butler.SearchDecisions(query, 3); dErr == nil && len(decisions) > 0 {
+				if !relatedAdded {
+					output.WriteString("---\n\n## 💡 Related Knowledge\n\n")
+					relatedAdded = true
+				}
+				output.WriteString("### Related Decisions\n\n")
+				for i := range decisions {
+					d := &decisions[i]
+					fmt.Fprintf(&output, "- `%s`: %s\n", d.ID, truncateString(d.Content, 80))
+				}
+				output.WriteString("\n")
+			}
+
+			// Find related ideas (max 3)
+			if ideas, iErr := s.butler.SearchIdeas(query, 3); iErr == nil && len(ideas) > 0 {
+				if !relatedAdded {
+					output.WriteString("---\n\n## 💡 Related Knowledge\n\n")
+					relatedAdded = true
+				}
+				output.WriteString("### Related Ideas\n\n")
+				for i := range ideas {
+					idea := &ideas[i]
+					fmt.Fprintf(&output, "- `%s`: %s\n", idea.ID, truncateString(idea.Content, 80))
+				}
+				output.WriteString("\n")
+			}
+
+			if relatedAdded {
+				output.WriteString("Use `recall_decisions` or `recall_ideas` to explore these further.\n")
+			}
 		}
 	}
 
@@ -415,6 +574,247 @@ func (s *MCPServer) toolSessionList(id any, args map[string]interface{}) jsonRPC
 			}
 			output.WriteString("\n")
 		}
+	}
+
+	return jsonRPCResponse{
+		JSONRPC: "2.0",
+		ID:      id,
+		Result: mcpToolResult{
+			Content: []mcpContent{{Type: "text", Text: output.String()}},
+		},
+	}
+}
+
+// toolSessionResume resumes a previous session for continuation.
+func (s *MCPServer) toolSessionResume(id any, args map[string]interface{}) jsonRPCResponse {
+	sessionID, _ := args["sessionId"].(string)
+	if sessionID == "" {
+		// Find the most recent session by this agent type
+		agentType, _ := args["agentType"].(string)
+		if agentType == "" {
+			return s.toolError(id, "sessionId or agentType is required")
+		}
+
+		// Get recent sessions for this agent type
+		sessions, err := s.butler.ListSessions(false, 10)
+		if err != nil {
+			return s.toolError(id, fmt.Sprintf("list sessions failed: %v", err))
+		}
+
+		// Find most recent non-completed session
+		for i := range sessions {
+			sess := &sessions[i]
+			if sess.AgentType == agentType && sess.State != "completed" && sess.State != "abandoned" {
+				sessionID = sess.ID
+				break
+			}
+		}
+
+		if sessionID == "" {
+			return s.toolError(id, fmt.Sprintf("no resumable session found for agent type: %s", agentType))
+		}
+	}
+
+	// Get the session
+	mem := s.butler.Memory()
+	session, err := mem.GetSession(sessionID)
+	if err != nil {
+		return s.toolError(id, fmt.Sprintf("get session failed: %v", err))
+	}
+	if session == nil {
+		return s.toolError(id, "session not found")
+	}
+
+	// Reactivate the session if it was timed out
+	if session.State == "timeout" {
+		if err := mem.UpdateSessionState(sessionID, "active"); err != nil {
+			return s.toolError(id, fmt.Sprintf("reactivate session failed: %v", err))
+		}
+		session.State = "active"
+	}
+
+	// Set as current session
+	s.currentSessionID = sessionID
+	s.autoSessionUsed = false
+
+	var output strings.Builder
+	output.WriteString("# Session Resumed\n\n")
+	fmt.Fprintf(&output, "**Session ID:** `%s`\n", session.ID)
+	fmt.Fprintf(&output, "**Agent:** %s\n", session.AgentType)
+	if session.Goal != "" {
+		fmt.Fprintf(&output, "**Original Task:** %s\n", session.Goal)
+	}
+	fmt.Fprintf(&output, "**Started:** %s\n", session.StartedAt.Format(time.RFC3339))
+	fmt.Fprintf(&output, "**State:** %s\n\n", session.State)
+
+	// Get activities summary
+	activities, _ := mem.GetActivities(sessionID, "", 20)
+	if len(activities) > 0 {
+		output.WriteString("## Previous Activity\n\n")
+
+		activityCounts := make(map[string]int)
+		for i := range activities {
+			activityCounts[activities[i].Kind]++
+		}
+
+		for kind, count := range activityCounts {
+			fmt.Fprintf(&output, "- %s: %d\n", kind, count)
+		}
+
+		// Show last 3 activities
+		output.WriteString("\n### Recent:\n\n")
+		showCount := minInt(3, len(activities))
+		for i := 0; i < showCount; i++ {
+			act := &activities[i]
+			fmt.Fprintf(&output, "- %s on `%s` (%s)\n", act.Kind, act.Target, act.Outcome)
+		}
+		output.WriteString("\n")
+	}
+
+	// Check for context focus
+	if s.currentTaskFocus != "" {
+		output.WriteString("## Context Focus\n\n")
+		fmt.Fprintf(&output, "**Task:** %s\n", s.currentTaskFocus)
+		if len(s.focusKeywords) > 0 {
+			fmt.Fprintf(&output, "**Keywords:** %s\n", strings.Join(s.focusKeywords, ", "))
+		}
+		output.WriteString("\n")
+	}
+
+	// Check for accepted handoff
+	handoffMu.RLock()
+	var acceptedHandoff *Handoff
+	for _, h := range handoffStore {
+		if h.AcceptedBy == sessionID && h.Status == "accepted" {
+			acceptedHandoff = h
+			break
+		}
+	}
+	handoffMu.RUnlock()
+
+	if acceptedHandoff != nil {
+		output.WriteString("## Active Handoff\n\n")
+		fmt.Fprintf(&output, "**Handoff ID:** `%s`\n", acceptedHandoff.ID)
+		fmt.Fprintf(&output, "**Task:** %s\n", acceptedHandoff.Task)
+		if len(acceptedHandoff.PendingWork) > 0 {
+			output.WriteString("**Pending Work:**\n")
+			for _, item := range acceptedHandoff.PendingWork {
+				fmt.Fprintf(&output, "- [ ] %s\n", item)
+			}
+		}
+		output.WriteString("\n")
+	}
+
+	output.WriteString("---\n")
+	output.WriteString("Session resumed. Continue where you left off.\n")
+
+	return jsonRPCResponse{
+		JSONRPC: "2.0",
+		ID:      id,
+		Result: mcpToolResult{
+			Content: []mcpContent{{Type: "text", Text: output.String()}},
+		},
+	}
+}
+
+// toolSessionStatus gets the current session status and context.
+func (s *MCPServer) toolSessionStatus(id any, args map[string]interface{}) jsonRPCResponse {
+	var output strings.Builder
+	output.WriteString("# Session Status\n\n")
+
+	if s.currentSessionID == "" {
+		output.WriteString("**No active session.**\n\n")
+		output.WriteString("Use `session_init` to start a new session or `session_resume` to continue a previous one.\n")
+
+		return jsonRPCResponse{
+			JSONRPC: "2.0",
+			ID:      id,
+			Result: mcpToolResult{
+				Content: []mcpContent{{Type: "text", Text: output.String()}},
+			},
+		}
+	}
+
+	mem := s.butler.Memory()
+	session, _ := mem.GetSession(s.currentSessionID)
+
+	if session != nil {
+		output.WriteString("## Current Session\n\n")
+		fmt.Fprintf(&output, "- **ID:** `%s`\n", session.ID)
+		fmt.Fprintf(&output, "- **Agent:** %s\n", session.AgentType)
+		if session.Goal != "" {
+			fmt.Fprintf(&output, "- **Task:** %s\n", session.Goal)
+		}
+		fmt.Fprintf(&output, "- **State:** %s\n", session.State)
+		fmt.Fprintf(&output, "- **Duration:** %s\n", formatDuration(time.Since(session.StartedAt)))
+		output.WriteString("\n")
+	}
+
+	// Context focus
+	if s.currentTaskFocus != "" {
+		output.WriteString("## Context Focus\n\n")
+		fmt.Fprintf(&output, "- **Task:** %s\n", s.currentTaskFocus)
+		if len(s.focusKeywords) > 0 {
+			fmt.Fprintf(&output, "- **Keywords:** %s\n", strings.Join(s.focusKeywords, ", "))
+		}
+		if len(s.contextPriorityUp) > 0 {
+			fmt.Fprintf(&output, "- **Pinned Records:** %d\n", len(s.contextPriorityUp))
+		}
+		output.WriteString("\n")
+	}
+
+	// Tracked files
+	if len(s.trackedFiles) > 0 {
+		output.WriteString("## Tracked Files\n\n")
+		count := 0
+		for path := range s.trackedFiles {
+			if count >= 5 {
+				fmt.Fprintf(&output, "- ... and %d more\n", len(s.trackedFiles)-5)
+				break
+			}
+			fmt.Fprintf(&output, "- `%s`\n", path)
+			count++
+		}
+		output.WriteString("\n")
+	}
+
+	// Activity summary
+	if session != nil {
+		activities, _ := mem.GetActivities(s.currentSessionID, "", 50)
+		if len(activities) > 0 {
+			output.WriteString("## Activity Summary\n\n")
+			successCount := 0
+			failureCount := 0
+			for i := range activities {
+				if activities[i].Outcome == "success" {
+					successCount++
+				} else if activities[i].Outcome == "failure" {
+					failureCount++
+				}
+			}
+			fmt.Fprintf(&output, "- **Total:** %d activities\n", len(activities))
+			fmt.Fprintf(&output, "- **Successful:** %d | **Failed:** %d\n", successCount, failureCount)
+			output.WriteString("\n")
+		}
+	}
+
+	// Active handoff
+	handoffMu.RLock()
+	var activeHandoff *Handoff
+	for _, h := range handoffStore {
+		if h.AcceptedBy == s.currentSessionID && h.Status == "accepted" {
+			activeHandoff = h
+			break
+		}
+	}
+	handoffMu.RUnlock()
+
+	if activeHandoff != nil {
+		output.WriteString("## Active Handoff\n\n")
+		fmt.Fprintf(&output, "- **ID:** `%s`\n", activeHandoff.ID)
+		fmt.Fprintf(&output, "- **From:** %s\n", activeHandoff.FromAgent)
+		fmt.Fprintf(&output, "- **Pending Items:** %d\n", len(activeHandoff.PendingWork))
+		output.WriteString("\n")
 	}
 
 	return jsonRPCResponse{

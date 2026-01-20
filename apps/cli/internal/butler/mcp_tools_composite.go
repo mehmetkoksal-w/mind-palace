@@ -49,6 +49,33 @@ func (s *MCPServer) toolSessionInit(id any, args map[string]interface{}) jsonRPC
 	}
 	fmt.Fprintf(&output, "- **Started:** %s\n\n", session.StartedAt.Format(time.RFC3339))
 
+	// 1.5. Check for pending handoffs
+	pendingHandoffs := getPendingHandoffsForAgent(agentType)
+	if len(pendingHandoffs) > 0 {
+		output.WriteString("## 📬 Pending Handoffs\n\n")
+		urgentCount := 0
+		highCount := 0
+		for _, h := range pendingHandoffs {
+			priorityIcon := "🔵"
+			switch h.Priority {
+			case "high":
+				priorityIcon = "🟠"
+				highCount++
+			case "urgent":
+				priorityIcon = "🔴"
+				urgentCount++
+			}
+			fmt.Fprintf(&output, "- %s `%s`: %s\n", priorityIcon, h.ID, truncateString(h.Task, 60))
+			fmt.Fprintf(&output, "  From: %s | Created: %s\n", h.FromAgent, h.CreatedAt.Format("Jan 2 15:04"))
+		}
+		if urgentCount > 0 {
+			fmt.Fprintf(&output, "\n⚠️ **%d urgent handoff(s)** waiting for attention!\n", urgentCount)
+		} else if highCount > 0 {
+			fmt.Fprintf(&output, "\n⚡ **%d high-priority handoff(s)** available.\n", highCount)
+		}
+		output.WriteString("\nUse `handoff_accept({id: '...'})` to take over a task.\n\n")
+	}
+
 	// 2. Get briefing
 	brief, err := s.butler.GetBrief("")
 	if err == nil {

@@ -99,15 +99,48 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 | `brief_file`     | `path`                             | Get detailed file intelligence |
 | `briefing_smart` | `context`, `contextPath`, `style?` | LLM-generated smart briefing   |
 
+#### Composite Tools
+
+| Tool           | Parameters                    | Returns                                           |
+| -------------- | ----------------------------- | ------------------------------------------------- |
+| `session_init` | `agent_name`, `task?`         | Initialize session with full context (RECOMMENDED)|
+
 #### Session Tools
 
-| Tool               | Parameters                                            | Returns                  |
-| ------------------ | ----------------------------------------------------- | ------------------------ |
-| `session_start`    | `agentType`, `goal?`                                  | Start a work session     |
-| `session_log`      | `sessionId`, `kind`, `target`, `outcome?`, `details?` | Log activity             |
-| `session_end`      | `sessionId`                                           | End session              |
-| `session_conflict` | `path`                                                | Check for file conflicts |
-| `session_list`     | `active?`, `limit?`                                   | List sessions            |
+| Tool               | Parameters                                            | Returns                     |
+| ------------------ | ----------------------------------------------------- | --------------------------- |
+| `session_start`    | `agentType`, `goal?`                                  | Start a work session        |
+| `session_log`      | `sessionId`, `kind`, `target`, `outcome?`, `details?` | Log activity                |
+| `session_end`      | `sessionId`                                           | End session with summary    |
+| `session_conflict` | `path`                                                | Check for file conflicts    |
+| `session_list`     | `active?`, `limit?`                                   | List sessions               |
+| `session_resume`   | `sessionId?`, `agentType?`                            | Resume a previous session   |
+| `session_status`   | -                                                     | Get current session status  |
+
+#### Context Tools
+
+| Tool            | Parameters              | Returns                           |
+| --------------- | ----------------------- | --------------------------------- |
+| `context_focus` | `task`, `pin?`          | Set task focus for prioritization |
+| `context_get`   | `file?`, `maxTokens?`   | Get prioritized context           |
+| `context_pin`   | `id`, `unpin?`          | Pin/unpin records to context      |
+
+#### Handoff Tools
+
+| Tool               | Parameters                                                       | Returns                    |
+| ------------------ | ---------------------------------------------------------------- | -------------------------- |
+| `handoff_create`   | `task`, `to?`, `context?`, `pending?`, `pin?`, `priority?`       | Create task handoff        |
+| `handoff_list`     | `status?`                                                        | List available handoffs    |
+| `handoff_accept`   | `id`                                                             | Accept and get full context|
+| `handoff_complete` | `id`, `summary?`                                                 | Mark handoff completed     |
+
+#### Analytics Tools
+
+| Tool                  | Parameters        | Returns                         |
+| --------------------- | ----------------- | ------------------------------- |
+| `analytics_sessions`  | `days?`           | Session statistics and trends   |
+| `analytics_learnings` | `limit?`, `sort?` | Learning effectiveness tracking |
+| `analytics_health`    | -                 | Workspace health dashboard      |
 
 #### Conversation Tools
 
@@ -296,14 +329,14 @@ Agents should:
 
 ## Session Memory Integration
 
-Track agent work with sessions:
+Track agent work with sessions. Use `session_init` for single-call initialization:
 
 ```json
 {
-  "tool": "session_start",
+  "tool": "session_init",
   "arguments": {
-    "agentType": "claude-code",
-    "goal": "Implement user authentication"
+    "agent_name": "claude-code",
+    "task": "Implement user authentication"
   }
 }
 ```
@@ -401,10 +434,14 @@ Understand what scope applies:
 
 ## Best Practices
 
-1. **Start a session** - Always begin with `start_session` to enable tracking
-2. **Log activities** - Record reads, edits, and commands for file intelligence
-3. **Capture learnings** - Store patterns and heuristics discovered during work
-4. **Check for conflicts** - Before editing, verify no other agent is working on the file
-5. **End sessions properly** - Call `end_session` when done
-6. **Respect guardrails** - Never touch protected files
-7. **Honor scope** - Stay within the requested scope (diff or full)
+1. **Use session_init** - Always begin with `session_init` for single-call initialization with full context
+2. **Check pending handoffs** - Review handoffs shown in session_init before starting new work
+3. **Log activities** - Record reads, edits, and commands for file intelligence
+4. **Capture learnings** - Store patterns and heuristics discovered during work
+5. **Check for conflicts** - Before editing, verify no other agent is working on the file
+6. **Use context_focus** - Set task focus for better context prioritization
+7. **Create handoffs** - When you can't complete work, hand it off to another agent
+8. **End sessions properly** - Call `session_end` when done (generates summary)
+9. **Check workspace health** - Use `analytics_health` periodically to monitor workspace quality
+10. **Respect guardrails** - Never touch protected files
+11. **Honor scope** - Stay within the requested scope (diff or full)

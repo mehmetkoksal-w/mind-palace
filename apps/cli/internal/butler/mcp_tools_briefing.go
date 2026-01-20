@@ -121,7 +121,8 @@ func (s *MCPServer) toolBriefingSmart(id any, args map[string]interface{}) jsonR
 		// Get workspace stats
 		totalLearnings, _ := mem.CountLearnings()
 		totalSessions, _ := mem.CountSessions(false)
-		contextData.WriteString(fmt.Sprintf("## Workspace Overview:\n- Total learnings: %d\n- Total sessions: %d\n\n", totalLearnings, totalSessions))
+		activeSessions, _ := mem.CountSessions(true)
+		contextData.WriteString(fmt.Sprintf("## Workspace Overview:\n- Total learnings: %d\n- Total sessions: %d (active: %d)\n\n", totalLearnings, totalSessions, activeSessions))
 
 		// Get recent high-confidence learnings
 		learnings, _ := mem.GetRelevantLearnings("", "", 10)
@@ -130,6 +131,42 @@ func (s *MCPServer) toolBriefingSmart(id any, args map[string]interface{}) jsonR
 			for i := range learnings {
 				l := &learnings[i]
 				contextData.WriteString(fmt.Sprintf("- [%s] (%.0f%%): %s\n", l.ID, l.Confidence*100, truncateForBriefing(l.Content, 100)))
+			}
+		}
+
+		// Get pending handoffs
+		pendingHandoffs := getPendingHandoffsForAgent("any")
+		if len(pendingHandoffs) > 0 {
+			contextData.WriteString(fmt.Sprintf("\n## Pending Handoffs: %d\n", len(pendingHandoffs)))
+			for _, h := range pendingHandoffs {
+				contextData.WriteString(fmt.Sprintf("- [%s] Priority: %s, Task: %s\n", h.ID, h.Priority, truncateForBriefing(h.Task, 80)))
+			}
+		}
+
+		// Get recent postmortems (last 7 days)
+		recentPostmortems, _ := mem.GetPostmortemsSince(time.Now().Add(-7 * 24 * time.Hour))
+		if len(recentPostmortems) > 0 {
+			contextData.WriteString(fmt.Sprintf("\n## Recent Postmortems: %d in last 7 days\n", len(recentPostmortems)))
+			for i := range recentPostmortems {
+				if i >= 3 {
+					break
+				}
+				p := &recentPostmortems[i]
+				contextData.WriteString(fmt.Sprintf("- [%s] %s: %s\n", p.ID, p.Severity, truncateForBriefing(p.Title, 60)))
+			}
+		}
+
+		// Get recent decisions
+		recentDecisions, _ := mem.GetDecisionsSince(time.Now().Add(-7*24*time.Hour), 5)
+		if len(recentDecisions) > 0 {
+			contextData.WriteString(fmt.Sprintf("\n## Recent Decisions: %d in last 7 days\n", len(recentDecisions)))
+			for i := range recentDecisions {
+				d := &recentDecisions[i]
+				outcomeIcon := ""
+				if d.Outcome != "" {
+					outcomeIcon = fmt.Sprintf(" [%s]", d.Outcome)
+				}
+				contextData.WriteString(fmt.Sprintf("- [%s]%s: %s\n", d.ID, outcomeIcon, truncateForBriefing(d.Content, 80)))
 			}
 		}
 	}
@@ -220,6 +257,57 @@ func (s *MCPServer) generateNonLLMBriefing(id any, contextType, contextPath stri
 			for i := range learnings {
 				l := &learnings[i]
 				output.WriteString(fmt.Sprintf("- **%.0f%%** - %s\n", l.Confidence*100, truncateForBriefing(l.Content, 80)))
+			}
+		}
+
+		// Pending handoffs
+		pendingHandoffs := getPendingHandoffsForAgent("any")
+		if len(pendingHandoffs) > 0 {
+			output.WriteString("\n### Pending Handoffs\n\n")
+			for _, h := range pendingHandoffs {
+				priorityIcon := "🔵"
+				switch h.Priority {
+				case "high":
+					priorityIcon = "🟠"
+				case "urgent":
+					priorityIcon = "🔴"
+				}
+				output.WriteString(fmt.Sprintf("- %s `%s`: %s\n", priorityIcon, h.ID, truncateForBriefing(h.Task, 60)))
+			}
+		}
+
+		// Recent postmortems
+		recentPostmortems, _ := mem.GetPostmortemsSince(time.Now().Add(-7 * 24 * time.Hour))
+		if len(recentPostmortems) > 0 {
+			output.WriteString("\n### Recent Postmortems\n\n")
+			for i := range recentPostmortems {
+				if i >= 3 {
+					output.WriteString(fmt.Sprintf("- ... and %d more\n", len(recentPostmortems)-3))
+					break
+				}
+				p := &recentPostmortems[i]
+				severityIcon := "⚠️"
+				if p.Severity == "critical" {
+					severityIcon = "🔴"
+				}
+				output.WriteString(fmt.Sprintf("- %s `%s`: %s\n", severityIcon, p.ID, truncateForBriefing(p.Title, 60)))
+			}
+		}
+
+		// Recent decisions
+		recentDecisions, _ := mem.GetDecisionsSince(time.Now().Add(-7*24*time.Hour), 5)
+		if len(recentDecisions) > 0 {
+			output.WriteString("\n### Recent Decisions\n\n")
+			for i := range recentDecisions {
+				d := &recentDecisions[i]
+				outcomeIcon := "📋"
+				switch d.Outcome {
+				case "successful":
+					outcomeIcon = "✅"
+				case "failed":
+					outcomeIcon = "❌"
+				}
+				output.WriteString(fmt.Sprintf("- %s `%s`: %s\n", outcomeIcon, d.ID, truncateForBriefing(d.Content, 60)))
 			}
 		}
 	}

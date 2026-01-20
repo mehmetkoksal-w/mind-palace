@@ -87,6 +87,17 @@ type MCPServer struct {
 
 	// Background goroutine management
 	stopTimeout chan struct{} // Channel to stop timeout checker
+
+	// Proactive intelligence: conflict monitoring
+	trackedFiles map[string]time.Time // Files accessed by this session with last access time
+
+	// Proactive intelligence: briefing updates
+	lastBriefingTime time.Time // Time of last briefing update shown
+
+	// Smart context management
+	currentTaskFocus  string   // Current task/goal for context prioritization
+	focusKeywords     []string // Keywords extracted from current focus
+	contextPriorityUp []string // Record IDs to prioritize (pinned)
 }
 
 // JSON-RPC types
@@ -299,6 +310,128 @@ func (s *MCPServer) checkSessionTimeout(timeout time.Duration) {
 // updateLastActivity records the time of the last tool call.
 func (s *MCPServer) updateLastActivity() {
 	s.lastActivity = time.Now()
+}
+
+// trackFileAccess records that a file was accessed by this session.
+func (s *MCPServer) trackFileAccess(filePath string) {
+	if filePath == "" {
+		return
+	}
+	if s.trackedFiles == nil {
+		s.trackedFiles = make(map[string]time.Time)
+	}
+	s.trackedFiles[filePath] = time.Now()
+}
+
+// checkFileConflicts checks if any tracked files have been modified by other agents.
+// Returns a list of conflict warnings to show in the response.
+func (s *MCPServer) checkFileConflicts() []string {
+	// Check if conflict monitoring is enabled
+	cfg := s.butler.Config()
+	if cfg == nil || cfg.Autonomy == nil || !cfg.Autonomy.ConflictMonitoring {
+		return nil
+	}
+
+	if len(s.trackedFiles) == 0 || s.currentSessionID == "" {
+		return nil
+	}
+
+	var warnings []string
+	mem := s.butler.Memory()
+
+	for filePath, lastAccess := range s.trackedFiles {
+		// Check if another agent has modified this file since we last accessed it
+		conflict, err := mem.CheckConflict(filePath, s.currentSessionID)
+		if err != nil || conflict == nil {
+			continue
+		}
+
+		// Only warn if the conflict is newer than our last access
+		if conflict.LastTouched.After(lastAccess) {
+			warnings = append(warnings, fmt.Sprintf("⚠️ File `%s` was modified by **%s** since you last accessed it (at %s)",
+				filePath, conflict.OtherAgent, conflict.LastTouched.Format("15:04:05")))
+		}
+	}
+
+	return warnings
+}
+
+// formatConflictWarnings formats conflict warnings for inclusion in response.
+func (s *MCPServer) formatConflictWarnings(warnings []string) string {
+	if len(warnings) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("## ⚠️ Conflict Warnings\n\n")
+	for _, w := range warnings {
+		sb.WriteString(w)
+		sb.WriteString("\n")
+	}
+	sb.WriteString("\n---\n\n")
+	return sb.String()
+}
+
+// checkBriefingUpdates checks for new learnings, decisions, or postmortems since last briefing.
+// Returns a formatted update string or empty if no updates or rate limited.
+func (s *MCPServer) checkBriefingUpdates() string {
+	// Check if proactive briefing is enabled
+	cfg := s.butler.Config()
+	if cfg == nil || cfg.Autonomy == nil || !cfg.Autonomy.ProactiveBriefing {
+		return ""
+	}
+
+	// Rate limit: max 1 update per 5 minutes
+	if !s.lastBriefingTime.IsZero() && time.Since(s.lastBriefingTime) < 5*time.Minute {
+		return ""
+	}
+
+	// If no session, no briefing updates
+	if s.currentSessionID == "" {
+		return ""
+	}
+
+	// Get counts of new items since last briefing
+	mem := s.butler.Memory()
+	since := s.lastBriefingTime
+	if since.IsZero() {
+		// First time - use session start or 1 hour ago
+		since = time.Now().Add(-1 * time.Hour)
+	}
+
+	var updates []string
+
+	// Check for new learnings
+	if learnings, err := mem.GetLearningsSince(since); err == nil && len(learnings) > 0 {
+		updates = append(updates, fmt.Sprintf("📚 **%d new learning(s)** added to the knowledge base", len(learnings)))
+	}
+
+	// Check for new decisions
+	if decisions, err := mem.GetDecisionsSince(since, 10); err == nil && len(decisions) > 0 {
+		updates = append(updates, fmt.Sprintf("📋 **%d new decision(s)** recorded", len(decisions)))
+	}
+
+	// Check for new postmortems
+	if postmortems, err := mem.GetPostmortemsSince(since); err == nil && len(postmortems) > 0 {
+		updates = append(updates, fmt.Sprintf("🔥 **%d new postmortem(s)** - review for critical learnings!", len(postmortems)))
+	}
+
+	if len(updates) == 0 {
+		return ""
+	}
+
+	// Update last briefing time
+	s.lastBriefingTime = time.Now()
+
+	var sb strings.Builder
+	sb.WriteString("## 📰 Context Updates\n\n")
+	for _, u := range updates {
+		sb.WriteString("- ")
+		sb.WriteString(u)
+		sb.WriteString("\n")
+	}
+	sb.WriteString("\nUse `recall` or `recall_decisions` to explore these updates.\n\n---\n\n")
+	return sb.String()
 }
 
 // cleanupOnDisconnect ends any active session when the MCP connection is closed.
@@ -552,11 +685,24 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 		}
 	}
 
+	// Proactive conflict monitoring: check for conflicts on tracked files
+	conflictWarnings := s.checkFileConflicts()
+
 	// Dispatch to tool handler
 	resp := s.dispatchTool(req.ID, params)
 
+	// Track file access for file-related tools (after successful dispatch)
+	if resp.Error == nil {
+		if filePath := s.extractFilePath(params.Name, params.Arguments); filePath != "" {
+			s.trackFileAccess(filePath)
+		}
+	}
+
 	// Auto-activity logging: log activities transparently
 	s.autoLogActivity(params.Name, params.Arguments, resp.Error == nil)
+
+	// Proactive briefing: check for knowledge updates
+	briefingUpdates := s.checkBriefingUpdates()
 
 	// Prepend any notification messages to the response
 	if resp.Error == nil {
@@ -564,6 +710,12 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 			var prefix strings.Builder
 			if sessionTimeoutMsg != "" {
 				prefix.WriteString(sessionTimeoutMsg)
+			}
+			if conflictWarningsStr := s.formatConflictWarnings(conflictWarnings); conflictWarningsStr != "" {
+				prefix.WriteString(conflictWarningsStr)
+			}
+			if briefingUpdates != "" {
+				prefix.WriteString(briefingUpdates)
 			}
 			if autoSessionWarning != "" {
 				prefix.WriteString(autoSessionWarning)
@@ -576,6 +728,27 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 	}
 
 	return resp
+}
+
+// extractFilePath extracts a file path from tool arguments if applicable.
+func (s *MCPServer) extractFilePath(toolName string, args map[string]interface{}) string {
+	switch toolName {
+	case "file_context", "context_auto_inject", "brief_file":
+		if path, ok := args["file_path"].(string); ok {
+			return path
+		}
+		if path, ok := args["path"].(string); ok {
+			return path
+		}
+	case "explore_file", "explore_impact":
+		if path, ok := args["file"].(string); ok {
+			return path
+		}
+		if path, ok := args["target"].(string); ok {
+			return path
+		}
+	}
+	return ""
 }
 
 // autoLogActivity logs an activity if auto-logging is enabled for this tool.
@@ -700,6 +873,20 @@ func (s *MCPServer) dispatchTool(id any, params mcpToolCallParams) jsonRPCRespon
 		return s.toolSessionConflict(id, params.Arguments)
 	case "session_list":
 		return s.toolSessionList(id, params.Arguments)
+	case "session_resume":
+		return s.toolSessionResume(id, params.Arguments)
+	case "session_status":
+		return s.toolSessionStatus(id, params.Arguments)
+
+	// Handoff tools - multi-agent task handoff
+	case "handoff_create":
+		return s.toolHandoffCreate(id, params.Arguments)
+	case "handoff_list":
+		return s.toolHandoffList(id, params.Arguments)
+	case "handoff_accept":
+		return s.toolHandoffAccept(id, params.Arguments)
+	case "handoff_complete":
+		return s.toolHandoffComplete(id, params.Arguments)
 
 	// Conversation tools - store and search conversations
 	case "conversation_store":
@@ -768,6 +955,12 @@ func (s *MCPServer) dispatchTool(id any, params mcpToolCallParams) jsonRPCRespon
 	// Context & Scope Tools
 	case "context_auto_inject":
 		return s.toolContextAutoInject(id, params.Arguments)
+	case "context_focus":
+		return s.toolContextFocus(id, params.Arguments)
+	case "context_get":
+		return s.toolContextGet(id, params.Arguments)
+	case "context_pin":
+		return s.toolContextPin(id, params.Arguments)
 	case "scope_explain":
 		return s.toolScopeExplain(id, params.Arguments)
 
@@ -784,6 +977,14 @@ func (s *MCPServer) dispatchTool(id any, params mcpToolCallParams) jsonRPCRespon
 		return s.toolPostmortemStats(id, params.Arguments)
 	case "postmortem_to_learnings":
 		return s.toolPostmortemToLearnings(id, params.Arguments)
+
+	// Analytics tools - workspace insights
+	case "analytics_sessions":
+		return s.toolSessionAnalytics(id, params.Arguments)
+	case "analytics_learnings":
+		return s.toolLearningEffectiveness(id, params.Arguments)
+	case "analytics_health":
+		return s.toolWorkspaceHealth(id, params.Arguments)
 
 	default:
 		return jsonRPCResponse{

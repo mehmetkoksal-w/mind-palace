@@ -95,6 +95,13 @@ func (m *Memory) UpdateSessionActivity(sessionID string) error {
 	return err
 }
 
+// UpdateSessionState changes the state of a session (e.g., from "timeout" to "active").
+func (m *Memory) UpdateSessionState(sessionID, state string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := m.db.ExecContext(context.Background(), `UPDATE sessions SET state = ?, last_activity = ? WHERE id = ?`, state, now, sessionID)
+	return err
+}
+
 // EndSession marks a session as completed or abandoned.
 func (m *Memory) EndSession(sessionID, state, summary string) error {
 	if state == "" {

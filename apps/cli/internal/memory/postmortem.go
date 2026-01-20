@@ -411,3 +411,50 @@ func (m *Memory) ConvertPostmortemToLearning(postmortemID string) ([]string, err
 
 	return learningIDs, nil
 }
+
+// GetPostmortemsSince returns postmortems created since the given time.
+func (m *Memory) GetPostmortemsSince(since time.Time) ([]Postmortem, error) {
+	query := `
+		SELECT id, title, what_happened, root_cause, lessons_learned,
+			   prevention_steps, severity, status, affected_files,
+			   related_decision, related_session, created_at, resolved_at
+		FROM postmortems
+		WHERE created_at > ?
+		ORDER BY created_at DESC LIMIT 10`
+
+	rows, err := m.db.QueryContext(context.Background(), query, since.Format(time.RFC3339))
+	if err != nil {
+		return nil, fmt.Errorf("get postmortems since: %w", err)
+	}
+	defer rows.Close()
+
+	var postmortems []Postmortem
+	for rows.Next() {
+		pm := Postmortem{}
+		var lessonsJSON, preventionJSON, filesJSON string
+		var createdAt string
+		var resolvedAt sql.NullString
+
+		err := rows.Scan(
+			&pm.ID, &pm.Title, &pm.WhatHappened, &pm.RootCause, &lessonsJSON,
+			&preventionJSON, &pm.Severity, &pm.Status, &filesJSON,
+			&pm.RelatedDecision, &pm.RelatedSession, &createdAt, &resolvedAt,
+		)
+		if err != nil {
+			continue
+		}
+
+		json.Unmarshal([]byte(lessonsJSON), &pm.LessonsLearned)
+		json.Unmarshal([]byte(preventionJSON), &pm.PreventionSteps)
+		json.Unmarshal([]byte(filesJSON), &pm.AffectedFiles)
+
+		pm.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		if resolvedAt.Valid {
+			pm.ResolvedAt, _ = time.Parse(time.RFC3339, resolvedAt.String)
+		}
+
+		postmortems = append(postmortems, pm)
+	}
+
+	return postmortems, nil
+}
