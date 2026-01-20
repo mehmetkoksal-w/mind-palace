@@ -121,10 +121,24 @@ type mcpInitializeResult struct {
 	ServerInfo      mcpServerInfo   `json:"serverInfo"`
 }
 
+// mcpToolAutonomy provides metadata for agent autonomy guidance.
+// This helps agents understand when and how to use tools without explicit instructions.
+type mcpToolAutonomy struct {
+	// Level indicates how critical this tool is: "required", "recommended", or "optional"
+	Level string `json:"level"`
+	// Prerequisites lists tools that should be called before this one
+	Prerequisites []string `json:"prerequisites,omitempty"`
+	// Triggers describes when this tool should be called
+	Triggers []string `json:"triggers,omitempty"`
+	// Frequency indicates how often: "once_per_session", "per_file", "as_needed"
+	Frequency string `json:"frequency,omitempty"`
+}
+
 type mcpTool struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description,omitempty"`
 	InputSchema map[string]interface{} `json:"inputSchema"`
+	Autonomy    *mcpToolAutonomy       `json:"autonomy,omitempty"`
 }
 
 type mcpResource struct {
@@ -309,6 +323,12 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 	}
 
 	switch params.Name {
+	// Composite tools - streamlined workflows
+	case "session_init":
+		return s.toolSessionInit(req.ID, params.Arguments)
+	case "file_context":
+		return s.toolFileContext(req.ID, params.Arguments)
+
 	// Explore tools - search, context, symbols, graphs
 	case "explore":
 		return s.toolExplore(req.ID, params.Arguments)

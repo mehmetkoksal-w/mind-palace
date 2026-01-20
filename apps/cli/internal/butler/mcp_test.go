@@ -985,3 +985,260 @@ func TestMCPDefaultModeIsAgent(t *testing.T) {
 		t.Errorf("NewMCPServer() should default to agent mode, got %q", server.Mode())
 	}
 }
+
+// ============================================================
+// Composite Tools Tests - Sprint 1 Autonomy
+// ============================================================
+
+func TestMCPToolSessionInit(t *testing.T) {
+	server, _ := setupMCPServer(t)
+
+	// Test basic session_init
+	resp := server.toolSessionInit(1, map[string]interface{}{
+		"agent_name": "test-agent",
+		"task":       "Testing composite tool",
+	})
+
+	if resp.Error != nil {
+		t.Fatalf("toolSessionInit error: %v", resp.Error)
+	}
+
+	text := toolText(t, resp)
+
+	// Verify session was created
+	if !strings.Contains(text, "Session ID") {
+		t.Errorf("toolSessionInit should return session ID, got: %s", text)
+	}
+
+	// Verify briefing was included
+	if !strings.Contains(text, "Briefing") {
+		t.Errorf("toolSessionInit should include briefing, got: %s", text)
+	}
+
+	// Verify rooms were included
+	if !strings.Contains(text, "Room") || !strings.Contains(text, "core") {
+		t.Errorf("toolSessionInit should include rooms list, got: %s", text)
+	}
+
+	// Verify next steps guidance
+	if !strings.Contains(text, "Next Steps") {
+		t.Errorf("toolSessionInit should include next steps, got: %s", text)
+	}
+}
+
+func TestMCPToolSessionInitWithAgentType(t *testing.T) {
+	server, _ := setupMCPServer(t)
+
+	// Test with agentType (alternative parameter name)
+	resp := server.toolSessionInit(1, map[string]interface{}{
+		"agentType": "cursor",
+	})
+
+	if resp.Error != nil {
+		t.Fatalf("toolSessionInit with agentType error: %v", resp.Error)
+	}
+
+	text := toolText(t, resp)
+	if !strings.Contains(text, "Session ID") {
+		t.Errorf("toolSessionInit should work with agentType param, got: %s", text)
+	}
+}
+
+func TestMCPToolSessionInitMissingAgent(t *testing.T) {
+	server, _ := setupMCPServer(t)
+
+	// Test without required agent_name
+	resp := server.toolSessionInit(1, map[string]interface{}{
+		"task": "Some task",
+	})
+
+	// Should return error
+	result, ok := resp.Result.(mcpToolResult)
+	if !ok {
+		t.Fatalf("result type = %T, want mcpToolResult", resp.Result)
+	}
+
+	if !result.IsError {
+		t.Error("toolSessionInit without agent_name should return error")
+	}
+
+	if !strings.Contains(result.Content[0].Text, "agent_name is required") {
+		t.Errorf("Error should mention agent_name requirement, got: %s", result.Content[0].Text)
+	}
+}
+
+func TestMCPToolFileContext(t *testing.T) {
+	server, b := setupMCPServer(t)
+
+	// Start a session first
+	sessionResp := server.toolSessionStart(1, map[string]interface{}{
+		"agentType": "cli",
+		"goal":      "test file context",
+	})
+	sessionText := toolText(t, sessionResp)
+	sessionID := extractBetween(sessionText, "**Session ID:** `", "`")
+
+	// Register agent for the session
+	if err := b.memory.RegisterAgent("cli", "agent-1", sessionID); err != nil {
+		t.Fatalf("RegisterAgent() error = %v", err)
+	}
+
+	// Record some activity on the file
+	if err := b.RecordFileEdit("main.go", "cli"); err != nil {
+		t.Fatalf("RecordFileEdit() error = %v", err)
+	}
+
+	// Test file_context
+	resp := server.toolFileContext(1, map[string]interface{}{
+		"file_path":  "main.go",
+		"session_id": sessionID,
+	})
+
+	if resp.Error != nil {
+		t.Fatalf("toolFileContext error: %v", resp.Error)
+	}
+
+	text := toolText(t, resp)
+
+	// Verify file context was retrieved (shows file path and history)
+	if !strings.Contains(text, "File Context") || !strings.Contains(text, "main.go") {
+		t.Errorf("toolFileContext should include file context header, got: %s", text)
+	}
+
+	// Verify file history is shown
+	if !strings.Contains(text, "File History") || !strings.Contains(text, "Total edits") {
+		t.Errorf("toolFileContext should include file history, got: %s", text)
+	}
+
+	// Verify next steps guidance
+	if !strings.Contains(text, "Next Steps") {
+		t.Errorf("toolFileContext should include next steps, got: %s", text)
+	}
+}
+
+func TestMCPToolFileContextMissingPath(t *testing.T) {
+	server, _ := setupMCPServer(t)
+
+	// Test without required file_path
+	resp := server.toolFileContext(1, map[string]interface{}{
+		"session_id": "some-session",
+	})
+
+	// Should return error
+	result, ok := resp.Result.(mcpToolResult)
+	if !ok {
+		t.Fatalf("result type = %T, want mcpToolResult", resp.Result)
+	}
+
+	if !result.IsError {
+		t.Error("toolFileContext without file_path should return error")
+	}
+
+	if !strings.Contains(result.Content[0].Text, "file_path is required") {
+		t.Errorf("Error should mention file_path requirement, got: %s", result.Content[0].Text)
+	}
+}
+
+func TestMCPToolFileContextConflictDetection(t *testing.T) {
+	server, b := setupMCPServer(t)
+
+	// Create first session
+	sessionResp1 := server.toolSessionStart(1, map[string]interface{}{
+		"agentType": "cli",
+		"goal":      "first agent",
+	})
+	sessionText1 := toolText(t, sessionResp1)
+	sessionID1 := extractBetween(sessionText1, "**Session ID:** `", "`")
+
+	// Register first agent and set current file
+	if err := b.memory.RegisterAgent("cli", "agent-1", sessionID1); err != nil {
+		t.Fatalf("RegisterAgent 1 error = %v", err)
+	}
+	if err := b.memory.SetCurrentFile("agent-1", "main.go"); err != nil {
+		t.Fatalf("SetCurrentFile error = %v", err)
+	}
+
+	// Create second session
+	sessionResp2 := server.toolSessionStart(2, map[string]interface{}{
+		"agentType": "cursor",
+		"goal":      "second agent",
+	})
+	sessionText2 := toolText(t, sessionResp2)
+	sessionID2 := extractBetween(sessionText2, "**Session ID:** `", "`")
+
+	// Check file_context from second session - should detect conflict
+	resp := server.toolFileContext(3, map[string]interface{}{
+		"file_path":  "main.go",
+		"session_id": sessionID2,
+	})
+
+	if resp.Error != nil {
+		t.Fatalf("toolFileContext error: %v", resp.Error)
+	}
+
+	text := toolText(t, resp)
+
+	// Should detect that another agent is working on main.go
+	// The output shows "cli" (agent type) rather than "agent-1" (agent ID)
+	if !strings.Contains(text, "Conflict Warning") || !strings.Contains(text, "cli") {
+		t.Errorf("toolFileContext should detect conflict with cli agent, got: %s", text)
+	}
+
+	// Should recommend coordination
+	if !strings.Contains(text, "Coordinate") || !strings.Contains(text, "wait") {
+		t.Errorf("toolFileContext should recommend coordination, got: %s", text)
+	}
+}
+
+func TestMCPToolAutonomyMetadata(t *testing.T) {
+	server, _ := setupMCPServer(t)
+
+	resp := server.handleToolsList(jsonRPCRequest{JSONRPC: "2.0", ID: 1})
+	if resp.Error != nil {
+		t.Fatalf("handleToolsList error: %v", resp.Error)
+	}
+
+	result := resp.Result.(map[string]interface{})
+	tools := result["tools"].([]mcpTool)
+
+	// Find session_init and verify it has autonomy metadata
+	var sessionInitFound, fileContextFound bool
+	for _, tool := range tools {
+		if tool.Name == "session_init" {
+			sessionInitFound = true
+			if tool.Autonomy == nil {
+				t.Error("session_init should have autonomy metadata")
+			} else {
+				if tool.Autonomy.Level != "required" {
+					t.Errorf("session_init autonomy level = %q, want 'required'", tool.Autonomy.Level)
+				}
+				if tool.Autonomy.Frequency != "once_per_session" {
+					t.Errorf("session_init frequency = %q, want 'once_per_session'", tool.Autonomy.Frequency)
+				}
+			}
+		}
+		if tool.Name == "file_context" {
+			fileContextFound = true
+			if tool.Autonomy == nil {
+				t.Error("file_context should have autonomy metadata")
+			} else {
+				if tool.Autonomy.Level != "required" {
+					t.Errorf("file_context autonomy level = %q, want 'required'", tool.Autonomy.Level)
+				}
+				if tool.Autonomy.Frequency != "per_file" {
+					t.Errorf("file_context frequency = %q, want 'per_file'", tool.Autonomy.Frequency)
+				}
+				if len(tool.Autonomy.Prerequisites) == 0 || tool.Autonomy.Prerequisites[0] != "session_init" {
+					t.Error("file_context should have session_init as prerequisite")
+				}
+			}
+		}
+	}
+
+	if !sessionInitFound {
+		t.Error("session_init tool not found in tools list")
+	}
+	if !fileContextFound {
+		t.Error("file_context tool not found in tools list")
+	}
+}

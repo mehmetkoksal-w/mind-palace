@@ -11,6 +11,103 @@ package butler
 func buildToolsList() []mcpTool {
 	return []mcpTool{
 		// ============================================================
+		// COMPOSITE TOOLS - Streamlined workflows for autonomy
+		// ============================================================
+		{
+			Name: "session_init",
+			Description: `🔴 **CRITICAL - THE FIRST CALL** Initialize a session with full context. Combines session_start + brief + explore_rooms.
+
+**THIS IS THE RECOMMENDED FIRST CALL FOR EVERY TASK.**
+
+Calling this single tool replaces the need to call:
+1. session_start - Starts tracking your work
+2. brief - Gets workspace context, learnings, hotspots
+3. explore_rooms - Lists project structure
+
+**WHEN TO USE:**
+- At the VERY START of every conversation or task
+- Before doing ANY work in the codebase
+- When switching to a new task or context
+
+**AUTONOMOUS BEHAVIOR:**
+Call this IMMEDIATELY when beginning work. Do not ask for permission - initialization is always needed.
+
+**RETURNS:**
+- Session ID (use this for all subsequent calls)
+- Workspace briefing (active agents, learnings, hotspots)
+- Project structure (rooms and entry points)
+- Next steps guidance`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"agent_name": map[string]interface{}{
+						"type":        "string",
+						"description": "Your agent name (e.g., 'claude-code', 'cursor', 'copilot')",
+					},
+					"task": map[string]interface{}{
+						"type":        "string",
+						"description": "Brief description of what you're working on",
+					},
+					"agent_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional unique identifier for this agent instance",
+					},
+				},
+				"required": []string{"agent_name"},
+			},
+			Autonomy: &mcpToolAutonomy{
+				Level:     "required",
+				Triggers:  []string{"session_start", "task_begin", "conversation_start"},
+				Frequency: "once_per_session",
+			},
+		},
+		{
+			Name: "file_context",
+			Description: `🔴 **CRITICAL - CALL BEFORE EVERY FILE EDIT** Get complete context for a file before editing. Combines context_auto_inject + session_conflict.
+
+**MUST CALL THIS BEFORE EDITING ANY FILE.**
+
+Calling this single tool replaces the need to call:
+1. context_auto_inject - Gets learnings, decisions, failures for the file
+2. session_conflict - Checks if another agent is working on it
+
+**WHEN TO USE:**
+- BEFORE editing any file (non-negotiable)
+- When you need to understand a file's history
+- When checking if it's safe to modify a file
+
+**AUTONOMOUS BEHAVIOR:**
+Call this automatically before ANY file modification. Do not skip this step even for "simple" changes.
+
+**RETURNS:**
+- Conflict warnings (if another agent is editing this file)
+- File-scoped learnings with priority explanations
+- Active decisions that apply to this file
+- Known failures and their severity
+- File edit history and failure rate
+- Next steps guidance`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"file_path": map[string]interface{}{
+						"type":        "string",
+						"description": "Path to the file you're about to edit",
+					},
+					"session_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Your session ID from session_init (for conflict detection)",
+					},
+				},
+				"required": []string{"file_path"},
+			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "required",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"before_file_edit", "before_file_modify"},
+				Frequency:     "per_file",
+			},
+		},
+		// ============================================================
 		// EXPLORE TOOLS - Search, context, symbols, and call graphs
 		// ============================================================
 		{
@@ -52,6 +149,12 @@ Quick discovery of relevant files and code locations. Like a 'smart grep' that u
 				},
 				"required": []string{"query"},
 			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "recommended",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"unknown_location", "feature_discovery", "code_search"},
+				Frequency:     "as_needed",
+			},
 		},
 		{
 			Name: "explore_rooms",
@@ -71,6 +174,12 @@ Understanding the conceptual organization of the project. Rooms are curated area
 			InputSchema: map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
+			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "recommended",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"session_start", "codebase_orientation"},
+				Frequency:     "once_per_session",
 			},
 		},
 		{
@@ -449,6 +558,12 @@ Agents should call this automatically after completing tasks, solving problems, 
 				},
 				"required": []string{"content"},
 			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "recommended",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"after_problem_solved", "after_decision_made", "after_pattern_discovered"},
+				Frequency:     "as_needed",
+			},
 		},
 		{
 			Name: "store_direct",
@@ -626,6 +741,12 @@ Agents should proactively search learnings when working in areas that might have
 						"default":     10,
 					},
 				},
+			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "optional",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"before_implementation", "knowledge_lookup", "pattern_search"},
+				Frequency:     "as_needed",
 			},
 		},
 		{
@@ -1023,6 +1144,12 @@ Activity logs build file intelligence (hotspots, failure rates), enable conflict
 				},
 				"required": []string{"sessionId", "kind", "target"},
 			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "recommended",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"after_file_edit", "after_file_read", "after_search", "after_command"},
+				Frequency:     "per_activity",
+			},
 		},
 		{
 			Name: "session_end",
@@ -1057,6 +1184,12 @@ Ending sessions properly releases file locks, records outcomes for learning conf
 					},
 				},
 				"required": []string{"sessionId"},
+			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "required",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"task_complete", "conversation_end", "context_switch"},
+				Frequency:     "once_per_session",
 			},
 		},
 		{
