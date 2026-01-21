@@ -257,7 +257,7 @@ func (s *MCPServer) toolHandoffAccept(id any, args map[string]interface{}) jsonR
 
 	// Get pinned learnings
 	mem := s.butler.Memory()
-	if len(handoff.PinnedRecords) > 0 && mem != nil { //nolint:nestif // pinned records display requires nested conditions
+	if len(handoff.PinnedRecords) > 0 && mem != nil {
 		output.WriteString("\n## Pinned Knowledge\n\n")
 		for _, pid := range handoff.PinnedRecords {
 			if strings.HasPrefix(pid, "l_") {

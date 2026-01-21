@@ -105,12 +105,13 @@ func (s *Server) handlePatterns(w http.ResponseWriter, r *http.Request) {
 
 	// Convert to response format
 	response := make([]PatternResponse, 0, len(patterns))
-	for _, p := range patterns {
+	for i := range patterns {
+		p := &patterns[i]
 		// Get locations for this pattern
 		allLocations, _ := mem.GetPatternLocations(p.ID)
 		locations, outliers := splitLocations(allLocations)
 
-		pr := patternToResponse(p, locations, outliers)
+		pr := patternToResponse(*p, locations, outliers)
 		response = append(response, pr)
 	}
 
@@ -337,7 +338,8 @@ func (s *Server) handlePatternStats(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	totalConfidence := 0.0
-	for _, p := range allPatterns {
+	for i := range allPatterns {
+		p := &allPatterns[i]
 		switch p.Status {
 		case "discovered":
 			stats.Discovered++
@@ -360,11 +362,11 @@ func (s *Server) handlePatternStats(w http.ResponseWriter, _ *http.Request) {
 
 // splitLocations separates locations into regular locations and outliers.
 func splitLocations(all []memory.PatternLocation) (locations, outliers []memory.PatternLocation) {
-	for _, loc := range all {
-		if loc.IsOutlier {
-			outliers = append(outliers, loc)
+	for i := range all {
+		if all[i].IsOutlier {
+			outliers = append(outliers, all[i])
 		} else {
-			locations = append(locations, loc)
+			locations = append(locations, all[i])
 		}
 	}
 	return
@@ -373,13 +375,13 @@ func splitLocations(all []memory.PatternLocation) (locations, outliers []memory.
 // patternToResponse converts a memory.Pattern to a PatternResponse.
 func patternToResponse(p memory.Pattern, locations, outliers []memory.PatternLocation) PatternResponse {
 	locResponses := make([]LocationResponse, 0, len(locations))
-	for _, loc := range locations {
-		locResponses = append(locResponses, locationToResponse(loc))
+	for i := range locations {
+		locResponses = append(locResponses, locationToResponse(locations[i]))
 	}
 
 	outlierResponses := make([]LocationResponse, 0, len(outliers))
-	for _, loc := range outliers {
-		outlierResponses = append(outlierResponses, locationToResponse(loc))
+	for i := range outliers {
+		outlierResponses = append(outlierResponses, locationToResponse(outliers[i]))
 	}
 
 	return PatternResponse{

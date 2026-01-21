@@ -89,7 +89,7 @@ func ListFiles(root string, guardrails config.Guardrails) ([]string, error) {
 			target, err := os.Stat(path)
 			if err != nil {
 				// Skip broken symlinks or inaccessible targets
-				return nil //nolint:nilerr // intentionally skip broken symlinks
+				return nil
 			}
 			if target.IsDir() {
 				// Skip symlinked directories to avoid following them
@@ -121,7 +121,7 @@ func ChunkContent(content string, maxLines, maxBytes int) []Chunk {
 	}
 	lines := strings.Split(content, "\n")
 	var chunks []Chunk
-	var buffer []string //nolint:prealloc // size unknown until flush
+	var buffer []string
 	currentBytes := 0
 	startLine := 1
 
@@ -321,7 +321,7 @@ func splitLargeChunk(lines []string, start, end int, symbols []SymbolBoundary, m
 
 	// Group consecutive symbols that fit within limits
 	currentStart := start
-	var currentSymbols []SymbolBoundary //nolint:prealloc // size unknown until flush
+	var currentSymbols []SymbolBoundary
 	currentBytes := 0
 
 	flushGroup := func() {

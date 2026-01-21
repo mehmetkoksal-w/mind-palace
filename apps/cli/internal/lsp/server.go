@@ -61,6 +61,7 @@ const DefaultDebounceDelay = 300 * time.Millisecond
 // NewServer creates a new LSP server.
 func NewServer() *Server {
 	// Create log file for debugging (don't log to stdout - that's for LSP messages)
+	//nolint:gosec // G302: log file intentionally world-readable for debugging
 	logFile, err := os.OpenFile("palace-lsp.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	var logger *log.Logger
 	if err != nil {

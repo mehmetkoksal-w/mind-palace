@@ -229,7 +229,7 @@ func (e *FastAPIExtractor) ExtractPydanticModels(content []byte) (map[string]*co
 }
 
 func (e *FastAPIExtractor) findPydanticModels(node *sitter.Node, content []byte, models map[string]*contracts.TypeSchema) {
-	if node.Type() == "class_definition" { //nolint:nestif // complex model extraction logic
+	if node.Type() == "class_definition" {
 		// Check if it inherits from BaseModel
 		if e.isPydanticModel(node, content) {
 			className := ""

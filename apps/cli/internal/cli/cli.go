@@ -29,6 +29,8 @@ func validateScope(v string) error       { return flags.ValidateScope(v) }
 func validatePort(v int) error           { return flags.ValidatePort(v) }
 
 // Run executes the application given the command-line arguments.
+//
+//nolint:gocyclo // command dispatch switch is intentionally large
 func Run(args []string) error {
 	if len(args) == 0 {
 		return usage()

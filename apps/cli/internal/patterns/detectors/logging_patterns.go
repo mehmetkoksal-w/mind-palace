@@ -79,7 +79,6 @@ const (
 
 // Detect implements the Detector interface.
 //
-//nolint:gocognit,gocyclo // pattern detection is complex by design
 func (d *LoggingPatternDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	content := string(dctx.FileContent)
 	lines := strings.Split(content, "\n")
@@ -216,10 +215,10 @@ func (d *LoggingPatternDetector) Detect(_ context.Context, dctx *patterns.Detect
 			locations = append(locations, locs...)
 		} else {
 			// Non-dominant libraries are potential outliers
-			for _, loc := range locs {
-				loc.IsOutlier = true
-				loc.OutlierReason = "Uses " + string(lib) + " instead of " + string(dominantLib)
-				outliers = append(outliers, loc)
+			for i := range locs {
+				locs[i].IsOutlier = true
+				locs[i].OutlierReason = "Uses " + string(lib) + " instead of " + string(dominantLib)
+				outliers = append(outliers, locs[i])
 			}
 		}
 	}
@@ -227,10 +226,10 @@ func (d *LoggingPatternDetector) Detect(_ context.Context, dctx *patterns.Detect
 	// Mark print statements as outliers in Python (if there are proper logging calls)
 	if lang == "python" && libraryCounts[libPyLogging] > 0 {
 		if printLocs, ok := libraryLocations[libPrint]; ok {
-			for _, loc := range printLocs {
-				loc.IsOutlier = true
-				loc.OutlierReason = "Uses print() instead of logging module"
-				outliers = append(outliers, loc)
+			for i := range printLocs {
+				printLocs[i].IsOutlier = true
+				printLocs[i].OutlierReason = "Uses print() instead of logging module"
+				outliers = append(outliers, printLocs[i])
 			}
 		}
 	}
@@ -238,10 +237,10 @@ func (d *LoggingPatternDetector) Detect(_ context.Context, dctx *patterns.Detect
 	// Mark console.log as outliers in JS/TS if proper logger exists
 	if (lang == "typescript" || lang == "javascript") && (libraryCounts[libWinston] > 0 || libraryCounts[libPino] > 0) {
 		if consoleLocs, ok := libraryLocations[libConsole]; ok {
-			for _, loc := range consoleLocs {
-				loc.IsOutlier = true
-				loc.OutlierReason = "Uses console.log instead of structured logger"
-				outliers = append(outliers, loc)
+			for i := range consoleLocs {
+				consoleLocs[i].IsOutlier = true
+				consoleLocs[i].OutlierReason = "Uses console.log instead of structured logger"
+				outliers = append(outliers, consoleLocs[i])
 			}
 		}
 	}

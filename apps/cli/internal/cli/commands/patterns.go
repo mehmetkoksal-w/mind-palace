@@ -170,7 +170,8 @@ func ExecutePatternsScan(opts PatternsOptions) error {
 	if len(result.Patterns) > 0 {
 		fmt.Println()
 		fmt.Println("Discovered patterns:")
-		for _, p := range result.Patterns {
+		for i := range result.Patterns {
+			p := &result.Patterns[i]
 			level := patterns.GetConfidenceLevel(p.Confidence)
 			icon := "?"
 			switch level {
@@ -244,8 +245,8 @@ func ExecutePatternsList(opts PatternsOptions) error {
 
 	// Count by status
 	discovered, approved, ignored := 0, 0, 0
-	for _, p := range patternList {
-		switch p.Status {
+	for i := range patternList {
+		switch patternList[i].Status {
 		case "discovered":
 			discovered++
 		case "approved":
@@ -260,8 +261,9 @@ func ExecutePatternsList(opts PatternsOptions) error {
 	fmt.Println(strings.Repeat("=", 60))
 
 	// Group by category
-	byCategory := make(map[string][]memory.Pattern)
-	for _, p := range patternList {
+	byCategory := make(map[string][]*memory.Pattern)
+	for i := range patternList {
+		p := &patternList[i]
 		byCategory[p.Category] = append(byCategory[p.Category], p)
 	}
 
@@ -358,7 +360,6 @@ Examples:
 
 // ExecutePatternsApprove approves patterns.
 //
-//nolint:gocognit // CLI command with complex user interaction flow
 func ExecutePatternsApprove(opts PatternsOptions) error {
 	rootPath, err := filepath.Abs(opts.Root)
 	if err != nil {
@@ -371,7 +372,7 @@ func ExecutePatternsApprove(opts PatternsOptions) error {
 	}
 	defer mem.Close()
 
-	if opts.Bulk { //nolint:nestif // bulk approval logic requires nested conditions
+	if opts.Bulk {
 		// Bulk approval
 		if opts.DryRun {
 			// Show what would be approved
@@ -394,7 +395,8 @@ func ExecutePatternsApprove(opts PatternsOptions) error {
 				action = "approve and create learnings for"
 			}
 			fmt.Printf("Would %s %d patterns (dry-run):\n", action, len(toApprove))
-			for _, p := range toApprove {
+			for i := range toApprove {
+				p := &toApprove[i]
 				fmt.Printf("  + %s: %s (%.0f%%)\n", p.ID, p.Name, p.Confidence*100)
 			}
 			return nil
@@ -563,7 +565,6 @@ Arguments:
 
 // ExecutePatternsShow shows pattern details.
 //
-//nolint:gocognit // CLI command with detailed pattern formatting
 func ExecutePatternsShow(opts PatternsOptions) error {
 	rootPath, err := filepath.Abs(opts.Root)
 	if err != nil {
@@ -610,11 +611,11 @@ func ExecutePatternsShow(opts PatternsOptions) error {
 	fmt.Printf("First seen:  %s\n", pattern.FirstSeen.Format("2006-01-02 15:04"))
 	fmt.Printf("Last seen:   %s\n", pattern.LastSeen.Format("2006-01-02 15:04"))
 
-	if len(locations) > 0 { //nolint:nestif // display logic requires nested conditions
+	if len(locations) > 0 {
 		matches := 0
 		outliers := 0
-		for _, loc := range locations {
-			if loc.IsOutlier {
+		for i := range locations {
+			if locations[i].IsOutlier {
 				outliers++
 			} else {
 				matches++
@@ -626,7 +627,8 @@ func ExecutePatternsShow(opts PatternsOptions) error {
 
 		// Show first few locations
 		shown := 0
-		for _, loc := range locations {
+		for i := range locations {
+			loc := &locations[i]
 			if loc.IsOutlier {
 				continue
 			}
@@ -646,7 +648,8 @@ func ExecutePatternsShow(opts PatternsOptions) error {
 			fmt.Println()
 			fmt.Println("Outliers (deviations):")
 			shown = 0
-			for _, loc := range locations {
+			for i := range locations {
+				loc := &locations[i]
 				if !loc.IsOutlier {
 					continue
 				}

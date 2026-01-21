@@ -394,7 +394,7 @@ func (s *Store) BulkSave(contracts []*Contract) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck // rollback error safe to ignore
+	defer tx.Rollback()
 
 	for _, contract := range contracts {
 		if err := s.SaveContract(contract); err != nil {

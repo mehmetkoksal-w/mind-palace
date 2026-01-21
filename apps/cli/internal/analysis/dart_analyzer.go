@@ -249,6 +249,7 @@ func (a *DartAnalyzer) QuickCallScan(files []string, progressFn func(current, to
 				continue
 			}
 
+			//nolint:nestif // symbol type handling requires nested conditions for class vs function
 			if sym.Kind == KindFunction || sym.Kind == KindClass {
 				// For classes, find constructors and public methods
 				if sym.Kind == KindClass {

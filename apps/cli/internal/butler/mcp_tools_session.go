@@ -147,7 +147,7 @@ func (s *MCPServer) toolSessionEnd(id any, args map[string]interface{}) jsonRPCR
 
 	// Get activities summary
 	activities, _ := mem.GetActivities(sessionID, "", 100)
-	if len(activities) > 0 { //nolint:nestif // activity summary display requires nested conditions
+	if len(activities) > 0 {
 		output.WriteString("\n## Activity Summary\n\n")
 
 		// Count activities by kind
@@ -321,7 +321,7 @@ func (s *MCPServer) toolRecall(id any, args map[string]interface{}) jsonRPCRespo
 	}
 
 	// Related Knowledge Suggestions: when querying, also suggest related decisions and ideas
-	if query != "" { //nolint:nestif // related knowledge display requires nested conditions
+	if query != "" {
 		cfg := s.butler.Config()
 		// Check if proactive briefing (which includes related suggestions) is enabled
 		if cfg != nil && cfg.Autonomy != nil && cfg.Autonomy.ProactiveBriefing {
@@ -588,7 +588,6 @@ func (s *MCPServer) toolSessionList(id any, args map[string]interface{}) jsonRPC
 
 // toolSessionResume resumes a previous session for continuation.
 //
-//nolint:gocognit // complex by design - handles session state restoration
 func (s *MCPServer) toolSessionResume(id any, args map[string]interface{}) jsonRPCResponse {
 	sessionID, _ := args["sessionId"].(string)
 	if sessionID == "" {

@@ -11,7 +11,6 @@ import (
 // toolSessionInit is a composite tool that combines session_start + brief + explore_rooms.
 // This is the recommended first call for any agent session.
 //
-//nolint:gocognit,gocyclo // complex by design - combines multiple tools
 func (s *MCPServer) toolSessionInit(id any, args map[string]interface{}) jsonRPCResponse {
 	agentType, _ := args["agent_name"].(string)
 	if agentType == "" {
@@ -80,7 +79,7 @@ func (s *MCPServer) toolSessionInit(id any, args map[string]interface{}) jsonRPC
 
 	// 2. Get briefing
 	brief, err := s.butler.GetBrief("")
-	if err == nil { //nolint:nestif // briefing display requires nested conditions
+	if err == nil {
 		output.WriteString("## Workspace Briefing\n\n")
 
 		// Active agents (exclude self)
@@ -191,7 +190,6 @@ func (s *MCPServer) toolSessionInit(id any, args map[string]interface{}) jsonRPC
 // toolFileContext is a composite tool that combines context_auto_inject + session_conflict.
 // This should be called before editing any file.
 //
-//nolint:gocognit // complex by design - combines multiple tools
 func (s *MCPServer) toolFileContext(id any, args map[string]interface{}) jsonRPCResponse {
 	filePath, _ := args["file_path"].(string)
 	if filePath == "" {
@@ -235,7 +233,7 @@ func (s *MCPServer) toolFileContext(id any, args map[string]interface{}) jsonRPC
 	}
 
 	ctx, err := s.butler.GetAutoInjectionContext(filePath, autoInjectCfg)
-	if err != nil { //nolint:nestif // context display requires nested conditions
+	if err != nil {
 		output.WriteString("## Context\n\n")
 		output.WriteString("*No specific context available for this file.*\n\n")
 	} else {
@@ -296,7 +294,7 @@ func (s *MCPServer) toolFileContext(id any, args map[string]interface{}) jsonRPC
 
 	// 3. Get file intel
 	mem := s.butler.Memory()
-	if mem != nil { //nolint:nestif // file intel display requires nested conditions
+	if mem != nil {
 		intel, err := mem.GetFileIntel(filePath)
 		if err == nil && intel != nil && intel.EditCount > 0 {
 			output.WriteString("## File History\n\n")

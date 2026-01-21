@@ -162,6 +162,8 @@ func (e *Engine) parseFiles(ctx context.Context, files []string) error {
 }
 
 // getDetectors returns the detectors to run based on configuration.
+//
+//nolint:gocognit // filter logic requires checking multiple conditions
 func (e *Engine) getDetectors() []Detector {
 	all := e.registry.All()
 
@@ -206,6 +208,8 @@ func (e *Engine) getDetectors() []Detector {
 }
 
 // runDetectors executes all detectors and collects results.
+//
+//nolint:gocognit // concurrent detection logic is inherently complex
 func (e *Engine) runDetectors(ctx context.Context, detectors []Detector) ([]Pattern, []error) {
 	var allPatterns []Pattern
 	var allErrors []error
@@ -410,7 +414,7 @@ func (e *Engine) SaveResults(_ context.Context, patterns []Pattern) error {
 			return err
 		}
 
-		if existing != nil { //nolint:nestif // update logic requires nested conditions
+		if existing != nil {
 			// Update existing pattern
 			existing.Confidence = p.Confidence
 			existing.FrequencyScore = p.FrequencyScore

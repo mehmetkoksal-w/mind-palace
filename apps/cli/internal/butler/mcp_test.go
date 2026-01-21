@@ -1190,7 +1190,6 @@ func TestMCPToolFileContextConflictDetection(t *testing.T) {
 	}
 }
 
-//nolint:gocognit // test function verifies complex metadata
 func TestMCPToolAutonomyMetadata(t *testing.T) {
 	server, _ := setupMCPServer(t)
 
@@ -1205,7 +1204,7 @@ func TestMCPToolAutonomyMetadata(t *testing.T) {
 	// Find session_init and verify it has autonomy metadata
 	var sessionInitFound, fileContextFound bool
 	for _, tool := range tools {
-		if tool.Name == "session_init" { //nolint:nestif // test verifies nested metadata
+		if tool.Name == "session_init" {
 			sessionInitFound = true
 			if tool.Autonomy == nil {
 				t.Error("session_init should have autonomy metadata")
@@ -1218,7 +1217,7 @@ func TestMCPToolAutonomyMetadata(t *testing.T) {
 				}
 			}
 		}
-		if tool.Name == "file_context" { //nolint:nestif // test verifies nested metadata
+		if tool.Name == "file_context" {
 			fileContextFound = true
 			if tool.Autonomy == nil {
 				t.Error("file_context should have autonomy metadata")

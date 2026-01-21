@@ -73,7 +73,6 @@ const (
 
 // Detect implements the Detector interface.
 //
-//nolint:gocognit,gocyclo // pattern detection is complex by design
 func (d *DependencyInjectionDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	content := string(dctx.FileContent)
 	lines := strings.Split(content, "\n")
@@ -219,10 +218,10 @@ func (d *DependencyInjectionDetector) Detect(_ context.Context, dctx *patterns.D
 		if fw == dominantFW {
 			locations = append(locations, locs...)
 		} else {
-			for _, loc := range locs {
-				loc.IsOutlier = true
-				loc.OutlierReason = "Uses " + string(fw) + " instead of " + string(dominantFW)
-				outliers = append(outliers, loc)
+			for i := range locs {
+				locs[i].IsOutlier = true
+				locs[i].OutlierReason = "Uses " + string(fw) + " instead of " + string(dominantFW)
+				outliers = append(outliers, locs[i])
 			}
 		}
 	}

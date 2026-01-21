@@ -63,7 +63,6 @@ const (
 
 // Detect implements the Detector interface.
 //
-//nolint:gocognit // pattern detection is complex by design
 func (d *TestPatternDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	// Only analyze test files
 	if !isTestFile(dctx.File.Path) {

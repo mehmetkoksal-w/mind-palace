@@ -44,9 +44,9 @@ func (s *Server) getHoverInfo(doc *TextDocument, pos Position) *Hover {
 
 	// Check for contract mismatches on this line
 	mismatches, _ := s.diagnosticsProvider.GetContractMismatchesForFile(filePath)
-	for _, mismatch := range mismatches {
-		if mismatch.Line == line {
-			return s.contractHover(mismatch)
+	for i := range mismatches {
+		if mismatches[i].Line == line {
+			return s.contractHover(mismatches[i])
 		}
 	}
 
@@ -122,7 +122,8 @@ func (s *Server) handleCodeAction(req Request) *Response {
 func (s *Server) getCodeActions(_ *TextDocument, params CodeActionParams) []CodeAction {
 	var actions []CodeAction
 
-	for _, diag := range params.Context.Diagnostics {
+	for i := range params.Context.Diagnostics {
+		diag := params.Context.Diagnostics[i]
 		if diag.Source != "mind-palace" {
 			continue
 		}
@@ -140,6 +141,7 @@ func (s *Server) getCodeActions(_ *TextDocument, params CodeActionParams) []Code
 				}
 			}
 
+		//nolint:gocritic // appendCombine: keeping separate for readability with complex structs
 			actions = append(actions, CodeAction{
 				Title:       fmt.Sprintf("Approve Pattern: %s", patternID),
 				Kind:        CodeActionKindQuickFix,
@@ -214,6 +216,7 @@ func (s *Server) getCodeActions(_ *TextDocument, params CodeActionParams) []Code
 		default:
 			// Generic fallback for unknown diagnostic types
 			if code, ok := diag.Code.(string); ok {
+				//nolint:gocritic // appendCombine: keeping separate for readability with complex structs
 				actions = append(actions, CodeAction{
 					Title:       fmt.Sprintf("Approve: %s", code),
 					Kind:        CodeActionKindQuickFix,
@@ -260,7 +263,7 @@ func (s *Server) handleCodeLens(req Request) *Response {
 
 // getCodeLenses returns code lenses for a document.
 func (s *Server) getCodeLenses(doc *TextDocument) []CodeLens {
-	var lenses []CodeLens //nolint:prealloc // size depends on conditional logic
+	var lenses []CodeLens
 
 	if s.diagnosticsProvider == nil {
 		return lenses
@@ -346,7 +349,8 @@ func (s *Server) getCodeLenses(doc *TextDocument) []CodeLens {
 	}
 
 	// Add inline lenses for each contract mismatch
-	for _, mismatch := range mismatches {
+	for i := range mismatches {
+		mismatch := &mismatches[i]
 		lenses = append(lenses, CodeLens{
 			Range: Range{
 				Start: Position{Line: mismatch.Line - 1, Character: 0}, // Convert to 0-based
@@ -473,8 +477,9 @@ func (s *Server) getDefinition(doc *TextDocument, pos Position) *Location {
 
 	// Check if we're on a contract mismatch line
 	mismatches, _ := s.diagnosticsProvider.GetContractMismatchesForFile(filePath)
-	for _, mismatch := range mismatches {
-		if mismatch.Line == line {
+	for i := range mismatches {
+		if mismatches[i].Line == line {
+			mismatch := &mismatches[i]
 			// Navigate to the related file (backend if on frontend, frontend if on backend)
 			// This requires additional context from the diagnostics provider
 			// For now, return the current location as a placeholder
@@ -509,7 +514,7 @@ func (s *Server) handleDocumentSymbol(req Request) *Response {
 
 // getDocumentSymbols returns document symbols for a document.
 func (s *Server) getDocumentSymbols(doc *TextDocument) []DocumentSymbol {
-	var symbols []DocumentSymbol //nolint:prealloc // size depends on conditional logic
+	var symbols []DocumentSymbol
 
 	if s.diagnosticsProvider == nil {
 		return symbols
@@ -519,7 +524,8 @@ func (s *Server) getDocumentSymbols(doc *TextDocument) []DocumentSymbol {
 
 	// Add pattern outliers as symbols
 	outliers, _ := s.diagnosticsProvider.GetPatternOutliersForFile(filePath)
-	for _, outlier := range outliers {
+	for i := range outliers {
+		outlier := &outliers[i]
 		symbol := DocumentSymbol{
 			Name:   fmt.Sprintf("Pattern: %s", outlier.PatternName),
 			Detail: outlier.OutlierReason,
@@ -538,7 +544,8 @@ func (s *Server) getDocumentSymbols(doc *TextDocument) []DocumentSymbol {
 
 	// Add contract mismatches as symbols
 	mismatches, _ := s.diagnosticsProvider.GetContractMismatchesForFile(filePath)
-	for _, mismatch := range mismatches {
+	for i := range mismatches {
+		mismatch := &mismatches[i]
 		symbol := DocumentSymbol{
 			Name:   fmt.Sprintf("Contract: %s %s", mismatch.Method, mismatch.Endpoint),
 			Detail: mismatch.Description,

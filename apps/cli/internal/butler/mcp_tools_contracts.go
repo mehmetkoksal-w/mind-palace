@@ -9,7 +9,6 @@ import (
 
 // toolContractsGet retrieves contracts from the store with filtering.
 //
-//nolint:gocognit // complex by design - handles multiple filter options
 func (s *MCPServer) toolContractsGet(id any, args map[string]interface{}) jsonRPCResponse {
 	mem := s.butler.Memory()
 	if mem == nil {
@@ -52,7 +51,7 @@ func (s *MCPServer) toolContractsGet(id any, args map[string]interface{}) jsonRP
 	var output strings.Builder
 	output.WriteString("# API Contracts\n\n")
 
-	if len(contractList) == 0 { //nolint:nestif // contract display requires nested conditions
+	if len(contractList) == 0 {
 		output.WriteString("No contracts found matching the criteria.\n\n")
 		output.WriteString("Run `palace contracts scan` to detect API contracts in the codebase.\n")
 	} else {

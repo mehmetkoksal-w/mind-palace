@@ -105,7 +105,6 @@ func (e *TSTypeExtractor) findTypeAliasSchema(node *sitter.Node, content []byte,
 	return nil
 }
 
-//nolint:gocognit,nestif // TypeScript AST traversal is inherently complex
 func (e *TSTypeExtractor) extractTypeDeclarations(node *sitter.Node, content []byte, schemas map[string]*contracts.TypeSchema) {
 	nodeType := node.Type()
 
@@ -127,7 +126,7 @@ func (e *TSTypeExtractor) extractTypeDeclarations(node *sitter.Node, content []b
 		if nameNode != nil {
 			name := nameNode.Content(content)
 			// In TS, check if it starts with capital letter (convention for types)
-			if len(name) > 0 {
+			if name != "" {
 				var schema *contracts.TypeSchema
 				if nodeType == "interface_declaration" {
 					bodyNode := node.ChildByFieldName("body")
@@ -230,7 +229,6 @@ func (e *TSTypeExtractor) parsePropertySignature(node *sitter.Node, content []by
 	schema.AddProperty(name, propSchema, !optional)
 }
 
-//nolint:gocognit,gocyclo // TypeScript type parsing requires handling many node types
 func (e *TSTypeExtractor) parseTypeNode(node *sitter.Node, content []byte) *contracts.TypeSchema {
 	if node == nil {
 		return contracts.NewPrimitiveSchema(contracts.SchemaTypeAny)
@@ -276,7 +274,7 @@ func (e *TSTypeExtractor) parseTypeNode(node *sitter.Node, content []byte) *cont
 			}
 		}
 
-		if nameNode != nil { //nolint:nestif // complex type resolution logic
+		if nameNode != nil {
 			name := nameNode.Content(content)
 			switch name {
 			case "Array":

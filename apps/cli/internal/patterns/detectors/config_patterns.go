@@ -74,7 +74,6 @@ const (
 
 // Detect implements the Detector interface.
 //
-//nolint:gocognit // pattern detection is complex by design
 func (d *ConfigPatternDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	content := string(dctx.FileContent)
 	lines := strings.Split(content, "\n")
@@ -216,10 +215,10 @@ func (d *ConfigPatternDetector) Detect(_ context.Context, dctx *patterns.Detecti
 			locations = append(locations, locs...)
 		} else {
 			// Non-dominant libraries could be outliers in a consistent codebase
-			for _, loc := range locs {
-				loc.IsOutlier = true
-				loc.OutlierReason = "Uses " + string(lib) + " instead of " + string(dominantLib)
-				outliers = append(outliers, loc)
+			for i := range locs {
+				locs[i].IsOutlier = true
+				locs[i].OutlierReason = "Uses " + string(lib) + " instead of " + string(dominantLib)
+				outliers = append(outliers, locs[i])
 			}
 		}
 	}

@@ -206,10 +206,10 @@ func findDominantStyle(styles map[namingStyle][]patterns.Location) (namingStyle,
 			locations = append(locations, locs...)
 		} else {
 			// Mark non-dominant as outliers
-			for _, loc := range locs {
-				loc.IsOutlier = true
-				loc.OutlierReason = "Uses " + string(style) + " instead of " + string(dominant)
-				outliers = append(outliers, loc)
+			for i := range locs {
+				locs[i].IsOutlier = true
+				locs[i].OutlierReason = "Uses " + string(style) + " instead of " + string(dominant)
+				outliers = append(outliers, locs[i])
 			}
 		}
 	}

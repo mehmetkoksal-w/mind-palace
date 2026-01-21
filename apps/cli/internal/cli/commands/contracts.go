@@ -104,7 +104,6 @@ func RunContractsScan(args []string) error {
 
 // ExecuteContractsScan scans the codebase for API contracts.
 //
-//nolint:gocognit // CLI command with complex scan workflow
 func ExecuteContractsScan(opts ContractsOptions) error {
 	rootPath, err := filepath.Abs(opts.Root)
 	if err != nil {
@@ -725,7 +724,8 @@ func extractEndpoints(files []string) ([]contracts.EndpointInput, error) {
 			continue
 		}
 
-		for _, ep := range extracted {
+		for i := range extracted {
+			ep := &extracted[i]
 			endpoints = append(endpoints, contracts.EndpointInput{
 				Method:         ep.Method,
 				Path:           ep.Path,

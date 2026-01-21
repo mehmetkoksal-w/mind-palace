@@ -32,7 +32,6 @@ type Result struct {
 
 // Run collects context from the palace index for the given root and diff range.
 //
-//nolint:gocognit // complex by design - orchestrates full context collection
 func Run(root, diffRange string, opts Options) (Result, error) {
 	rootPath, err := filepath.Abs(root)
 	if err != nil {
@@ -85,7 +84,7 @@ func Run(root, diffRange string, opts Options) (Result, error) {
 	scopeSource := "full-scan"
 	var candidates []string
 
-	if fullScope { //nolint:nestif // branching logic is clear despite depth
+	if fullScope {
 		candidates, err = fsutil.ListFiles(rootPath, guardrails)
 		if err != nil {
 			return Result{}, err

@@ -75,8 +75,8 @@ func (s *Server) computeDiagnostics(doc *TextDocument) []Diagnostic {
 		if err != nil {
 			s.logger.Printf("Error getting contract mismatches: %v", err)
 		} else {
-			for _, mismatch := range mismatches {
-				diag := s.contractMismatchToDiagnostic(mismatch)
+			for i := range mismatches {
+				diag := s.contractMismatchToDiagnostic(mismatches[i])
 				diagnostics = append(diagnostics, diag)
 			}
 		}
