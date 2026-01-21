@@ -50,10 +50,12 @@ var (
 )
 
 // Detect implements the Detector interface.
-func (d *ImportOrganizationDetector) Detect(ctx context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
+//
+//nolint:gocognit // pattern detection is complex by design
+func (d *ImportOrganizationDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	content := string(dctx.FileContent)
 	lines := strings.Split(content, "\n")
-	lang := string(dctx.File.Language)
+	lang := dctx.File.Language
 
 	var locations []patterns.Location
 	var outliers []patterns.Location
@@ -192,7 +194,7 @@ func (d *ImportOrganizationDetector) Detect(ctx context.Context, dctx *patterns.
 	}, nil
 }
 
-func classifyGoImport(line, filePath string) importGroup {
+func classifyGoImport(line, _ string) importGroup {
 	// Extract the import path
 	start := strings.Index(line, `"`)
 	if start == -1 {

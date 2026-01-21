@@ -16,10 +16,10 @@ type EndpointMatch struct {
 
 // Matcher matches frontend API calls to backend endpoints.
 type Matcher struct {
-	endpoints []matchableEndpoint
+	endpoints []MatchableEndpoint
 }
 
-type matchableEndpoint struct {
+type MatchableEndpoint struct {
 	Method  string
 	Path    string
 	Pattern *regexp.Regexp
@@ -29,7 +29,7 @@ type matchableEndpoint struct {
 // NewMatcher creates a new endpoint matcher.
 func NewMatcher() *Matcher {
 	return &Matcher{
-		endpoints: make([]matchableEndpoint, 0),
+		endpoints: make([]MatchableEndpoint, 0),
 	}
 }
 
@@ -43,7 +43,7 @@ func (m *Matcher) AddEndpoint(method, path string) {
 		return
 	}
 
-	m.endpoints = append(m.endpoints, matchableEndpoint{
+	m.endpoints = append(m.endpoints, MatchableEndpoint{
 		Method:  strings.ToUpper(method),
 		Path:    normalizedPath,
 		Pattern: re,
@@ -130,7 +130,7 @@ func (m *Matcher) methodMatches(frontendMethod, backendMethod string) bool {
 	return false
 }
 
-func (m *Matcher) calculateConfidence(url string, ep matchableEndpoint) float64 {
+func (m *Matcher) calculateConfidence(url string, ep MatchableEndpoint) float64 {
 	// Base confidence from pattern match
 	confidence := 0.8
 
@@ -171,7 +171,7 @@ func (m *Matcher) calculateConfidence(url string, ep matchableEndpoint) float64 
 	return confidence
 }
 
-func (m *Matcher) extractMatchedParams(url string, ep matchableEndpoint) map[string]string {
+func (m *Matcher) extractMatchedParams(url string, ep MatchableEndpoint) map[string]string {
 	params := make(map[string]string)
 
 	urlSegments := strings.Split(url, "/")
@@ -191,7 +191,7 @@ func (m *Matcher) extractMatchedParams(url string, ep matchableEndpoint) map[str
 }
 
 // FindUnmatchedEndpoints returns backend endpoints with no matching frontend calls.
-func (m *Matcher) FindUnmatchedEndpoints(calls []struct{ Method, URL string }) []matchableEndpoint {
+func (m *Matcher) FindUnmatchedEndpoints(calls []struct{ Method, URL string }) []MatchableEndpoint {
 	matchedPaths := make(map[string]bool)
 
 	for _, call := range calls {
@@ -202,7 +202,7 @@ func (m *Matcher) FindUnmatchedEndpoints(calls []struct{ Method, URL string }) [
 		}
 	}
 
-	var unmatched []matchableEndpoint
+	var unmatched []MatchableEndpoint
 	for _, ep := range m.endpoints {
 		key := ep.Method + ":" + ep.Path
 		if !matchedPaths[key] {

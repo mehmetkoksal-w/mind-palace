@@ -150,7 +150,7 @@ func (e *ExpressExtractor) detectHTTPMethod(name string) string {
 	return ""
 }
 
-func (e *ExpressExtractor) parseRouteCall(method string, argsNode *sitter.Node, content []byte, filePath string, callNode *sitter.Node, receiver string) *ExtractedEndpoint {
+func (e *ExpressExtractor) parseRouteCall(method string, argsNode *sitter.Node, content []byte, filePath string, callNode *sitter.Node, _ string) *ExtractedEndpoint {
 	// Express routes: app.get('/path', handler) or app.get('/path', middleware, handler)
 	args := e.extractArguments(argsNode, content)
 	if len(args) < 2 {
@@ -177,7 +177,7 @@ func (e *ExpressExtractor) parseRouteCall(method string, argsNode *sitter.Node, 
 	}
 }
 
-func (e *ExpressExtractor) parseUseRoute(argsNode *sitter.Node, content []byte, filePath string, callNode *sitter.Node, receiver string) *ExtractedEndpoint {
+func (e *ExpressExtractor) parseUseRoute(argsNode *sitter.Node, content []byte, filePath string, callNode *sitter.Node, _ string) *ExtractedEndpoint {
 	// Express use: app.use('/api', apiRouter) - mounts a router
 	args := e.extractArguments(argsNode, content)
 	if len(args) < 1 {

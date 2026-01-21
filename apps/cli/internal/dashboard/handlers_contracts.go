@@ -230,7 +230,7 @@ func (s *Server) handleContractIgnore(w http.ResponseWriter, r *http.Request, st
 }
 
 // handleContractStats handles GET /api/contracts/stats
-func (s *Server) handleContractStats(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleContractStats(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RLock()
 	mem := s.memory
 	s.mu.RUnlock()
@@ -268,7 +268,7 @@ func (s *Server) handleContractStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleContractMismatches handles GET /api/contracts/mismatches
-func (s *Server) handleContractMismatches(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleContractMismatches(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RLock()
 	mem := s.memory
 	s.mu.RUnlock()

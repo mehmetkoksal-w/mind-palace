@@ -37,7 +37,7 @@ func (a *ButlerAdapter) GetPatternOutliersForFile(filePath string) ([]PatternOut
 		return nil, err
 	}
 
-	var outliers []PatternOutlier
+	outliers := make([]PatternOutlier, 0, len(locations))
 	for _, loc := range locations {
 		// Get the pattern for additional info
 		pattern, err := a.memory.GetPattern(loc.PatternID)

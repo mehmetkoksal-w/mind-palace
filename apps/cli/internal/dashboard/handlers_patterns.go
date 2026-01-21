@@ -314,7 +314,7 @@ func (s *Server) handlePatternBulkApprove(w http.ResponseWriter, r *http.Request
 }
 
 // handlePatternStats handles GET /api/patterns/stats
-func (s *Server) handlePatternStats(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handlePatternStats(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RLock()
 	mem := s.memory
 	s.mu.RUnlock()

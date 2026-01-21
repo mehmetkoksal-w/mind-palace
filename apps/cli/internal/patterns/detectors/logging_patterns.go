@@ -78,10 +78,12 @@ const (
 )
 
 // Detect implements the Detector interface.
-func (d *LoggingPatternDetector) Detect(ctx context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
+//
+//nolint:gocognit,gocyclo // pattern detection is complex by design
+func (d *LoggingPatternDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	content := string(dctx.FileContent)
 	lines := strings.Split(content, "\n")
-	lang := string(dctx.File.Language)
+	lang := dctx.File.Language
 
 	var locations []patterns.Location
 	var outliers []patterns.Location
@@ -298,7 +300,7 @@ func extractLogLevel(line string, levelCounts map[string]int) {
 }
 
 func getLibraryNames(counts map[loggingLibrary]int) []string {
-	var names []string
+	names := make([]string, 0, len(counts))
 	for lib := range counts {
 		names = append(names, string(lib))
 	}

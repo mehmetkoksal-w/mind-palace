@@ -31,6 +31,8 @@ type Result struct {
 }
 
 // Run collects context from the palace index for the given root and diff range.
+//
+//nolint:gocognit // complex by design - orchestrates full context collection
 func Run(root, diffRange string, opts Options) (Result, error) {
 	rootPath, err := filepath.Abs(root)
 	if err != nil {
@@ -83,7 +85,7 @@ func Run(root, diffRange string, opts Options) (Result, error) {
 	scopeSource := "full-scan"
 	var candidates []string
 
-	if fullScope {
+	if fullScope { //nolint:nestif // branching logic is clear despite depth
 		candidates, err = fsutil.ListFiles(rootPath, guardrails)
 		if err != nil {
 			return Result{}, err
@@ -246,7 +248,7 @@ func collectEntryPoints(rootPath, roomName string) []string {
 	if err := jsonc.DecodeFile(roomPath, &room); err != nil {
 		return nil
 	}
-	var entries []string
+	entries := make([]string, 0, len(room.EntryPoints))
 	for _, ep := range room.EntryPoints {
 		entries = append(entries, filepath.ToSlash(ep))
 	}

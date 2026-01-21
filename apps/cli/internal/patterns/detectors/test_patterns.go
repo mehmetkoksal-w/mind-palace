@@ -62,7 +62,9 @@ const (
 )
 
 // Detect implements the Detector interface.
-func (d *TestPatternDetector) Detect(ctx context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
+//
+//nolint:gocognit // pattern detection is complex by design
+func (d *TestPatternDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	// Only analyze test files
 	if !isTestFile(dctx.File.Path) {
 		return nil, nil
@@ -70,7 +72,7 @@ func (d *TestPatternDetector) Detect(ctx context.Context, dctx *patterns.Detecti
 
 	content := string(dctx.FileContent)
 	lines := strings.Split(content, "\n")
-	lang := string(dctx.File.Language)
+	lang := dctx.File.Language
 
 	var locations []patterns.Location
 	var outliers []patterns.Location

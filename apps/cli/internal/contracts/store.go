@@ -227,6 +227,9 @@ func (s *Store) getFrontendCalls(contractID string) ([]FrontendCall, error) {
 		}
 		calls = append(calls, call)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	return calls, nil
 }
@@ -250,6 +253,9 @@ func (s *Store) getMismatches(contractID string) ([]FieldMismatch, error) {
 		}
 		m.Type = MismatchType(mType)
 		mismatches = append(mismatches, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return mismatches, nil
@@ -302,6 +308,9 @@ func (s *Store) ListContracts(filter ContractFilter) ([]*Contract, error) {
 		if contract != nil {
 			contracts = append(contracts, contract)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return contracts, nil
@@ -359,6 +368,9 @@ func (s *Store) GetStats() (*ContractStats, error) {
 		_ = rows.Scan(&method, &count)
 		stats.ByMethod[method] = count
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	// Total mismatches (errors and warnings)
 	_ = s.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM contract_mismatches WHERE severity = 'error'`).Scan(&stats.TotalErrors)
@@ -382,7 +394,7 @@ func (s *Store) BulkSave(contracts []*Contract) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback error safe to ignore
 
 	for _, contract := range contracts {
 		if err := s.SaveContract(contract); err != nil {

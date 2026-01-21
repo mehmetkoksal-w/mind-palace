@@ -334,7 +334,7 @@ func (e *AxiosExtractor) extractArguments(argsNode *sitter.Node, content []byte)
 
 // ExtractTypeFromGeneric attempts to extract the expected response type from
 // axios generic type parameters like axios.get<User>('/users').
-func (e *AxiosExtractor) ExtractTypeFromGeneric(content []byte, callLine int) *contracts.TypeSchema {
+func (e *AxiosExtractor) ExtractTypeFromGeneric(_ []byte, _ int) *contracts.TypeSchema {
 	// This is a simplified implementation
 	// Full implementation would parse the generic type parameter
 	return nil

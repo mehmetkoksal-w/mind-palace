@@ -30,7 +30,7 @@ func NewFileOrganizationDetector() *FileOrganizationDetector {
 }
 
 // Detect implements the Detector interface.
-func (d *FileOrganizationDetector) Detect(ctx context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
+func (d *FileOrganizationDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	// This detector works across files, so we analyze based on the file path
 	filePath := dctx.File.Path
 	fileName := filepath.Base(filePath)

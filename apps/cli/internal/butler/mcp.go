@@ -705,7 +705,7 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 	briefingUpdates := s.checkBriefingUpdates()
 
 	// Prepend any notification messages to the response
-	if resp.Error == nil {
+	if resp.Error == nil { //nolint:nestif // response augmentation requires nested conditions
 		if result, ok := resp.Result.(mcpToolResult); ok && len(result.Content) > 0 {
 			var prefix strings.Builder
 			if sessionTimeoutMsg != "" {
@@ -792,6 +792,8 @@ func (s *MCPServer) autoLogActivity(toolName string, args map[string]interface{}
 }
 
 // dispatchTool routes the tool call to the appropriate handler.
+//
+//nolint:gocyclo // large switch statement is necessary for tool routing
 func (s *MCPServer) dispatchTool(id any, params mcpToolCallParams) jsonRPCResponse {
 	switch params.Name {
 	// Composite tools - streamlined workflows

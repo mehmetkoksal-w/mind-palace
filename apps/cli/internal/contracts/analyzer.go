@@ -154,9 +154,7 @@ func (a *Analyzer) Analyze(input *AnalysisInput) *AnalysisResult {
 		// Detect type mismatches
 		if call.ExpectedSchema != nil && contract.Backend.ResponseSchema != nil {
 			mismatches := contract.Backend.ResponseSchema.Compare(call.ExpectedSchema, "")
-			for _, m := range mismatches {
-				contract.Mismatches = append(contract.Mismatches, m)
-			}
+			contract.Mismatches = append(contract.Mismatches, mismatches...)
 		}
 
 		contract.FrontendCalls = append(contract.FrontendCalls, frontendCall)
@@ -199,11 +197,12 @@ func (a *Analyzer) calculateContractConfidence(contract *Contract) float64 {
 
 	// More frontend calls = higher confidence
 	callCount := len(contract.FrontendCalls)
-	if callCount >= 5 {
+	switch {
+	case callCount >= 5:
 		confidence += 0.3
-	} else if callCount >= 2 {
+	case callCount >= 2:
 		confidence += 0.2
-	} else if callCount >= 1 {
+	case callCount >= 1:
 		confidence += 0.1
 	}
 

@@ -50,7 +50,7 @@ func (s *Server) handleInitialize(req Request) *Response {
 }
 
 // handleInitialized handles the initialized notification.
-func (s *Server) handleInitialized(req Request) *Response {
+func (s *Server) handleInitialized(_ Request) *Response {
 	s.initialized = true
 	s.logger.Println("Server initialized")
 	// Notification - no response
@@ -65,7 +65,7 @@ func (s *Server) handleShutdown(req Request) *Response {
 }
 
 // handleExit handles the exit notification.
-func (s *Server) handleExit(req Request) *Response {
+func (s *Server) handleExit(_ Request) *Response {
 	s.logger.Println("Exit requested")
 	// The server loop will check s.shutdown and exit
 	s.shutdown = true

@@ -31,7 +31,7 @@ func NewFunctionLengthDetector() *FunctionLengthDetector {
 }
 
 // Detect implements the Detector interface.
-func (d *FunctionLengthDetector) Detect(ctx context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
+func (d *FunctionLengthDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	fa := dctx.File
 
 	// Extract functions from symbols
@@ -50,7 +50,7 @@ func (d *FunctionLengthDetector) Detect(ctx context.Context, dctx *patterns.Dete
 	var outliers []patterns.Location
 
 	// Calculate function lengths
-	var lengths []int
+	lengths := make([]int, 0, len(functions))
 	totalLines := 0
 
 	for _, fn := range functions {
@@ -78,13 +78,14 @@ func (d *FunctionLengthDetector) Detect(ctx context.Context, dctx *patterns.Dete
 			Snippet:   fn.Name,
 		}
 
-		if length <= 20 {
+		switch {
+		case length <= 20:
 			shortFunctions++
 			locations = append(locations, loc)
-		} else if length <= 50 {
+		case length <= 50:
 			mediumFunctions++
 			locations = append(locations, loc)
-		} else {
+		default:
 			longFunctions++
 			if length > outlierThreshold {
 				loc.IsOutlier = true

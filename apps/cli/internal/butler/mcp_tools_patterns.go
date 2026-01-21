@@ -109,6 +109,8 @@ func (s *MCPServer) toolPatternsGet(id any, args map[string]interface{}) jsonRPC
 }
 
 // toolPatternShow shows details of a specific pattern.
+//
+//nolint:gocognit // complex by design - formats detailed pattern info
 func (s *MCPServer) toolPatternShow(id any, args map[string]interface{}) jsonRPCResponse {
 	patternID, _ := args["pattern_id"].(string)
 	if patternID == "" {

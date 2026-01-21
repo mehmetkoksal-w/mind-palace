@@ -55,7 +55,7 @@ func ExecuteLSP(opts LSPOptions) error {
 	}
 
 	// Set up logging
-	var logWriter io.Writer = io.Discard // Don't log to stderr by default (it's for JSON-RPC)
+	var logWriter = io.Discard // Don't log to stderr by default (it's for JSON-RPC)
 	if opts.LogFile != "" {
 		logFile, err := os.OpenFile(opts.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if err != nil {

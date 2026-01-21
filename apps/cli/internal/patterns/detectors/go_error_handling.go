@@ -49,7 +49,7 @@ var (
 )
 
 // Detect implements the Detector interface.
-func (d *GoErrorHandlingDetector) Detect(ctx context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
+func (d *GoErrorHandlingDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	// Only process Go files
 	if dctx.File.Language != "go" {
 		return nil, nil

@@ -133,20 +133,15 @@ func AdjustConfidenceForOutliers(baseConfidence float64, matches, outliers int) 
 }
 
 // clamp restricts a value to a range.
-func clamp(value, min, max float64) float64 {
-	if value < min {
-		return min
+//
+//nolint:unparam // generic utility function for code clarity
+func clamp(value, minVal, maxVal float64) float64 {
+	if value < minVal {
+		return minVal
 	}
-	if value > max {
-		return max
+	if value > maxVal {
+		return maxVal
 	}
 	return value
 }
 
-// max returns the larger of two integers.
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}

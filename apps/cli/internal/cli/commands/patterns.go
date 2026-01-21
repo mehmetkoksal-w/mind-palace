@@ -279,7 +279,7 @@ func ExecutePatternsList(opts PatternsOptions) error {
 			}
 
 			level := patterns.GetConfidenceLevel(p.Confidence)
-			confIcon := ""
+			var confIcon string
 			switch level {
 			case patterns.ConfidenceHigh:
 				confIcon = "HIGH"
@@ -357,6 +357,8 @@ Examples:
 }
 
 // ExecutePatternsApprove approves patterns.
+//
+//nolint:gocognit // CLI command with complex user interaction flow
 func ExecutePatternsApprove(opts PatternsOptions) error {
 	rootPath, err := filepath.Abs(opts.Root)
 	if err != nil {
@@ -369,7 +371,7 @@ func ExecutePatternsApprove(opts PatternsOptions) error {
 	}
 	defer mem.Close()
 
-	if opts.Bulk {
+	if opts.Bulk { //nolint:nestif // bulk approval logic requires nested conditions
 		// Bulk approval
 		if opts.DryRun {
 			// Show what would be approved
@@ -560,6 +562,8 @@ Arguments:
 }
 
 // ExecutePatternsShow shows pattern details.
+//
+//nolint:gocognit // CLI command with detailed pattern formatting
 func ExecutePatternsShow(opts PatternsOptions) error {
 	rootPath, err := filepath.Abs(opts.Root)
 	if err != nil {
@@ -606,7 +610,7 @@ func ExecutePatternsShow(opts PatternsOptions) error {
 	fmt.Printf("First seen:  %s\n", pattern.FirstSeen.Format("2006-01-02 15:04"))
 	fmt.Printf("Last seen:   %s\n", pattern.LastSeen.Format("2006-01-02 15:04"))
 
-	if len(locations) > 0 {
+	if len(locations) > 0 { //nolint:nestif // display logic requires nested conditions
 		matches := 0
 		outliers := 0
 		for _, loc := range locations {

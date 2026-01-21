@@ -169,7 +169,7 @@ func (e *Engine) getDetectors() []Detector {
 		return all
 	}
 
-	var filtered []Detector
+	filtered := make([]Detector, 0, len(all))
 	for _, d := range all {
 		// Check detector ID filter
 		if len(e.config.DetectorIDs) > 0 {
@@ -410,7 +410,7 @@ func (e *Engine) SaveResults(_ context.Context, patterns []Pattern) error {
 			return err
 		}
 
-		if existing != nil {
+		if existing != nil { //nolint:nestif // update logic requires nested conditions
 			// Update existing pattern
 			existing.Confidence = p.Confidence
 			existing.FrequencyScore = p.FrequencyScore
@@ -520,7 +520,7 @@ func CollectFiles(root string, ignorePaths []string) ([]string, error) {
 
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil // Skip errors
+			return nil //nolint:nilerr // intentionally skip inaccessible files
 		}
 
 		// Skip directories

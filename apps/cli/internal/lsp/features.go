@@ -119,7 +119,7 @@ func (s *Server) handleCodeAction(req Request) *Response {
 }
 
 // getCodeActions returns code actions for the given context.
-func (s *Server) getCodeActions(doc *TextDocument, params CodeActionParams) []CodeAction {
+func (s *Server) getCodeActions(_ *TextDocument, params CodeActionParams) []CodeAction {
 	var actions []CodeAction
 
 	for _, diag := range params.Context.Diagnostics {
@@ -131,7 +131,8 @@ func (s *Server) getCodeActions(doc *TextDocument, params CodeActionParams) []Co
 		data, _ := diag.Data.(map[string]interface{})
 		diagType, _ := data["type"].(string)
 
-		if diagType == "pattern" {
+		switch diagType {
+		case "pattern":
 			patternID, _ := data["patternId"].(string)
 			if patternID == "" {
 				if code, ok := diag.Code.(string); ok {
@@ -173,7 +174,7 @@ func (s *Server) getCodeActions(doc *TextDocument, params CodeActionParams) []Co
 				},
 			})
 
-		} else if diagType == "contract" {
+		case "contract":
 			contractID, _ := data["contractId"].(string)
 
 			actions = append(actions, CodeAction{
@@ -210,7 +211,7 @@ func (s *Server) getCodeActions(doc *TextDocument, params CodeActionParams) []Co
 				},
 			})
 
-		} else {
+		default:
 			// Generic fallback for unknown diagnostic types
 			if code, ok := diag.Code.(string); ok {
 				actions = append(actions, CodeAction{
@@ -259,7 +260,7 @@ func (s *Server) handleCodeLens(req Request) *Response {
 
 // getCodeLenses returns code lenses for a document.
 func (s *Server) getCodeLenses(doc *TextDocument) []CodeLens {
-	var lenses []CodeLens
+	var lenses []CodeLens //nolint:prealloc // size depends on conditional logic
 
 	if s.diagnosticsProvider == nil {
 		return lenses
@@ -508,7 +509,7 @@ func (s *Server) handleDocumentSymbol(req Request) *Response {
 
 // getDocumentSymbols returns document symbols for a document.
 func (s *Server) getDocumentSymbols(doc *TextDocument) []DocumentSymbol {
-	var symbols []DocumentSymbol
+	var symbols []DocumentSymbol //nolint:prealloc // size depends on conditional logic
 
 	if s.diagnosticsProvider == nil {
 		return symbols

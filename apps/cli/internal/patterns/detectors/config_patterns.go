@@ -73,7 +73,9 @@ const (
 )
 
 // Detect implements the Detector interface.
-func (d *ConfigPatternDetector) Detect(ctx context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
+//
+//nolint:gocognit // pattern detection is complex by design
+func (d *ConfigPatternDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	content := string(dctx.FileContent)
 	lines := strings.Split(content, "\n")
 	lang := dctx.File.Language

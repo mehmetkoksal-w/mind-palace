@@ -130,9 +130,9 @@ func (m *Memory) GetPostmortem(id string) (*Postmortem, error) {
 		return nil, fmt.Errorf("get postmortem: %w", err)
 	}
 
-	json.Unmarshal([]byte(lessonsJSON), &pm.LessonsLearned)
-	json.Unmarshal([]byte(preventionJSON), &pm.PreventionSteps)
-	json.Unmarshal([]byte(filesJSON), &pm.AffectedFiles)
+	_ = json.Unmarshal([]byte(lessonsJSON), &pm.LessonsLearned)
+	_ = json.Unmarshal([]byte(preventionJSON), &pm.PreventionSteps)
+	_ = json.Unmarshal([]byte(filesJSON), &pm.AffectedFiles)
 
 	pm.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 	if resolvedAt.Valid {
@@ -185,9 +185,9 @@ func (m *Memory) GetPostmortems(status, severity string, limit int) ([]Postmorte
 			continue
 		}
 
-		json.Unmarshal([]byte(lessonsJSON), &pm.LessonsLearned)
-		json.Unmarshal([]byte(preventionJSON), &pm.PreventionSteps)
-		json.Unmarshal([]byte(filesJSON), &pm.AffectedFiles)
+		_ = json.Unmarshal([]byte(lessonsJSON), &pm.LessonsLearned)
+		_ = json.Unmarshal([]byte(preventionJSON), &pm.PreventionSteps)
+		_ = json.Unmarshal([]byte(filesJSON), &pm.AffectedFiles)
 
 		pm.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 		if resolvedAt.Valid {
@@ -239,9 +239,9 @@ func (m *Memory) GetPostmortemsForFile(filePath string, limit int) ([]Postmortem
 			continue
 		}
 
-		json.Unmarshal([]byte(lessonsJSON), &pm.LessonsLearned)
-		json.Unmarshal([]byte(preventionJSON), &pm.PreventionSteps)
-		json.Unmarshal([]byte(filesJSON), &pm.AffectedFiles)
+		_ = json.Unmarshal([]byte(lessonsJSON), &pm.LessonsLearned)
+		_ = json.Unmarshal([]byte(preventionJSON), &pm.PreventionSteps)
+		_ = json.Unmarshal([]byte(filesJSON), &pm.AffectedFiles)
 
 		pm.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 		if resolvedAt.Valid {
@@ -249,6 +249,9 @@ func (m *Memory) GetPostmortemsForFile(filePath string, limit int) ([]Postmortem
 		}
 
 		postmortems = append(postmortems, pm)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate postmortems for file: %w", err)
 	}
 
 	return postmortems, nil
@@ -444,9 +447,9 @@ func (m *Memory) GetPostmortemsSince(since time.Time) ([]Postmortem, error) {
 			continue
 		}
 
-		json.Unmarshal([]byte(lessonsJSON), &pm.LessonsLearned)
-		json.Unmarshal([]byte(preventionJSON), &pm.PreventionSteps)
-		json.Unmarshal([]byte(filesJSON), &pm.AffectedFiles)
+		_ = json.Unmarshal([]byte(lessonsJSON), &pm.LessonsLearned)
+		_ = json.Unmarshal([]byte(preventionJSON), &pm.PreventionSteps)
+		_ = json.Unmarshal([]byte(filesJSON), &pm.AffectedFiles)
 
 		pm.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 		if resolvedAt.Valid {
@@ -454,6 +457,9 @@ func (m *Memory) GetPostmortemsSince(since time.Time) ([]Postmortem, error) {
 		}
 
 		postmortems = append(postmortems, pm)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate postmortems since: %w", err)
 	}
 
 	return postmortems, nil

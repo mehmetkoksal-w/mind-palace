@@ -76,12 +76,12 @@ func (m *Memory) GetConversation(id string) (*Conversation, error) {
 
 	// Parse messages
 	if messagesJSON.Valid && messagesJSON.String != "" {
-		json.Unmarshal([]byte(messagesJSON.String), &c.Messages)
+		_ = json.Unmarshal([]byte(messagesJSON.String), &c.Messages)
 	}
 
 	// Parse extracted IDs
 	if extractedJSON.Valid && extractedJSON.String != "" {
-		json.Unmarshal([]byte(extractedJSON.String), &c.Extracted)
+		_ = json.Unmarshal([]byte(extractedJSON.String), &c.Extracted)
 	}
 
 	if sessionID.Valid {
@@ -227,10 +227,10 @@ func (m *Memory) GetConversationForSession(sessionID string) (*Conversation, err
 	}
 
 	if messagesJSON.Valid && messagesJSON.String != "" {
-		json.Unmarshal([]byte(messagesJSON.String), &c.Messages)
+		_ = json.Unmarshal([]byte(messagesJSON.String), &c.Messages)
 	}
 	if extractedJSON.Valid && extractedJSON.String != "" {
-		json.Unmarshal([]byte(extractedJSON.String), &c.Extracted)
+		_ = json.Unmarshal([]byte(extractedJSON.String), &c.Extracted)
 	}
 	if sid.Valid {
 		c.SessionID = sid.String

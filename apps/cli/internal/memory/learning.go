@@ -551,6 +551,7 @@ func (m *Memory) GetLearningsByEffectiveness(limit int, sortBy string) ([]Learni
 		orderClause = "confidence DESC"
 	}
 
+	//nolint:gosec // G202: safe - using parameterized placeholders
 	query := `
 		SELECT id, session_id, scope, scope_path, content, confidence, source, authority, promoted_from_proposal_id, created_at, last_used, use_count
 		FROM learnings
@@ -593,6 +594,7 @@ func (m *Memory) GetLearningsSince(since time.Time) ([]Learning, error) {
 	authVals := AuthoritativeValuesStrings()
 	authPlaceholders := SQLPlaceholders(len(authVals))
 
+	//nolint:gosec // G202: safe - using parameterized placeholders
 	query := `
 		SELECT id, session_id, scope, scope_path, content, confidence, source, authority, promoted_from_proposal_id, created_at, last_used, use_count
 		FROM learnings

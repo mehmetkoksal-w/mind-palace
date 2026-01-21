@@ -53,7 +53,9 @@ const (
 )
 
 // Detect implements the Detector interface.
-func (d *CommentPatternDetector) Detect(ctx context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
+//
+//nolint:gocognit,gocyclo // pattern detection is complex by design
+func (d *CommentPatternDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	content := string(dctx.FileContent)
 	lines := strings.Split(content, "\n")
 	lang := dctx.File.Language
@@ -170,7 +172,7 @@ func (d *CommentPatternDetector) Detect(ctx context.Context, dctx *patterns.Dete
 	}
 
 	// Mark undocumented exported functions as outliers (for Go)
-	if lang == "go" && undocumentedFunctions > 0 {
+	if lang == "go" && undocumentedFunctions > 0 { //nolint:nestif // checking exported functions requires nested conditions
 		for _, fn := range functions {
 			if len(fn.Name) > 0 && fn.Name[0] >= 'A' && fn.Name[0] <= 'Z' {
 				// Exported function

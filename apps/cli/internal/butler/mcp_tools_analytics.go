@@ -245,6 +245,8 @@ func (s *MCPServer) toolLearningEffectiveness(id any, args map[string]interface{
 }
 
 // toolWorkspaceHealth provides overall health metrics for the workspace.
+//
+//nolint:gocognit,gocyclo // complex by design - aggregates multiple metrics
 func (s *MCPServer) toolWorkspaceHealth(id any, _ map[string]interface{}) jsonRPCResponse {
 	mem := s.butler.Memory()
 	if mem == nil {
@@ -330,7 +332,7 @@ func (s *MCPServer) toolWorkspaceHealth(id any, _ map[string]interface{}) jsonRP
 	// Postmortem health
 	recentPostmortems, _ := mem.GetPostmortemsSince(time.Now().Add(-30 * 24 * time.Hour))
 	output.WriteString("## Failure Tracking\n\n")
-	if len(recentPostmortems) == 0 {
+	if len(recentPostmortems) == 0 { //nolint:nestif // postmortem display requires nested conditions
 		output.WriteString("- 🟢 **No postmortems in last 30 days**\n")
 	} else {
 		criticalCount := 0

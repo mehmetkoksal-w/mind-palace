@@ -520,7 +520,7 @@ func copyAgentRules(tool ToolInfo, rootPath string) error {
 	targetPath = filepath.Join(targetPath, tool.RulesFile)
 
 	// Write to target
-	if err := os.WriteFile(targetPath, content, 0o644); err != nil {
+	if err := os.WriteFile(targetPath, content, 0o644); err != nil { //nolint:gosec // G306: config files need to be readable
 		return fmt.Errorf("write %s: %w", tool.RulesFile, err)
 	}
 

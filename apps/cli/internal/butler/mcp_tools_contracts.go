@@ -8,6 +8,8 @@ import (
 )
 
 // toolContractsGet retrieves contracts from the store with filtering.
+//
+//nolint:gocognit // complex by design - handles multiple filter options
 func (s *MCPServer) toolContractsGet(id any, args map[string]interface{}) jsonRPCResponse {
 	mem := s.butler.Memory()
 	if mem == nil {
@@ -50,7 +52,7 @@ func (s *MCPServer) toolContractsGet(id any, args map[string]interface{}) jsonRP
 	var output strings.Builder
 	output.WriteString("# API Contracts\n\n")
 
-	if len(contractList) == 0 {
+	if len(contractList) == 0 { //nolint:nestif // contract display requires nested conditions
 		output.WriteString("No contracts found matching the criteria.\n\n")
 		output.WriteString("Run `palace contracts scan` to detect API contracts in the codebase.\n")
 	} else {
@@ -338,7 +340,7 @@ func (s *MCPServer) toolContractIgnore(id any, args map[string]interface{}) json
 }
 
 // toolContractStats returns statistics about API contracts.
-func (s *MCPServer) toolContractStats(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolContractStats(id any, _ map[string]interface{}) jsonRPCResponse {
 	mem := s.butler.Memory()
 	if mem == nil {
 		return s.toolError(id, "memory not initialized")
@@ -405,7 +407,7 @@ func (s *MCPServer) toolContractStats(id any, args map[string]interface{}) jsonR
 }
 
 // toolContractMismatches returns all contracts with type mismatches.
-func (s *MCPServer) toolContractMismatches(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolContractMismatches(id any, _ map[string]interface{}) jsonRPCResponse {
 	mem := s.butler.Memory()
 	if mem == nil {
 		return s.toolError(id, "memory not initialized")

@@ -331,7 +331,7 @@ func extractKeywords(text string) []string {
 	}
 
 	words := strings.Fields(strings.ToLower(text))
-	var keywords []string
+	keywords := make([]string, 0, len(words)/2) // estimate half of words are keywords
 	seen := make(map[string]bool)
 
 	for _, word := range words {

@@ -95,7 +95,7 @@ func hasLowerCase(s string) bool {
 }
 
 // Detect implements the Detector interface.
-func (d *NamingConventionDetector) Detect(ctx context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
+func (d *NamingConventionDetector) Detect(_ context.Context, dctx *patterns.DetectionContext) (*patterns.DetectionResult, error) {
 	fa := dctx.File
 
 	// Count naming styles for different symbol types

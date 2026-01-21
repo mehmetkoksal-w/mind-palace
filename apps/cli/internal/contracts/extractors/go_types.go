@@ -73,7 +73,7 @@ func (e *GoTypeExtractor) findStructSchema(node *sitter.Node, content []byte, st
 }
 
 func (e *GoTypeExtractor) extractTypeDeclarations(node *sitter.Node, content []byte, schemas map[string]*contracts.TypeSchema) {
-	if node.Type() == "type_spec" {
+	if node.Type() == "type_spec" { //nolint:nestif // type extraction requires nested conditions
 		nameNode := node.ChildByFieldName("name")
 		typeNode := node.ChildByFieldName("type")
 

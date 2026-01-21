@@ -103,6 +103,8 @@ func RunContractsScan(args []string) error {
 }
 
 // ExecuteContractsScan scans the codebase for API contracts.
+//
+//nolint:gocognit // CLI command with complex scan workflow
 func ExecuteContractsScan(opts ContractsOptions) error {
 	rootPath, err := filepath.Abs(opts.Root)
 	if err != nil {
@@ -693,6 +695,7 @@ func isLikelyBackendJS(path string) bool {
 	return false
 }
 
+//nolint:unparam // error return kept for future error handling
 func extractEndpoints(files []string) ([]contracts.EndpointInput, error) {
 	var endpoints []contracts.EndpointInput
 
@@ -739,6 +742,7 @@ func extractEndpoints(files []string) ([]contracts.EndpointInput, error) {
 	return endpoints, nil
 }
 
+//nolint:unparam // error return kept for future error handling
 func extractCalls(files []string) ([]contracts.CallInput, error) {
 	var calls []contracts.CallInput
 

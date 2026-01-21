@@ -199,7 +199,7 @@ func (e *FetchExtractor) parseURL(urlArg string) (url string, isDynamic bool, va
 	return
 }
 
-func (e *FetchExtractor) extractMethodFromOptions(optionsArg string, content []byte) string {
+func (e *FetchExtractor) extractMethodFromOptions(optionsArg string, _ []byte) string {
 	// Look for method property in object literal
 	// { method: 'POST' } or { method: "POST" }
 	methodRe := regexp.MustCompile(`method\s*:\s*["'](\w+)["']`)
@@ -248,7 +248,7 @@ func (e *FetchExtractor) extractArguments(argsNode *sitter.Node, content []byte)
 
 // ExtractTypeFromThen attempts to extract the expected response type from
 // a .then() chain or await expression.
-func (e *FetchExtractor) ExtractTypeFromThen(content []byte, callLine int) *contracts.TypeSchema {
+func (e *FetchExtractor) ExtractTypeFromThen(_ []byte, _ int) *contracts.TypeSchema {
 	// This is a simplified implementation
 	// Full implementation would track the call chain and type annotations
 	// Example: fetch(url).then(r => r.json()).then((data: User) => ...)

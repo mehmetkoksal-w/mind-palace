@@ -547,7 +547,7 @@ func (m *Memory) GetContradictionSummary(limit int) (*ContradictionSummary, erro
 
 	// Count total contradiction links
 	var totalLinks int
-	m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM links WHERE relation = ?`, RelationContradicts).Scan(&totalLinks)
+	_ = m.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM links WHERE relation = ?`, RelationContradicts).Scan(&totalLinks)
 	summary.TotalContradictionLinks = totalLinks
 
 	// Get contradiction pairs

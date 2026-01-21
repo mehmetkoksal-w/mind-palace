@@ -337,6 +337,9 @@ func (m *Memory) GetProposalsBySession(sessionID string) ([]Proposal, error) {
 		p.ArchivedAt = parseTimeOrZero(archivedAt)
 		proposals = append(proposals, p)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate proposals by session: %w", err)
+	}
 	return proposals, nil
 }
 
