@@ -986,6 +986,32 @@ func (s *MCPServer) dispatchTool(id any, params mcpToolCallParams) jsonRPCRespon
 	case "analytics_health":
 		return s.toolWorkspaceHealth(id, params.Arguments)
 
+	// Pattern tools - detected code pattern management
+	case "patterns_get":
+		return s.toolPatternsGet(id, params.Arguments)
+	case "pattern_show":
+		return s.toolPatternShow(id, params.Arguments)
+	case "pattern_approve":
+		return s.toolPatternApprove(id, params.Arguments)
+	case "pattern_ignore":
+		return s.toolPatternIgnore(id, params.Arguments)
+	case "pattern_stats":
+		return s.toolPatternStats(id, params.Arguments)
+
+	// Contract tools - FE-BE API contract management
+	case "contracts_get":
+		return s.toolContractsGet(id, params.Arguments)
+	case "contract_show":
+		return s.toolContractShow(id, params.Arguments)
+	case "contract_verify":
+		return s.toolContractVerify(id, params.Arguments)
+	case "contract_ignore":
+		return s.toolContractIgnore(id, params.Arguments)
+	case "contract_stats":
+		return s.toolContractStats(id, params.Arguments)
+	case "contract_mismatches":
+		return s.toolContractMismatches(id, params.Arguments)
+
 	default:
 		return jsonRPCResponse{
 			JSONRPC: "2.0",

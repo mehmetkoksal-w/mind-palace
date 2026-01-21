@@ -36,6 +36,10 @@ var migrations = []func(*sql.Tx) error{
 	migrateV6,
 	// Migration 7: Authoritative state views for bounded queries
 	migrateV7,
+	// Migration 8: Patterns table for automated pattern detection
+	migrateV8,
+	// Migration 9: Contracts tables for FE-BE contract detection
+	migrateV9,
 }
 
 // migrateV0 creates the initial database schema (version 0)
@@ -636,4 +640,156 @@ ORDER BY record_type, scope, scope_path;
 	}
 
 	return nil
+}
+
+// migrateV8 adds the patterns table for automated pattern detection.
+// Patterns represent detected code conventions that can be approved and become learnings.
+func migrateV8(tx *sql.Tx) error {
+	schema := `
+-- Patterns table for automated pattern detection
+-- Detected patterns from code analysis that can be approved and enforced
+CREATE TABLE IF NOT EXISTS patterns (
+    id TEXT PRIMARY KEY,
+    category TEXT NOT NULL,              -- api, auth, errors, structural, types, etc.
+    subcategory TEXT DEFAULT '',         -- More specific classification
+    name TEXT NOT NULL,                  -- Human-readable pattern name
+    description TEXT DEFAULT '',         -- What this pattern represents
+    detector_id TEXT NOT NULL,           -- ID of detector that found this pattern
+
+    -- Confidence scoring (multi-factor)
+    confidence REAL DEFAULT 0.0,         -- Overall score 0.0-1.0
+    frequency_score REAL DEFAULT 0.0,    -- How often pattern appears
+    consistency_score REAL DEFAULT 0.0,  -- Uniformity of implementations
+    spread_score REAL DEFAULT 0.0,       -- Number of files using it
+    age_score REAL DEFAULT 0.0,          -- How long pattern has existed
+
+    -- Status and governance
+    status TEXT DEFAULT 'discovered',    -- discovered, approved, ignored
+    authority TEXT DEFAULT 'proposed',   -- proposed, approved, legacy_approved
+    learning_id TEXT DEFAULT '',         -- Link to learning when approved
+
+    -- Metadata
+    metadata TEXT DEFAULT '{}',          -- JSON for detector-specific data
+    first_seen TEXT NOT NULL,
+    last_seen TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_patterns_category ON patterns(category);
+CREATE INDEX IF NOT EXISTS idx_patterns_detector ON patterns(detector_id);
+CREATE INDEX IF NOT EXISTS idx_patterns_status ON patterns(status);
+CREATE INDEX IF NOT EXISTS idx_patterns_authority ON patterns(authority);
+CREATE INDEX IF NOT EXISTS idx_patterns_confidence ON patterns(confidence DESC);
+CREATE INDEX IF NOT EXISTS idx_patterns_created ON patterns(created_at DESC);
+
+-- Pattern locations: where patterns are found in code
+CREATE TABLE IF NOT EXISTS pattern_locations (
+    id TEXT PRIMARY KEY,
+    pattern_id TEXT NOT NULL REFERENCES patterns(id) ON DELETE CASCADE,
+    file_path TEXT NOT NULL,
+    line_start INTEGER NOT NULL,
+    line_end INTEGER DEFAULT 0,
+    snippet TEXT DEFAULT '',             -- Code snippet for context
+    is_outlier INTEGER DEFAULT 0,        -- 1 if this deviates from pattern
+    outlier_reason TEXT DEFAULT '',      -- Why it's an outlier
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pattern_locations_pattern ON pattern_locations(pattern_id);
+CREATE INDEX IF NOT EXISTS idx_pattern_locations_file ON pattern_locations(file_path);
+CREATE INDEX IF NOT EXISTS idx_pattern_locations_outlier ON pattern_locations(is_outlier) WHERE is_outlier = 1;
+
+-- FTS5 for patterns search
+CREATE VIRTUAL TABLE IF NOT EXISTS patterns_fts USING fts5(
+    name, description, category, subcategory,
+    content=patterns, content_rowid=rowid
+);
+
+CREATE TRIGGER IF NOT EXISTS patterns_ai AFTER INSERT ON patterns BEGIN
+    INSERT INTO patterns_fts(rowid, name, description, category, subcategory)
+    VALUES (new.rowid, new.name, new.description, new.category, new.subcategory);
+END;
+
+CREATE TRIGGER IF NOT EXISTS patterns_ad AFTER DELETE ON patterns BEGIN
+    INSERT INTO patterns_fts(patterns_fts, rowid, name, description, category, subcategory)
+    VALUES('delete', old.rowid, old.name, old.description, old.category, old.subcategory);
+END;
+
+CREATE TRIGGER IF NOT EXISTS patterns_au AFTER UPDATE ON patterns BEGIN
+    INSERT INTO patterns_fts(patterns_fts, rowid, name, description, category, subcategory)
+    VALUES('delete', old.rowid, old.name, old.description, old.category, old.subcategory);
+    INSERT INTO patterns_fts(rowid, name, description, category, subcategory)
+    VALUES (new.rowid, new.name, new.description, new.category, new.subcategory);
+END;
+`
+	_, err := tx.ExecContext(context.Background(), schema)
+	return err
+}
+
+// migrateV9 adds the contracts tables for FE-BE contract detection.
+// Contracts represent API endpoints and their frontend callers with type mismatch detection.
+func migrateV9(tx *sql.Tx) error {
+	schema := `
+-- Contracts table for FE-BE API contract detection
+CREATE TABLE IF NOT EXISTS contracts (
+    id TEXT PRIMARY KEY,
+    method TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    endpoint_pattern TEXT,
+
+    backend_file TEXT,
+    backend_line INTEGER,
+    backend_framework TEXT,
+    backend_handler TEXT,
+    backend_request_schema TEXT,
+    backend_response_schema TEXT,
+
+    frontend_call_count INTEGER DEFAULT 0,
+
+    status TEXT DEFAULT 'discovered',
+    authority TEXT DEFAULT 'proposed',
+    confidence REAL DEFAULT 0.0,
+
+    first_seen TEXT NOT NULL DEFAULT (datetime('now')),
+    last_seen TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_contracts_endpoint ON contracts(endpoint);
+CREATE INDEX IF NOT EXISTS idx_contracts_method ON contracts(method);
+CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(status);
+
+-- Contract frontend calls: where API calls are made from frontend code
+CREATE TABLE IF NOT EXISTS contract_frontend_calls (
+    id TEXT PRIMARY KEY,
+    contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+    file_path TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    call_type TEXT,
+    expected_schema TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_contract_calls_contract ON contract_frontend_calls(contract_id);
+
+-- Contract mismatches: type mismatches between FE and BE
+CREATE TABLE IF NOT EXISTS contract_mismatches (
+    id TEXT PRIMARY KEY,
+    contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+    field_path TEXT NOT NULL,
+    mismatch_type TEXT NOT NULL,
+    severity TEXT DEFAULT 'warning',
+    description TEXT,
+    backend_type TEXT,
+    frontend_type TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_contract_mismatches_contract ON contract_mismatches(contract_id);
+CREATE INDEX IF NOT EXISTS idx_contract_mismatches_type ON contract_mismatches(mismatch_type);
+`
+	_, err := tx.ExecContext(context.Background(), schema)
+	return err
 }

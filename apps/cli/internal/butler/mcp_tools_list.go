@@ -2670,5 +2670,293 @@ Increases confidence of cross-workspace knowledge. Signals that general knowledg
 				"required": []string{"learningId"},
 			},
 		},
+
+		// ============================================================
+		// PATTERN TOOLS - Detected code pattern management
+		// ============================================================
+		{
+			Name: "patterns_get",
+			Description: `🟢 **RECOMMENDED** Get detected code patterns from the codebase.
+
+**WHEN TO USE:**
+- To see what patterns have been detected in the codebase
+- When user asks about code conventions or patterns
+- Before making changes to understand existing patterns
+- When reviewing code quality
+
+**AUTONOMOUS BEHAVIOR:**
+Use when discussing code conventions or standards. Patterns represent detected coding styles that can become enforced learnings.
+
+**RETURNS:**
+List of patterns grouped by category with confidence scores and status.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"category": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by category (api, errors, naming, structural, testing, logging, config, documentation, complexity).",
+					},
+					"status": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by status: discovered, approved, ignored.",
+						"enum":        []string{"discovered", "approved", "ignored"},
+					},
+					"min_confidence": map[string]interface{}{
+						"type":        "number",
+						"description": "Minimum confidence threshold (0-1). Default: 0.",
+					},
+					"limit": map[string]interface{}{
+						"type":        "number",
+						"description": "Maximum patterns to return. Default: 50.",
+					},
+				},
+			},
+		},
+		{
+			Name: "pattern_show",
+			Description: `🟢 **RECOMMENDED** Show detailed information about a specific pattern.
+
+**WHEN TO USE:**
+- To understand a specific pattern in depth
+- Before approving or ignoring a pattern
+- When investigating code locations matching a pattern
+- To see confidence scoring factors
+
+**RETURNS:**
+Detailed pattern info including confidence breakdown, locations, and outliers.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"pattern_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the pattern (e.g., 'pat_abc123').",
+					},
+				},
+				"required": []string{"pattern_id"},
+			},
+		},
+		{
+			Name: "pattern_approve",
+			Description: `🟡 **IMPORTANT** Approve a detected pattern for enforcement.
+
+**WHEN TO USE:**
+- When a pattern represents a good coding practice
+- When user confirms a pattern should be followed
+- To convert high-confidence patterns into enforced learnings
+- When establishing code conventions
+
+**OPTIONS:**
+- with_learning: true - Also creates a learning from the pattern for enforcement
+
+**AUTONOMOUS BEHAVIOR:**
+Suggest approving high-confidence (>=85%) patterns. Always ask for confirmation.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"pattern_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the pattern to approve.",
+					},
+					"with_learning": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Create a learning from this pattern for enforcement. Default: false.",
+					},
+				},
+				"required": []string{"pattern_id"},
+			},
+		},
+		{
+			Name: "pattern_ignore",
+			Description: `🟡 **IMPORTANT** Ignore a detected pattern so it won't appear in future results.
+
+**WHEN TO USE:**
+- When pattern is a false positive
+- When pattern represents an anti-pattern to avoid
+- When user says 'we don't want to follow this pattern'
+- To clean up pattern list
+
+**AUTONOMOUS BEHAVIOR:**
+Suggest ignoring low-confidence (<50%) patterns. Always ask for confirmation.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"pattern_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the pattern to ignore.",
+					},
+				},
+				"required": []string{"pattern_id"},
+			},
+		},
+		{
+			Name: "pattern_stats",
+			Description: `🟢 **RECOMMENDED** Get statistics about detected patterns.
+
+**WHEN TO USE:**
+- For an overview of code pattern health
+- When reporting on code quality
+- To see how many patterns need review
+- When planning code standardization
+
+**RETURNS:**
+Statistics including total count, by status, by category, and average confidence.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+
+		// ============================================================
+		// CONTRACT TOOLS - FE-BE API contract management
+		// ============================================================
+		{
+			Name: "contracts_get",
+			Description: `🟢 **RECOMMENDED** Get FE-BE API contracts from the codebase.
+
+**WHEN TO USE:**
+- To see what API contracts exist between frontend and backend
+- When user asks about API endpoints or type mismatches
+- Before making changes to API endpoints
+- When reviewing API design
+
+**AUTONOMOUS BEHAVIOR:**
+Use when discussing API design, type safety, or frontend-backend integration.
+
+**RETURNS:**
+List of contracts grouped by HTTP method with mismatch info and status.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"method": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by HTTP method (GET, POST, PUT, PATCH, DELETE).",
+						"enum":        []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
+					},
+					"status": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by status: discovered, verified, mismatch, ignored.",
+						"enum":        []string{"discovered", "verified", "mismatch", "ignored"},
+					},
+					"endpoint": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by endpoint pattern (partial match).",
+					},
+					"has_mismatches": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Only show contracts with type mismatches. Default: false.",
+					},
+					"limit": map[string]interface{}{
+						"type":        "number",
+						"description": "Maximum contracts to return. Default: 50.",
+					},
+				},
+			},
+		},
+		{
+			Name: "contract_show",
+			Description: `🟢 **RECOMMENDED** Show detailed information about a specific contract.
+
+**WHEN TO USE:**
+- To understand a specific API contract in depth
+- Before verifying or ignoring a contract
+- When investigating type mismatches
+- To see frontend call locations
+
+**RETURNS:**
+Detailed contract info including backend, frontend calls, and mismatches.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"contract_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the contract (e.g., 'ct_abc123').",
+					},
+				},
+				"required": []string{"contract_id"},
+			},
+		},
+		{
+			Name: "contract_verify",
+			Description: `🟡 **IMPORTANT** Mark a contract as verified (correct and intentional).
+
+**WHEN TO USE:**
+- When a contract's types are correct
+- After fixing type mismatches
+- When user confirms the contract is working correctly
+- To clear false positive mismatches
+
+**AUTONOMOUS BEHAVIOR:**
+Suggest verifying contracts after confirming types match. Always ask for confirmation.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"contract_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the contract to verify.",
+					},
+				},
+				"required": []string{"contract_id"},
+			},
+		},
+		{
+			Name: "contract_ignore",
+			Description: `🟡 **IMPORTANT** Ignore a contract so it won't appear in future results.
+
+**WHEN TO USE:**
+- When contract is a false positive
+- When API is intentionally different
+- When user says 'ignore this contract'
+- To clean up contract list
+
+**AUTONOMOUS BEHAVIOR:**
+Suggest ignoring contracts that are false positives. Always ask for confirmation.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"contract_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the contract to ignore.",
+					},
+				},
+				"required": []string{"contract_id"},
+			},
+		},
+		{
+			Name: "contract_stats",
+			Description: `🟢 **RECOMMENDED** Get statistics about API contracts.
+
+**WHEN TO USE:**
+- For an overview of FE-BE API health
+- When reporting on type safety
+- To see how many contracts have mismatches
+- When planning API improvements
+
+**RETURNS:**
+Statistics including total count, by status, by method, and mismatch counts.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			Name: "contract_mismatches",
+			Description: `🟡 **IMPORTANT** Get all contracts with type mismatches between frontend and backend.
+
+**WHEN TO USE:**
+- To find all type safety issues
+- When reviewing API type consistency
+- Before releases to ensure FE-BE compatibility
+- When investigating runtime type errors
+
+**AUTONOMOUS BEHAVIOR:**
+Use proactively when user mentions type errors, API issues, or frontend-backend integration problems.
+
+**RETURNS:**
+All contracts with mismatches, grouped by severity.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{},
+			},
+		},
 	}
 }

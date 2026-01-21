@@ -209,6 +209,120 @@ export interface ScopeLevelDetail {
   ideas: Idea[];
 }
 
+// Patterns (Sprint 1)
+export interface Pattern {
+  id: string;
+  category: string;
+  subcategory: string;
+  name: string;
+  description: string;
+  detectorId: string;
+  confidence: number;
+  frequencyScore: number;
+  consistencyScore: number;
+  spreadScore: number;
+  ageScore: number;
+  status: 'discovered' | 'approved' | 'ignored';
+  authority: string;
+  learningId: string;
+  locations: PatternLocation[];
+  outliers: PatternLocation[];
+  metadata: Record<string, any>;
+  firstSeen: string;
+  lastSeen: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatternLocation {
+  id: string;
+  patternId: string;
+  filePath: string;
+  lineStart: number;
+  lineEnd: number;
+  snippet: string;
+  isOutlier: boolean;
+  outlierReason: string;
+  createdAt: string;
+}
+
+export interface PatternStats {
+  total: number;
+  discovered: number;
+  approved: number;
+  ignored: number;
+  byCategory: Record<string, number>;
+  averageConfidence: number;
+}
+
+// Contracts (Sprint 2)
+export interface Contract {
+  id: string;
+  method: string;
+  endpoint: string;
+  endpointPattern: string;
+  backend: BackendEndpoint;
+  frontendCalls: FrontendCall[];
+  mismatches: FieldMismatch[];
+  status: 'discovered' | 'verified' | 'mismatch' | 'ignored';
+  authority: string;
+  confidence: number;
+  firstSeen: string;
+  lastSeen: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BackendEndpoint {
+  file: string;
+  line: number;
+  framework: string;
+  handler: string;
+  requestSchema?: TypeSchema;
+  responseSchema?: TypeSchema;
+}
+
+export interface FrontendCall {
+  id: string;
+  contractId: string;
+  file: string;
+  line: number;
+  callType: string;
+  expectedSchema?: TypeSchema;
+  createdAt: string;
+}
+
+export interface FieldMismatch {
+  id: string;
+  fieldPath: string;
+  type: 'missing_in_frontend' | 'missing_in_backend' | 'type_mismatch' | 'optionality_mismatch' | 'nullability_mismatch';
+  severity: 'error' | 'warning' | 'info';
+  description: string;
+  backendType?: string;
+  frontendType?: string;
+}
+
+export interface TypeSchema {
+  type: string;
+  properties?: Record<string, TypeSchema>;
+  items?: TypeSchema;
+  required?: string[];
+  nullable?: boolean;
+  format?: string;
+}
+
+export interface ContractStats {
+  total: number;
+  discovered: number;
+  verified: number;
+  mismatch: number;
+  ignored: number;
+  byMethod: Record<string, number>;
+  totalCalls: number;
+  totalErrors: number;
+  totalWarnings: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -434,5 +548,71 @@ export class ApiService {
       contextPath,
       style
     });
+  }
+
+  // Patterns (Sprint 1)
+  getPatterns(params: {
+    category?: string;
+    status?: string;
+    minConfidence?: number;
+    limit?: number;
+  } = {}): Observable<{ patterns: Pattern[]; count: number }> {
+    const queryParams: any = { limit: (params.limit || 50).toString() };
+    if (params.category) queryParams.category = params.category;
+    if (params.status) queryParams.status = params.status;
+    if (params.minConfidence) queryParams.minConfidence = params.minConfidence.toString();
+    return this.http.get<any>(`${this.baseUrl}/patterns`, { params: queryParams });
+  }
+
+  getPattern(id: string): Observable<Pattern> {
+    return this.http.get<Pattern>(`${this.baseUrl}/patterns/${id}`);
+  }
+
+  approvePattern(id: string, withLearning = false): Observable<Pattern | { pattern: Pattern; learningId: string }> {
+    return this.http.post<any>(`${this.baseUrl}/patterns/${id}/approve`, { withLearning });
+  }
+
+  ignorePattern(id: string): Observable<Pattern> {
+    return this.http.post<Pattern>(`${this.baseUrl}/patterns/${id}/ignore`, {});
+  }
+
+  bulkApprovePatterns(ids: string[], withLearning = false): Observable<{ approved: number; patterns: Pattern[]; learningIds?: string[] }> {
+    return this.http.post<any>(`${this.baseUrl}/patterns/bulk-approve`, { ids, withLearning });
+  }
+
+  getPatternStats(): Observable<PatternStats> {
+    return this.http.get<PatternStats>(`${this.baseUrl}/patterns/stats`);
+  }
+
+  // Contracts (Sprint 2)
+  getContracts(params: {
+    method?: string;
+    status?: string;
+    endpoint?: string;
+    hasMismatches?: boolean;
+    limit?: number;
+  } = {}): Observable<{ contracts: Contract[]; count: number }> {
+    const queryParams: any = { limit: (params.limit || 50).toString() };
+    if (params.method) queryParams.method = params.method;
+    if (params.status) queryParams.status = params.status;
+    if (params.endpoint) queryParams.endpoint = params.endpoint;
+    if (params.hasMismatches) queryParams.mismatches = 'true';
+    return this.http.get<any>(`${this.baseUrl}/contracts`, { params: queryParams });
+  }
+
+  getContract(id: string): Observable<Contract> {
+    return this.http.get<Contract>(`${this.baseUrl}/contracts/${id}`);
+  }
+
+  verifyContract(id: string): Observable<Contract> {
+    return this.http.post<Contract>(`${this.baseUrl}/contracts/${id}/verify`, {});
+  }
+
+  ignoreContract(id: string): Observable<Contract> {
+    return this.http.post<Contract>(`${this.baseUrl}/contracts/${id}/ignore`, {});
+  }
+
+  getContractStats(): Observable<ContractStats> {
+    return this.http.get<ContractStats>(`${this.baseUrl}/contracts/stats`);
   }
 }

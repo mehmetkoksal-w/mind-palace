@@ -499,7 +499,7 @@ func copyAgentRules(tool ToolInfo, rootPath string) error {
 	// Find template in starter directory
 	templatePath, err := findRulesTemplate(sourceDir, sourceFile)
 	if err != nil {
-		return nil // Not an error if template doesn't exist
+		return err
 	}
 
 	// Read template

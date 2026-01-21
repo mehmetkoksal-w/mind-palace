@@ -139,6 +139,20 @@ export const routes: Routes = [
             (m) => m.ScopeExplorerComponent
           ),
       },
+      {
+        path: "patterns",
+        loadComponent: () =>
+          import("./features/patterns/patterns.component").then(
+            (m) => m.PatternsComponent
+          ),
+      },
+      {
+        path: "contracts",
+        loadComponent: () =>
+          import("./features/contracts/contracts.component").then(
+            (m) => m.ContractsComponent
+          ),
+      },
     ],
   },
   // Fallback redirect for old routes

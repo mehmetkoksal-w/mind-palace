@@ -5,9 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0-alpha] - 2026-01-20
+## [0.4.0-alpha] - 2026-01-21
 
 ### Added
+
+- **LSP Server**: Full Language Server Protocol implementation for real-time editor integration
+  - JSON-RPC 2.0 codec with request/response/notification support
+  - Server lifecycle (initialize, shutdown, exit) handlers
+  - Document synchronization (didOpen, didChange, didClose, didSave)
+  - Diagnostics provider for pattern violations and contract mismatches
+  - Hover provider showing pattern/contract details in Markdown
+  - Code actions: approve pattern, ignore pattern, verify contract, show details
+  - Code lens showing pattern/contract counts at file top and inline
+  - Go to definition for navigating to pattern/contract sources
+  - Document symbols for listing patterns/contracts in outline view
+  - Performance optimizations: 300ms debouncing, diagnostics caching
+
+- **`palace lsp` Command**: New CLI command to start the LSP server
+  - Stdio transport for editor communication
+  - Configurable log file output
+  - Graceful shutdown with signal handling
+
+- **VS Code LSP Client**: Language client integration in VS Code extension
+  - Automatic LSP server startup on extension activation
+  - Multi-language support (TypeScript, JavaScript, Go, Python, Rust, Java, C#, etc.)
+  - Command handlers for pattern/contract actions
+  - Crash recovery with automatic server restart
 
 - **Composite Tools**: New `session_init` tool combines session_start + brief + explore_rooms into a single initialization call
 - **Auto-Session**: MCP server auto-creates sessions for agents that forget to initialize
@@ -32,21 +55,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New MCP Tools
 
-| Tool | Category | Description |
-|------|----------|-------------|
-| `session_init` | Composite | Initialize session with full context (session + brief + rooms) |
-| `session_resume` | Session | Resume a previous session for continuation |
-| `session_status` | Session | Get current session status and context |
-| `context_focus` | Context | Set task focus for context prioritization |
-| `context_get` | Context | Get prioritized context based on current focus |
-| `context_pin` | Context | Pin/unpin records for guaranteed context inclusion |
-| `handoff_create` | Handoff | Create a task handoff for another agent |
-| `handoff_list` | Handoff | List available handoffs by status |
-| `handoff_accept` | Handoff | Accept a handoff and receive full context |
-| `handoff_complete` | Handoff | Mark a handoff as completed |
-| `analytics_sessions` | Analytics | Session statistics and trends |
-| `analytics_learnings` | Analytics | Learning effectiveness tracking |
-| `analytics_health` | Analytics | Workspace health dashboard |
+| Tool                  | Category  | Description                                                    |
+| --------------------- | --------- | -------------------------------------------------------------- |
+| `session_init`        | Composite | Initialize session with full context (session + brief + rooms) |
+| `session_resume`      | Session   | Resume a previous session for continuation                     |
+| `session_status`      | Session   | Get current session status and context                         |
+| `context_focus`       | Context   | Set task focus for context prioritization                      |
+| `context_get`         | Context   | Get prioritized context based on current focus                 |
+| `context_pin`         | Context   | Pin/unpin records for guaranteed context inclusion             |
+| `handoff_create`      | Handoff   | Create a task handoff for another agent                        |
+| `handoff_list`        | Handoff   | List available handoffs by status                              |
+| `handoff_accept`      | Handoff   | Accept a handoff and receive full context                      |
+| `handoff_complete`    | Handoff   | Mark a handoff as completed                                    |
+| `analytics_sessions`  | Analytics | Session statistics and trends                                  |
+| `analytics_learnings` | Analytics | Learning effectiveness tracking                                |
+| `analytics_health`    | Analytics | Workspace health dashboard                                     |
+
+### New LSP Settings (VS Code)
+
+| Setting                                | Default | Description                        |
+| -------------------------------------- | ------- | ---------------------------------- |
+| `mindPalace.lsp.enabled`               | `true`  | Enable/disable LSP server          |
+| `mindPalace.lsp.diagnostics.patterns`  | `true`  | Show pattern violation diagnostics |
+| `mindPalace.lsp.diagnostics.contracts` | `true`  | Show contract mismatch diagnostics |
+| `mindPalace.lsp.codeLens.enabled`      | `true`  | Show code lens for issue counts    |
 
 ### Changed
 
@@ -54,10 +86,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Session End**: Now generates comprehensive session summary with activity breakdown
 - **Briefings**: Include more actionable intelligence (handoffs, postmortems, decisions)
 - **Memory**: Added `UpdateSessionState`, `GetProposalsBySession`, `GetLearningsByEffectiveness` methods
+- **VS Code Extension**: Now activates LSP client on startup for real-time diagnostics
+- **Documentation**: Updated README with LSP component and feature descriptions
+
+### Testing
+
+- **LSP Package**: 17 tests covering all LSP methods and providers
+- All existing tests continue to pass
 
 ---
 
-## [0.3.1-alpha] - 2026-01-17
+## [0.4.0-alpha] - 2026-01-17
 
 ### Fixed
 

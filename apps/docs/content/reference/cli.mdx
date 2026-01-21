@@ -16,6 +16,7 @@ All commands are deterministic. Validation uses embedded schemas.
 | `scan`      | Build/refresh Index                   | Yes            |
 | `check`     | Verify freshness and CI               | No             |
 | `serve`     | Start MCP server                      | No             |
+| `lsp`       | Start LSP server for editors          | No             |
 | `session`   | Manage agent sessions                 | Yes            |
 | `corridor`  | Cross-workspace sharing               | Varies         |
 | `dashboard` | Start web dashboard                   | No             |
@@ -158,6 +159,33 @@ palace check [options]
 | `--diff <range>` | Scope check to a specific git diff range |
 | `--collect` | Also generate context pack from diff |
 | `--signal` | Also generate change signal from diff |
+
+---
+
+## Services
+
+### lsp
+
+Start the Language Server Protocol server for editor integration.
+
+```sh
+palace lsp [options]
+```
+
+**Options**:
+| Flag | Description |
+|------|-------------|
+| `--root <path>` | Workspace root directory (default: current directory) |
+| `--log <file>` | Log file path (logs to file instead of stderr) |
+
+The LSP server provides:
+- Real-time pattern violation diagnostics
+- Contract mismatch detection
+- Hover information for patterns and contracts
+- Code actions (approve, ignore, verify)
+- Code lens showing issue counts
+
+Typically started automatically by the VS Code extension. See [LSP Server](/reference/lsp) for details.
 
 ---
 

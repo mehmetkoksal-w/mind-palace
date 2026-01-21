@@ -100,11 +100,13 @@ jobs:
       - name: Test
         run: go test -v -race -coverprofile=coverage.out ./apps/cli/internal/...
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v5
+      - name: Upload Coverage Artifact
+        if: always()
+        uses: actions/upload-artifact@v6
         with:
-          files: coverage.out
-          fail_ci_if_error: false
+          name: go-coverage-main
+          path: coverage.out
+          retention-days: 30
 
   build-vscode:
     name: "Build: VS Code"

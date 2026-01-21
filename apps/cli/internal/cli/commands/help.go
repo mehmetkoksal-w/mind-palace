@@ -43,6 +43,7 @@ SETUP & INDEX
 SERVICES
   serve     Start MCP server for AI agents
   dashboard Start web dashboard for visualization
+  lsp       Start Language Server Protocol server for editors
 
 AGENTS & SESSIONS
   session   Manage agent sessions
@@ -192,6 +193,31 @@ Subcommands:
 
 Starts a Model Context Protocol server on stdio.
 `)
+	case "lsp":
+		fmt.Print(`palace lsp - Start Language Server Protocol server
+
+Starts an LSP server for editor integration. Provides real-time
+diagnostics for pattern violations and contract mismatches.
+
+Usage: palace lsp [options]
+
+Options:
+  --root <path>     Workspace root (default: .)
+  --log <file>      Log file path (default: none)
+  --stdio           Use stdio transport (default: true)
+
+Features:
+  - Pattern violation diagnostics
+  - Contract mismatch diagnostics
+  - Hover information for patterns and contracts
+  - Code actions (approve, ignore, verify)
+  - Code lens showing issue counts
+  - Go to definition for pattern sources
+
+VS Code Integration:
+  Configure your VS Code extension to start the LSP server
+  with: palace lsp --stdio
+`)
 	case "session":
 		fmt.Print(`palace session - Manage agent sessions
 
@@ -297,7 +323,7 @@ Generated: .palace/index/*, .palace/outputs/*
 	case "all":
 		fmt.Println(ExplainAll())
 	default:
-		return fmt.Errorf("unknown help topic: %s\n\nAvailable topics: explore, store, recall, brief, init, scan, check, stats, serve, session, corridor, dashboard, clean, mcp-config, artifacts", topic)
+		return fmt.Errorf("unknown help topic: %s\n\nAvailable topics: explore, store, recall, brief, init, scan, check, stats, serve, lsp, session, corridor, dashboard, clean, mcp-config, artifacts", topic)
 	}
 	return nil
 }

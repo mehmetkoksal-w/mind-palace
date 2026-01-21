@@ -133,7 +133,8 @@ func (s *MCPServer) toolContextGet(id any, args map[string]interface{}) jsonRPCR
 	// Build output
 	if len(pinnedLearnings) > 0 {
 		output.WriteString("## 📌 Pinned Learnings\n\n")
-		for _, l := range pinnedLearnings {
+		for i := range pinnedLearnings {
+			l := &pinnedLearnings[i]
 			fmt.Fprintf(&output, "- `%s` (%.0f%%): %s\n", l.ID, l.Confidence*100, truncateString(l.Content, 80))
 		}
 		output.WriteString("\n")
@@ -143,7 +144,7 @@ func (s *MCPServer) toolContextGet(id any, args map[string]interface{}) jsonRPCR
 		output.WriteString("## 📚 Relevant Learnings\n\n")
 		// Show top prioritized learnings
 		shown := 0
-		for _, pl := range prioritizedLearnings {
+		for i := range prioritizedLearnings {
 			if shown >= 10 {
 				remaining := len(prioritizedLearnings) - shown
 				if remaining > 0 {
@@ -151,6 +152,7 @@ func (s *MCPServer) toolContextGet(id any, args map[string]interface{}) jsonRPCR
 				}
 				break
 			}
+			pl := &prioritizedLearnings[i]
 			l := &pl.Learning
 			relevance := ""
 			if pl.Priority > 0.8 {

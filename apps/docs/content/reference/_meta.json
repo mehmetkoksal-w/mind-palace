@@ -1,5 +1,6 @@
 {
   "cli": "CLI Reference",
+  "lsp": "LSP Server",
   "extension": "VS Code Extension",
   "agent-rules": "Agent Rules",
   "governance-quick-reference": "Governance Quick Reference",

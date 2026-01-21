@@ -18,6 +18,18 @@ Mind Palace Observer is the VS Code extension for the Mind Palace ecosystem.
 
 ## Features
 
+### LSP Integration
+
+The extension includes a full Language Server Protocol client that provides real-time feedback:
+
+- **Pattern Diagnostics**: Warnings for code deviating from detected patterns
+- **Contract Diagnostics**: Errors for frontend/backend API mismatches
+- **Hover Information**: Pattern and contract details on hover
+- **Code Actions**: Quick fixes to approve, ignore, or verify issues
+- **Code Lens**: Issue counts shown at file top and inline
+
+See [LSP Server](/reference/lsp) for complete documentation.
+
 ### Status Bar (HUD)
 
 | State | Color | Meaning |
@@ -130,6 +142,10 @@ On file save:
 | `showStatusBarItem` | `true` | Show status bar indicator |
 | `showFileDecorations` | `true` | Show inline editor decorations |
 | `enableSemanticSearch` | `true` | Enable semantic search features |
+| `lsp.enabled` | `true` | Enable LSP server for diagnostics |
+| `lsp.diagnostics.patterns` | `true` | Show pattern violation diagnostics |
+| `lsp.diagnostics.contracts` | `true` | Show contract mismatch diagnostics |
+| `lsp.codeLens.enabled` | `true` | Show code lens for issue counts |
 
 ### Embedding Configuration
 

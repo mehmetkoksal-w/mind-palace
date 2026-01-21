@@ -8,8 +8,9 @@ import { ProviderRegistry } from "./core/provider-registry";
 import { ViewRegistry } from "./core/view-registry";
 import { EventBus } from "./core/event-bus";
 import { warnIfIncompatible } from "./version";
+import { activateLspClient, deactivateLspClient } from "./lsp";
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   warnIfIncompatible();
 
   const bridge = new PalaceBridge();
@@ -53,8 +54,17 @@ export function activate(context: vscode.ExtensionContext) {
   // Register all event listeners (save, editor change, workspace changes, config changes)
   context.subscriptions.push(...eventBus.registerAll(context));
 
+  // Start LSP client for real-time pattern and contract diagnostics
+  try {
+    await activateLspClient(context);
+  } catch (error) {
+    console.error("Failed to activate LSP client:", error);
+  }
+
   // Perform initial status check
   commandRegistry.checkStatus();
 }
 
-export function deactivate() {}
+export async function deactivate() {
+  await deactivateLspClient();
+}

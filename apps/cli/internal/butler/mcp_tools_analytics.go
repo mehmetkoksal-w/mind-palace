@@ -69,9 +69,10 @@ func (s *MCPServer) toolSessionAnalytics(id any, args map[string]interface{}) js
 		}
 		activities, _ := mem.GetActivities(sess.ID, "", 100)
 		for j := range activities {
-			if activities[j].Outcome == "success" {
+			switch activities[j].Outcome {
+			case "success":
 				successfulOutcomes++
-			} else if activities[j].Outcome == "failure" {
+			case "failure":
 				failedOutcomes++
 			}
 		}
@@ -108,9 +109,10 @@ func (s *MCPServer) toolSessionAnalytics(id any, args map[string]interface{}) js
 	pendingHandoffs := 0
 	completedHandoffs := 0
 	for _, h := range handoffStore {
-		if h.Status == "pending" {
+		switch h.Status {
+		case "pending":
 			pendingHandoffs++
-		} else if h.Status == "completed" {
+		case "completed":
 			completedHandoffs++
 		}
 	}
@@ -243,7 +245,7 @@ func (s *MCPServer) toolLearningEffectiveness(id any, args map[string]interface{
 }
 
 // toolWorkspaceHealth provides overall health metrics for the workspace.
-func (s *MCPServer) toolWorkspaceHealth(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolWorkspaceHealth(id any, _ map[string]interface{}) jsonRPCResponse {
 	mem := s.butler.Memory()
 	if mem == nil {
 		return s.toolError(id, "memory not available")

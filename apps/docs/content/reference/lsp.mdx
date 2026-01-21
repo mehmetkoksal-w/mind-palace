@@ -1,0 +1,357 @@
+# LSP Server
+
+Mind Palace includes a Language Server Protocol (LSP) server that provides real-time diagnostics, hover information, and code actions directly in your editor.
+
+---
+
+## Overview
+
+The LSP server connects pattern detection and contract analysis to your editor, showing issues as you type without leaving your workflow.
+
+**Key Features:**
+- Pattern violation warnings with confidence scores
+- Contract mismatch errors between frontend and backend
+- Hover information showing pattern/contract details
+- Code actions to approve, ignore, or verify issues
+- Code lens showing issue counts per file
+- Go to definition for pattern/contract sources
+
+---
+
+## Starting the Server
+
+The LSP server runs via the `palace lsp` command:
+
+```sh
+# Start LSP server (stdio transport)
+palace lsp
+
+# With explicit workspace root
+palace lsp --root /path/to/project
+
+# With log file for debugging
+palace lsp --log /tmp/palace-lsp.log
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--root <path>` | Workspace root directory (default: current directory) |
+| `--log <file>` | Log file path (logs to file instead of stderr) |
+
+---
+
+## VS Code Integration
+
+The VS Code extension automatically starts and manages the LSP server.
+
+### Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `mindPalace.lsp.enabled` | `true` | Enable/disable LSP server |
+| `mindPalace.lsp.diagnostics.patterns` | `true` | Show pattern violation diagnostics |
+| `mindPalace.lsp.diagnostics.contracts` | `true` | Show contract mismatch diagnostics |
+| `mindPalace.lsp.codeLens.enabled` | `true` | Show code lens for issue counts |
+
+### Disabling LSP
+
+To disable the LSP server while keeping other extension features:
+
+```json
+{
+  "mindPalace.lsp.enabled": false
+}
+```
+
+---
+
+## Diagnostics
+
+The LSP server provides two types of diagnostics:
+
+### Pattern Violations
+
+Pattern violations appear as **warnings** (yellow squiggles). These indicate code that deviates from detected patterns in your codebase.
+
+```
+⚠ Deviates from pattern: go_error_handling
+  Expected: Error wrapping with context
+  Confidence: 0.85
+```
+
+**Severity mapping:**
+- High confidence (>= 0.85): Warning
+- Medium confidence (>= 0.70): Information
+- Low confidence (< 0.70): Hint
+
+### Contract Mismatches
+
+Contract mismatches appear as **errors** (red squiggles) or **warnings** depending on severity. These indicate inconsistencies between frontend API calls and backend endpoints.
+
+```
+✗ Contract mismatch: missing_field
+  Endpoint: GET /api/users/:id
+  Frontend expects field 'email' not in backend response
+```
+
+**Mismatch types:**
+| Type | Severity | Description |
+|------|----------|-------------|
+| `missing_endpoint` | Error | Frontend calls endpoint that doesn't exist |
+| `method_mismatch` | Error | HTTP method doesn't match (GET vs POST) |
+| `missing_field` | Warning | Response field expected but not provided |
+| `type_mismatch` | Warning | Field type differs between FE and BE |
+| `extra_field` | Hint | Backend provides field frontend doesn't use |
+
+---
+
+## Hover Information
+
+Hover over code with pattern or contract issues to see detailed information:
+
+### Pattern Hover
+
+```markdown
+## Pattern: go_error_handling
+
+**Confidence:** 85%
+**Occurrences:** 47 files
+**Description:** Consistent error wrapping with context
+
+### Expected Pattern
+```go
+if err != nil {
+    return fmt.Errorf("context: %w", err)
+}
+```
+```
+
+### Contract Hover
+
+```markdown
+## Contract: GET /api/users/:id
+
+**Backend:** src/handlers/users.go:42
+**Frontend:** src/api/users.ts:15
+
+### Response Schema
+- `id`: string
+- `name`: string
+- `email`: string (missing in backend)
+```
+
+---
+
+## Code Actions
+
+Quick fixes available via the lightbulb menu or `Cmd/Ctrl + .`:
+
+### Pattern Actions
+
+| Action | Description |
+|--------|-------------|
+| **Approve Pattern** | Mark this pattern as intentional, creating a learning |
+| **Ignore Pattern** | Suppress this pattern violation for this location |
+| **Show Pattern Details** | Open pattern details in sidebar |
+
+### Contract Actions
+
+| Action | Description |
+|--------|-------------|
+| **Verify Contract** | Mark contract as verified after manual review |
+| **Ignore Mismatch** | Suppress this mismatch (with reason) |
+| **Show Contract Details** | Open contract details in sidebar |
+| **Go to Backend** | Navigate to backend endpoint definition |
+| **Go to Frontend** | Navigate to frontend API call |
+
+---
+
+## Code Lens
+
+Code lens appears above the first line of files with issues:
+
+```
+[3 pattern issues] [1 contract mismatch]
+```
+
+Click to:
+- View list of all issues in the file
+- Bulk approve/ignore issues
+- Navigate to specific issues
+
+Inline code lens also appears above specific code locations:
+
+```go
+// ▸ Pattern: go_error_handling (85%)
+if err != nil {
+    return err  // Missing context wrapping
+}
+```
+
+---
+
+## Go to Definition
+
+`F12` or `Cmd/Ctrl + Click` on diagnostic locations to navigate:
+
+- **Pattern violations**: Jump to the pattern's most common example
+- **Contract mismatches**: Jump to the corresponding backend/frontend code
+
+---
+
+## Document Symbols
+
+`Cmd/Ctrl + Shift + O` shows patterns and contracts in the document outline:
+
+```
+PATTERNS
+  ├ go_error_handling (line 42)
+  └ go_naming_convention (line 78)
+CONTRACTS
+  └ GET /api/users/:id (line 15)
+```
+
+---
+
+## Performance
+
+The LSP server is optimized for responsiveness:
+
+- **Debouncing**: 300ms delay before recomputing diagnostics on changes
+- **Caching**: Diagnostic results cached per document
+- **Background computation**: Diagnostics computed in background after save
+- **Incremental updates**: Only changed documents are reanalyzed
+
+---
+
+## Other Editors
+
+The LSP server works with any editor supporting the Language Server Protocol.
+
+### Neovim
+
+```lua
+-- Using nvim-lspconfig
+require('lspconfig').palace.setup({
+  cmd = { 'palace', 'lsp' },
+  filetypes = { 'go', 'typescript', 'javascript', 'python' },
+  root_dir = function(fname)
+    return vim.fn.getcwd()
+  end,
+})
+```
+
+### Sublime Text
+
+Install the LSP package, then add to LSP settings:
+
+```json
+{
+  "clients": {
+    "palace": {
+      "command": ["palace", "lsp"],
+      "selector": "source.go | source.ts | source.js | source.python"
+    }
+  }
+}
+```
+
+### Emacs (lsp-mode)
+
+```elisp
+(lsp-register-client
+ (make-lsp-client
+  :new-connection (lsp-stdio-connection '("palace" "lsp"))
+  :major-modes '(go-mode typescript-mode python-mode)
+  :server-id 'palace-lsp))
+```
+
+---
+
+## Troubleshooting
+
+**LSP server not starting**
+- Check: `palace lsp --log /tmp/lsp.log` and inspect log
+- Verify CLI is accessible: `palace version`
+- Check VS Code Output panel: "Mind Palace LSP"
+
+**No diagnostics showing**
+- Ensure `.palace/` directory exists with valid index
+- Run `palace scan` to build the index
+- Check `mindPalace.lsp.enabled` is `true`
+
+**Diagnostics are stale**
+- Save the file to trigger refresh
+- Run `palace scan` to update pattern/contract analysis
+- Check for errors in LSP log file
+
+**High CPU usage**
+- Increase debounce delay in settings
+- Disable code lens if not needed
+- Check for very large files triggering frequent reanalysis
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        EDITOR (VS Code)                          │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  VS Code Extension                                          │ │
+│  │  - Language Client (vscode-languageclient)                  │ │
+│  │  - Starts palace lsp via stdio                              │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ JSON-RPC 2.0 (stdio)
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     LSP SERVER (Go)                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │   Protocol   │  │  Dispatcher  │  │   Handlers   │          │
+│  │   (codec)    │──┤  (routing)   │──┤  (requests)  │          │
+│  └──────────────┘  └──────────────┘  └──────┬───────┘          │
+│                                              │                   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    PROVIDERS                              │   │
+│  │  ┌────────────┐ ┌────────────┐ ┌────────────┐           │   │
+│  │  │Diagnostics │ │   Hover    │ │Code Actions│           │   │
+│  │  └────────────┘ └────────────┘ └────────────┘           │   │
+│  │  ┌────────────┐ ┌────────────┐ ┌────────────┐           │   │
+│  │  │ Code Lens  │ │ Definition │ │Doc Symbols │           │   │
+│  │  └────────────┘ └────────────┘ └────────────┘           │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                              │                                   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                  BUTLER ADAPTER                           │   │
+│  │  ├── Pattern Store (outliers, approvals)                 │   │
+│  │  ├── Contract Store (endpoints, mismatches)              │   │
+│  │  └── Memory (sessions, learnings)                        │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## LSP Methods Supported
+
+| Method | Description |
+|--------|-------------|
+| `initialize` | Server initialization and capability negotiation |
+| `initialized` | Initialization complete notification |
+| `shutdown` | Server shutdown request |
+| `exit` | Server exit notification |
+| `textDocument/didOpen` | Document opened |
+| `textDocument/didChange` | Document content changed |
+| `textDocument/didClose` | Document closed |
+| `textDocument/didSave` | Document saved |
+| `textDocument/publishDiagnostics` | Push diagnostics to client |
+| `textDocument/hover` | Hover information |
+| `textDocument/codeAction` | Code actions (quick fixes) |
+| `codeAction/resolve` | Resolve deferred code action |
+| `textDocument/codeLens` | Code lens items |
+| `codeLens/resolve` | Resolve deferred code lens |
+| `textDocument/definition` | Go to definition |
+| `textDocument/documentSymbol` | Document outline symbols |

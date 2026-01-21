@@ -242,9 +242,10 @@ func (s *MCPServer) toolFileContext(id any, args map[string]interface{}) jsonRPC
 				pl := &ctx.Learnings[i]
 				l := &pl.Learning
 				scopeTag := ""
-				if l.Scope == "file" {
+				switch l.Scope {
+				case "file":
 					scopeTag = " 📍"
-				} else if l.Scope == "room" {
+				case "room":
 					scopeTag = " 🏠"
 				}
 				fmt.Fprintf(&output, "- [%.0f%%]%s %s\n", l.Confidence*100, scopeTag, l.Content)

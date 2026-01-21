@@ -160,9 +160,10 @@ func (s *MCPServer) toolSessionEnd(id any, args map[string]interface{}) jsonRPCR
 		for i := range activities {
 			act := &activities[i]
 			activityCounts[act.Kind]++
-			if act.Outcome == "success" {
+			switch act.Outcome {
+			case "success":
 				successCount++
-			} else if act.Outcome == "failure" {
+			case "failure":
 				failureCount++
 			}
 			if act.Kind == "file_edit" && act.Target != "" && !filesSeen[act.Target] {
@@ -718,7 +719,7 @@ func (s *MCPServer) toolSessionResume(id any, args map[string]interface{}) jsonR
 }
 
 // toolSessionStatus gets the current session status and context.
-func (s *MCPServer) toolSessionStatus(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolSessionStatus(id any, _ map[string]interface{}) jsonRPCResponse {
 	var output strings.Builder
 	output.WriteString("# Session Status\n\n")
 
@@ -786,9 +787,10 @@ func (s *MCPServer) toolSessionStatus(id any, args map[string]interface{}) jsonR
 			successCount := 0
 			failureCount := 0
 			for i := range activities {
-				if activities[i].Outcome == "success" {
+				switch activities[i].Outcome {
+				case "success":
 					successCount++
-				} else if activities[i].Outcome == "failure" {
+				case "failure":
 					failureCount++
 				}
 			}

@@ -4,7 +4,6 @@ A deterministic context system for codebases, inspired by the [Method of Loci](h
 
 [![Pipeline](https://github.com/mehmetkoksal-w/mind-palace/actions/workflows/pipeline.yml/badge.svg)](https://github.com/mehmetkoksal-w/mind-palace/actions/workflows/pipeline.yml)
 [![PR Validation](https://github.com/mehmetkoksal-w/mind-palace/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/mehmetkoksal-w/mind-palace/actions/workflows/pr-validation.yml)
-[![codecov](https://codecov.io/gh/mehmetkoksal-w/mind-palace/branch/main/graph/badge.svg)](https://codecov.io/gh/mehmetkoksal-w/mind-palace)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mehmetkoksal-w/mind-palace)](https://goreportcard.com/report/github.com/mehmetkoksal-w/mind-palace)
 
 ## Overview
@@ -19,6 +18,7 @@ Mind Palace provides a **deterministic, schema-validated index** for codebases t
 | **Dashboard**         | Web UI for visualization and monitoring          |
 | **VS Code Extension** | HUD, sidebar, and auto-sync integration          |
 | **MCP Server**        | AI agent integration via JSON-RPC                |
+| **LSP Server**        | Editor diagnostics for patterns and contracts    |
 
 ### Key Features
 
@@ -26,6 +26,7 @@ Mind Palace provides a **deterministic, schema-validated index** for codebases t
 - **Corridors** - Share knowledge across multiple projects
 - **Dashboard** - Visual exploration of your codebase
 - **MCP Integration** - First-class support for AI agents
+- **LSP Integration** - Real-time pattern and contract diagnostics in editors
 
 ## Quick Start
 
@@ -135,6 +136,7 @@ make deps           # Install all dependencies
 ### Scripts (Cross-Platform)
 
 **Linux/macOS (Bash):**
+
 ```sh
 ./scripts/dev.sh        # Interactive development menu
 ./scripts/build.sh      # Build (all, cli, dashboard, vscode, release)
@@ -142,6 +144,7 @@ make deps           # Install all dependencies
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 .\scripts\dev.ps1       # Interactive development menu
 .\scripts\build.ps1     # Build (all, cli, dashboard, vscode, release)
@@ -185,8 +188,8 @@ npm run test:coverage
 
 ### Test Status
 
-| Component     | Framework | Tests        | Coverage | Status     |
-| ------------- | --------- | ------------ | -------- | ---------- |
+| Component     | Framework | Tests        | Coverage | Status  |
+| ------------- | --------- | ------------ | -------- | ------- |
 | **Go CLI**    | Go test   | 77 files     | ~50%     | Passing |
 | **Dashboard** | Vitest    | 211 tests    | 70%+     | Passing |
 | **VS Code**   | Mocha     | 49 tests     | TBD      | Passing |

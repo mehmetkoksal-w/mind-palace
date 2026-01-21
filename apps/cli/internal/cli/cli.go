@@ -61,6 +61,8 @@ func Run(args []string) error {
 		return cmdServe(args[1:])
 	case "dashboard":
 		return cmdDashboard(args[1:])
+	case "lsp":
+		return cmdLSP(args[1:])
 
 	// Agents & Sessions
 	case "session":
@@ -169,6 +171,11 @@ func cmdServe(args []string) error {
 // cmdDashboard delegates to commands.RunDashboard
 func cmdDashboard(args []string) error {
 	return commands.RunDashboard(args)
+}
+
+// cmdLSP delegates to commands.RunLSP
+func cmdLSP(args []string) error {
+	return commands.RunLSP(args)
 }
 
 // ============================================================================
