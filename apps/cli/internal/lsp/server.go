@@ -100,7 +100,7 @@ func (s *Server) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			s.logger.Println("Context cancelled, shutting down")
+			s.logger.Println("Context canceled, shutting down")
 			return ctx.Err()
 		default:
 		}

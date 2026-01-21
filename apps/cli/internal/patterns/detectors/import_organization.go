@@ -40,15 +40,12 @@ const (
 )
 
 var (
-	// Go stdlib packages (common ones)
-	goStdlibPattern = regexp.MustCompile(`^"(context|fmt|os|io|net|http|strings|strconv|time|sync|encoding|errors|path|filepath|regexp|sort|testing|bytes|bufio|crypto|database|flag|log|math|reflect|runtime|unicode|archive|compress)"`)
-
 	// TypeScript/JavaScript patterns
 	tsNodeModulesPattern = regexp.MustCompile(`^["'][@a-zA-Z]`)
 	tsRelativePattern    = regexp.MustCompile(`^["']\.\.?/`)
 
 	// Python patterns
-	pyStdlibPattern  = regexp.MustCompile(`^(import|from)\s+(os|sys|re|json|time|datetime|collections|itertools|functools|typing|pathlib|logging|unittest|math|random|copy|io|csv|http|urllib|socket|threading|multiprocessing|subprocess|shutil|glob|tempfile|pickle|hashlib|base64|struct|enum|dataclasses|abc|contextlib|operator|string|textwrap|difflib|heapq|bisect|array|weakref|types|gc|inspect|dis|traceback|warnings|argparse|getopt|configparser|secrets|uuid|platform|locale|gettext|calendar|pprint|decimal|fractions|statistics|cmath|numbers|itertools)`)
+	pyStdlibPattern  = regexp.MustCompile(`^(import|from)\s+(os|sys|re|json|time|datetime|collections|itertools|functools|typing|pathlib|logging|unittest|math|random|copy|io|csv|http|urllib|socket|threading|multiprocessing|subprocess|shutil|glob|tempfile|pickle|hashlib|base64|struct|enum|dataclasses|abc|contextlib|operator|string|textwrap|difflib|heapq|bisect|array|weakref|types|gc|inspect|dis|traceback|warnings|argparse|getopt|configparser|secrets|uuid|platform|locale|gettext|calendar|pprint|decimal|fractions|statistics|cmath|numbers)`)
 	pyRelativePattern = regexp.MustCompile(`^from\s+\.`)
 )
 

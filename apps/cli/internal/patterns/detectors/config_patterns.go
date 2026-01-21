@@ -39,7 +39,6 @@ var (
 	// JavaScript/TypeScript config patterns
 	jsProcessEnvPattern = regexp.MustCompile(`process\.env\.`)
 	jsDotenvPattern     = regexp.MustCompile(`(dotenv|require\s*\(\s*['"]dotenv['"])`)
-	jsConfigFilePattern = regexp.MustCompile(`(config\.(json|js|ts)|\.env)`)
 	jsZodPattern        = regexp.MustCompile(`z\.(object|string|number|boolean)`)
 
 	// Python config patterns

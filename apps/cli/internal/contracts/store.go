@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -74,7 +75,7 @@ func (s *Store) CreateTables() error {
 	}
 
 	for _, q := range queries {
-		if _, err := s.db.Exec(q); err != nil {
+		if _, err := s.db.ExecContext(context.Background(), q); err != nil {
 			return fmt.Errorf("failed to create table: %w", err)
 		}
 	}
@@ -87,7 +88,7 @@ func (s *Store) SaveContract(contract *Contract) error {
 	requestSchema, _ := json.Marshal(contract.Backend.RequestSchema)
 	responseSchema, _ := json.Marshal(contract.Backend.ResponseSchema)
 
-	_, err := s.db.Exec(`
+	_, err := s.db.ExecContext(context.Background(), `
 		INSERT OR REPLACE INTO contracts (
 			id, method, endpoint, endpoint_pattern,
 			backend_file, backend_line, backend_framework, backend_handler,
@@ -126,7 +127,7 @@ func (s *Store) SaveContract(contract *Contract) error {
 func (s *Store) saveFrontendCall(contractID string, call *FrontendCall) error {
 	expectedSchema, _ := json.Marshal(call.ExpectedSchema)
 
-	_, err := s.db.Exec(`
+	_, err := s.db.ExecContext(context.Background(), `
 		INSERT OR REPLACE INTO contract_frontend_calls (
 			id, contract_id, file_path, line_number, call_type, expected_schema
 		) VALUES (?, ?, ?, ?, ?, ?)
@@ -139,7 +140,7 @@ func (s *Store) saveFrontendCall(contractID string, call *FrontendCall) error {
 func (s *Store) saveMismatch(contractID string, mismatch *FieldMismatch) error {
 	id := GenerateID("mm")
 
-	_, err := s.db.Exec(`
+	_, err := s.db.ExecContext(context.Background(), `
 		INSERT OR REPLACE INTO contract_mismatches (
 			id, contract_id, field_path, mismatch_type, severity, description, backend_type, frontend_type
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -152,7 +153,7 @@ func (s *Store) saveMismatch(contractID string, mismatch *FieldMismatch) error {
 
 // GetContract retrieves a contract by ID.
 func (s *Store) GetContract(id string) (*Contract, error) {
-	row := s.db.QueryRow(`
+	row := s.db.QueryRowContext(context.Background(), `
 		SELECT id, method, endpoint, endpoint_pattern,
 			backend_file, backend_line, backend_framework, backend_handler,
 			backend_request_schema, backend_response_schema,
@@ -205,7 +206,7 @@ func (s *Store) GetContract(id string) (*Contract, error) {
 }
 
 func (s *Store) getFrontendCalls(contractID string) ([]FrontendCall, error) {
-	rows, err := s.db.Query(`
+	rows, err := s.db.QueryContext(context.Background(), `
 		SELECT id, file_path, line_number, call_type, expected_schema
 		FROM contract_frontend_calls WHERE contract_id = ?
 	`, contractID)
@@ -231,7 +232,7 @@ func (s *Store) getFrontendCalls(contractID string) ([]FrontendCall, error) {
 }
 
 func (s *Store) getMismatches(contractID string) ([]FieldMismatch, error) {
-	rows, err := s.db.Query(`
+	rows, err := s.db.QueryContext(context.Background(), `
 		SELECT field_path, mismatch_type, severity, description, backend_type, frontend_type
 		FROM contract_mismatches WHERE contract_id = ?
 	`, contractID)
@@ -282,7 +283,7 @@ func (s *Store) ListContracts(filter ContractFilter) ([]*Contract, error) {
 		args = append(args, filter.Limit)
 	}
 
-	rows, err := s.db.Query(query, args...)
+	rows, err := s.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list contracts: %w", err)
 	}
@@ -317,7 +318,7 @@ type ContractFilter struct {
 
 // UpdateStatus updates the status of a contract.
 func (s *Store) UpdateStatus(id string, status ContractStatus) error {
-	_, err := s.db.Exec(`
+	_, err := s.db.ExecContext(context.Background(), `
 		UPDATE contracts SET status = ?, updated_at = ? WHERE id = ?
 	`, string(status), time.Now(), id)
 	return err
@@ -326,7 +327,7 @@ func (s *Store) UpdateStatus(id string, status ContractStatus) error {
 // DeleteContract deletes a contract and its related data.
 func (s *Store) DeleteContract(id string) error {
 	// Cascading deletes should handle related data
-	_, err := s.db.Exec(`DELETE FROM contracts WHERE id = ?`, id)
+	_, err := s.db.ExecContext(context.Background(), `DELETE FROM contracts WHERE id = ?`, id)
 	return err
 }
 
@@ -337,16 +338,16 @@ func (s *Store) GetStats() (*ContractStats, error) {
 	}
 
 	// Total contracts
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contracts`).Scan(&stats.Total)
+	_ = s.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM contracts`).Scan(&stats.Total)
 
 	// Contracts by status
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'discovered'`).Scan(&stats.Discovered)
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'verified'`).Scan(&stats.Verified)
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'mismatch'`).Scan(&stats.Mismatch)
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'ignored'`).Scan(&stats.Ignored)
+	_ = s.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM contracts WHERE status = 'discovered'`).Scan(&stats.Discovered)
+	_ = s.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM contracts WHERE status = 'verified'`).Scan(&stats.Verified)
+	_ = s.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM contracts WHERE status = 'mismatch'`).Scan(&stats.Mismatch)
+	_ = s.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM contracts WHERE status = 'ignored'`).Scan(&stats.Ignored)
 
 	// Contracts by method
-	rows, err := s.db.Query(`SELECT method, COUNT(*) FROM contracts GROUP BY method`)
+	rows, err := s.db.QueryContext(context.Background(), `SELECT method, COUNT(*) FROM contracts GROUP BY method`)
 	if err != nil {
 		return nil, err
 	}
@@ -360,24 +361,24 @@ func (s *Store) GetStats() (*ContractStats, error) {
 	}
 
 	// Total mismatches (errors and warnings)
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contract_mismatches WHERE severity = 'error'`).Scan(&stats.TotalErrors)
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contract_mismatches WHERE severity = 'warning'`).Scan(&stats.TotalWarnings)
+	_ = s.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM contract_mismatches WHERE severity = 'error'`).Scan(&stats.TotalErrors)
+	_ = s.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM contract_mismatches WHERE severity = 'warning'`).Scan(&stats.TotalWarnings)
 
 	// Total frontend calls
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contract_frontend_calls`).Scan(&stats.TotalCalls)
+	_ = s.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM contract_frontend_calls`).Scan(&stats.TotalCalls)
 
 	return stats, nil
 }
 
 // ClearMismatches removes all mismatches for a contract.
 func (s *Store) ClearMismatches(contractID string) error {
-	_, err := s.db.Exec(`DELETE FROM contract_mismatches WHERE contract_id = ?`, contractID)
+	_, err := s.db.ExecContext(context.Background(), `DELETE FROM contract_mismatches WHERE contract_id = ?`, contractID)
 	return err
 }
 
 // BulkSave saves multiple contracts efficiently.
 func (s *Store) BulkSave(contracts []*Contract) error {
-	tx, err := s.db.Begin()
+	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return err
 	}

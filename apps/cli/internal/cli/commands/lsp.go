@@ -70,7 +70,7 @@ func ExecuteLSP(opts LSPOptions) error {
 	mem, err = memory.Open(rootPath)
 	if err != nil {
 		// LSP can work without memory, just with limited functionality
-		_, _ = logWriter.Write([]byte(fmt.Sprintf("Memory database not available: %v; diagnostics will be limited\n", err)))
+		_, _ = fmt.Fprintf(logWriter, "Memory database not available: %v; diagnostics will be limited\n", err)
 	} else {
 		defer mem.Close()
 	}
@@ -94,11 +94,11 @@ func ExecuteLSP(opts LSPOptions) error {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigCh
-		_, _ = logWriter.Write([]byte("Received shutdown signal\n"))
+		_, _ = fmt.Fprintln(logWriter, "Received shutdown signal")
 		cancel()
 	}()
 
-	_, _ = logWriter.Write([]byte(fmt.Sprintf("Mind Palace LSP server started (root: %s)\n", rootPath)))
+	_, _ = fmt.Fprintf(logWriter, "Mind Palace LSP server started (root: %s)\n", rootPath)
 
 	// Run the server
 	return server.Run(ctx)

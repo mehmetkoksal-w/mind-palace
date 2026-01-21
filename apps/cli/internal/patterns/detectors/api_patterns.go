@@ -43,11 +43,8 @@ var (
 	// JavaScript/TypeScript patterns
 	jsExpressPattern       = regexp.MustCompile(`(app|router)\.(get|post|put|delete|patch)\s*\(`)
 	jsFastifyPattern       = regexp.MustCompile(`(fastify|server)\.(get|post|put|delete|patch)\s*\(`)
-	jsResJSONPattern       = regexp.MustCompile(`res\.(json|send)\s*\(`)
-	jsResponseEnvelope     = regexp.MustCompile(`(data|result|response|payload|success|error)\s*:`)
-	jsStatusCodePattern    = regexp.MustCompile(`res\.status\s*\(\s*\d+\s*\)`)
-	jsFetchPattern         = regexp.MustCompile(`fetch\s*\(`)
-	jsAxiosPattern         = regexp.MustCompile(`axios\.(get|post|put|delete|patch)`)
+	jsResJSONPattern   = regexp.MustCompile(`res\.(json|send)\s*\(`)
+	jsResponseEnvelope = regexp.MustCompile(`(data|result|response|payload|success|error)\s*:`)
 
 	// Python patterns
 	pyFastAPIPattern       = regexp.MustCompile(`@(app|router)\.(get|post|put|delete|patch)`)

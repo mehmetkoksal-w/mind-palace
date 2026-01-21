@@ -32,25 +32,21 @@ func NewDependencyInjectionDetector() *DependencyInjectionDetector {
 
 var (
 	// Go DI patterns
-	goConstructorPattern     = regexp.MustCompile(`func\s+New\w+\s*\([^)]*\)\s*\*?\w+`)
-	goInterfaceParamPattern  = regexp.MustCompile(`\w+\s+\w+er\b`)
-	goWirePattern            = regexp.MustCompile(`wire\.(Build|Bind|Value|Struct)`)
-	goFxPattern              = regexp.MustCompile(`fx\.(Provide|Invoke|Module|Option)`)
-	goDigPattern             = regexp.MustCompile(`dig\.(Container|Provide|Invoke)`)
+	goConstructorPattern = regexp.MustCompile(`func\s+New\w+\s*\([^)]*\)\s*\*?\w+`)
+	goWirePattern        = regexp.MustCompile(`wire\.(Build|Bind|Value|Struct)`)
+	goFxPattern          = regexp.MustCompile(`fx\.(Provide|Invoke|Module|Option)`)
+	goDigPattern         = regexp.MustCompile(`dig\.(Container|Provide|Invoke)`)
 
 	// TypeScript/JavaScript DI patterns
 	tsConstructorInjectPattern = regexp.MustCompile(`constructor\s*\([^)]*private|public`)
-	tsInjectablePattern       = regexp.MustCompile(`@Injectable\s*\(`)
-	tsInjectPattern           = regexp.MustCompile(`@Inject\s*\(`)
-	tsNestModulePattern       = regexp.MustCompile(`@Module\s*\(`)
-	tsProviderPattern         = regexp.MustCompile(`providers\s*:\s*\[`)
-	tsUseClassPattern         = regexp.MustCompile(`useClass\s*:`)
+	tsInjectablePattern        = regexp.MustCompile(`@Injectable\s*\(`)
+	tsInjectPattern            = regexp.MustCompile(`@Inject\s*\(`)
+	tsNestModulePattern        = regexp.MustCompile(`@Module\s*\(`)
 
 	// Python DI patterns
-	pyInjectPattern         = regexp.MustCompile(`@inject`)
-	pyDependsPattern        = regexp.MustCompile(`Depends\s*\(`)
-	pyContainerPattern      = regexp.MustCompile(`(Container|container)\s*\(`)
-	pyPuncqPattern          = regexp.MustCompile(`dependency_injector\.|punq\.`)
+	pyInjectPattern  = regexp.MustCompile(`@inject`)
+	pyDependsPattern = regexp.MustCompile(`Depends\s*\(`)
+	pyPuncqPattern   = regexp.MustCompile(`dependency_injector\.|punq\.`)
 )
 
 type diStyle string

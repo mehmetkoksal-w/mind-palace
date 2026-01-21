@@ -31,26 +31,14 @@ func NewCommentPatternDetector() *CommentPatternDetector {
 }
 
 var (
-	// JSDoc pattern: /** ... */
-	jsdocPattern = regexp.MustCompile(`/\*\*[\s\S]*?\*/`)
-
-	// JSDoc tags
-	jsdocTagPattern = regexp.MustCompile(`@(param|returns?|throws?|example|see|deprecated|since|author|version|type|typedef|callback|template)\b`)
-
 	// Go doc pattern: // FunctionName ...
 	godocPattern = regexp.MustCompile(`^//\s+[A-Z][a-zA-Z]+\s+`)
-
-	// Python docstring: """ or '''
-	pythonDocstringPattern = regexp.MustCompile(`^(\s*)("""|\'\'\')`)
 
 	// TODO/FIXME/NOTE comments
 	todoPattern = regexp.MustCompile(`(?i)(TODO|FIXME|NOTE|HACK|XXX|BUG)\s*[:\-]?\s*`)
 
 	// Single line comment patterns
 	singleLineCommentPattern = regexp.MustCompile(`^\s*(//|#)\s*`)
-
-	// Block comment patterns
-	blockCommentStartPattern = regexp.MustCompile(`^\s*/\*`)
 )
 
 type commentStyle string

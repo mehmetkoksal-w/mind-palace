@@ -48,8 +48,8 @@ func (s *MCPServer) toolPatternsGet(id any, args map[string]interface{}) jsonRPC
 		discovered := 0
 		approved := 0
 		ignored := 0
-		for _, p := range patterns {
-			switch p.Status {
+		for i := range patterns {
+			switch patterns[i].Status {
 			case "discovered":
 				discovered++
 			case "approved":
@@ -63,9 +63,9 @@ func (s *MCPServer) toolPatternsGet(id any, args map[string]interface{}) jsonRPC
 			len(patterns), discovered, approved, ignored)
 
 		// Group by category
-		byCategory := make(map[string][]memory.Pattern)
-		for _, p := range patterns {
-			byCategory[p.Category] = append(byCategory[p.Category], p)
+		byCategory := make(map[string][]*memory.Pattern)
+		for i := range patterns {
+			byCategory[patterns[i].Category] = append(byCategory[patterns[i].Category], &patterns[i])
 		}
 
 		for category, pats := range byCategory {
@@ -160,8 +160,8 @@ func (s *MCPServer) toolPatternShow(id any, args map[string]interface{}) jsonRPC
 	// Show locations
 	matches := 0
 	outliers := 0
-	for _, loc := range locations {
-		if loc.IsOutlier {
+	for i := range locations {
+		if locations[i].IsOutlier {
 			outliers++
 		} else {
 			matches++
@@ -172,17 +172,17 @@ func (s *MCPServer) toolPatternShow(id any, args map[string]interface{}) jsonRPC
 
 	// Show first few locations
 	shown := 0
-	for _, loc := range locations {
-		if loc.IsOutlier {
+	for i := range locations {
+		if locations[i].IsOutlier {
 			continue
 		}
 		if shown >= 5 {
 			fmt.Fprintf(&output, "... and %d more locations\n", matches-shown)
 			break
 		}
-		fmt.Fprintf(&output, "- `%s:%d`", loc.FilePath, loc.LineStart)
-		if loc.Snippet != "" {
-			snippet := loc.Snippet
+		fmt.Fprintf(&output, "- `%s:%d`", locations[i].FilePath, locations[i].LineStart)
+		if locations[i].Snippet != "" {
+			snippet := locations[i].Snippet
 			if len(snippet) > 60 {
 				snippet = snippet[:57] + "..."
 			}
@@ -196,17 +196,17 @@ func (s *MCPServer) toolPatternShow(id any, args map[string]interface{}) jsonRPC
 	if outliers > 0 {
 		output.WriteString("\n### Outliers (Deviations)\n\n")
 		shown = 0
-		for _, loc := range locations {
-			if !loc.IsOutlier {
+		for i := range locations {
+			if !locations[i].IsOutlier {
 				continue
 			}
 			if shown >= 3 {
 				fmt.Fprintf(&output, "... and %d more outliers\n", outliers-shown)
 				break
 			}
-			fmt.Fprintf(&output, "- `%s:%d`", loc.FilePath, loc.LineStart)
-			if loc.OutlierReason != "" {
-				fmt.Fprintf(&output, " - %s", loc.OutlierReason)
+			fmt.Fprintf(&output, "- `%s:%d`", locations[i].FilePath, locations[i].LineStart)
+			if locations[i].OutlierReason != "" {
+				fmt.Fprintf(&output, " - %s", locations[i].OutlierReason)
 			}
 			output.WriteString("\n")
 			shown++
@@ -323,7 +323,7 @@ func (s *MCPServer) toolPatternIgnore(id any, args map[string]interface{}) jsonR
 }
 
 // toolPatternStats returns statistics about detected patterns.
-func (s *MCPServer) toolPatternStats(id any, args map[string]interface{}) jsonRPCResponse {
+func (s *MCPServer) toolPatternStats(id any, _ map[string]interface{}) jsonRPCResponse {
 	mem := s.butler.Memory()
 	if mem == nil {
 		return s.toolError(id, "memory not initialized")
@@ -343,8 +343,8 @@ func (s *MCPServer) toolPatternStats(id any, args map[string]interface{}) jsonRP
 	byCategory := make(map[string]int)
 	totalConfidence := 0.0
 
-	for _, p := range patterns {
-		switch p.Status {
+	for i := range patterns {
+		switch patterns[i].Status {
 		case "discovered":
 			discovered++
 		case "approved":
@@ -352,8 +352,8 @@ func (s *MCPServer) toolPatternStats(id any, args map[string]interface{}) jsonRP
 		case "ignored":
 			ignored++
 		}
-		byCategory[p.Category]++
-		totalConfidence += p.Confidence
+		byCategory[patterns[i].Category]++
+		totalConfidence += patterns[i].Confidence
 	}
 
 	avgConfidence := 0.0

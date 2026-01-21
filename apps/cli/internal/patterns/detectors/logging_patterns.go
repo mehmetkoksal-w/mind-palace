@@ -38,10 +38,9 @@ var (
 	goZerologPattern    = regexp.MustCompile(`(zerolog\.|log\.(Info|Debug|Warn|Error|Fatal)\(\)\.Msg)`)
 
 	// JavaScript/TypeScript logging patterns
-	jsConsolePattern    = regexp.MustCompile(`console\.(log|info|warn|error|debug|trace)\s*\(`)
-	jsWinstonPattern    = regexp.MustCompile(`(winston|logger)\.(info|debug|warn|error|log)\s*\(`)
-	jsPinoPattern       = regexp.MustCompile(`(pino|logger)\.(info|debug|warn|error|fatal|trace)\s*\(`)
-	jsBunyanPattern     = regexp.MustCompile(`(bunyan|log)\.(info|debug|warn|error|fatal|trace)\s*\(`)
+	jsConsolePattern = regexp.MustCompile(`console\.(log|info|warn|error|debug|trace)\s*\(`)
+	jsWinstonPattern = regexp.MustCompile(`(winston|logger)\.(info|debug|warn|error|log)\s*\(`)
+	jsPinoPattern    = regexp.MustCompile(`(pino|logger)\.(info|debug|warn|error|fatal|trace)\s*\(`)
 
 	// Python logging patterns
 	pyLoggingPattern    = regexp.MustCompile(`logging\.(info|debug|warning|error|critical|exception)\s*\(`)

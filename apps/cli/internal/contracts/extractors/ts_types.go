@@ -109,9 +109,7 @@ func (e *TSTypeExtractor) extractTypeDeclarations(node *sitter.Node, content []b
 	nodeType := node.Type()
 
 	// Check for export statement wrapper
-	isExported := false
 	if nodeType == "export_statement" {
-		isExported = true
 		// Process the declaration inside
 		for i := 0; i < int(node.ChildCount()); i++ {
 			child := node.Child(i)
@@ -146,7 +144,6 @@ func (e *TSTypeExtractor) extractTypeDeclarations(node *sitter.Node, content []b
 				}
 			}
 		}
-		_ = isExported // Use it or lose it
 	}
 
 	// Recurse into children

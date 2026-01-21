@@ -91,16 +91,3 @@ func (s *Server) handleDidSave(req Request) *Response {
 
 	return nil
 }
-
-// computeAndPublishDiagnostics computes and publishes diagnostics for a document.
-func (s *Server) computeAndPublishDiagnostics(uri string) {
-	doc := s.getDocument(uri)
-	if doc == nil {
-		return
-	}
-
-	diagnostics := s.computeDiagnostics(doc)
-	if err := s.publishDiagnostics(uri, diagnostics); err != nil {
-		s.logger.Printf("Error publishing diagnostics: %v", err)
-	}
-}

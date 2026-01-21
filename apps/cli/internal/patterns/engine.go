@@ -301,16 +301,15 @@ func (e *Engine) buildPattern(detector Detector, result *DetectionResult) Patter
 	now := time.Now().UTC()
 
 	// Convert locations
-	var locations []Location
-	for _, loc := range result.Locations {
-		locations = append(locations, loc)
-	}
+	locations := make([]Location, len(result.Locations))
+	copy(locations, result.Locations)
 
 	var outliers []Location
 	if e.config.IncludeOutliers {
-		for _, loc := range result.Outliers {
-			loc.IsOutlier = true
-			outliers = append(outliers, loc)
+		outliers = make([]Location, len(result.Outliers))
+		for i := range result.Outliers {
+			outliers[i] = result.Outliers[i]
+			outliers[i].IsOutlier = true
 		}
 	}
 
@@ -345,11 +344,12 @@ func (e *Engine) buildPattern(detector Detector, result *DetectionResult) Patter
 func (e *Engine) aggregatePatterns(patterns []Pattern) []Pattern {
 	byDetector := make(map[string]*Pattern)
 
-	for _, p := range patterns {
+	for i := range patterns {
+		p := &patterns[i]
 		existing, ok := byDetector[p.DetectorID]
 		if !ok {
-			copy := p
-			byDetector[p.DetectorID] = &copy
+			patternCopy := *p
+			byDetector[p.DetectorID] = &patternCopy
 			continue
 		}
 
@@ -401,8 +401,9 @@ func (e *Engine) languageAllowed(lang string) bool {
 }
 
 // SaveResults persists scan results to the database.
-func (e *Engine) SaveResults(ctx context.Context, patterns []Pattern) error {
-	for _, p := range patterns {
+func (e *Engine) SaveResults(_ context.Context, patterns []Pattern) error {
+	for i := range patterns {
+		p := &patterns[i]
 		// Check if pattern already exists
 		existing, err := e.findExistingPattern(p.DetectorID)
 		if err != nil {
@@ -481,13 +482,13 @@ func (e *Engine) findExistingPattern(detectorID string) (*memory.Pattern, error)
 
 // saveLocations persists pattern locations to the database.
 func (e *Engine) saveLocations(patternID string, locations, outliers []Location) error {
-	for _, loc := range locations {
+	for i := range locations {
 		memLoc := memory.PatternLocation{
 			PatternID: patternID,
-			FilePath:  loc.FilePath,
-			LineStart: loc.LineStart,
-			LineEnd:   loc.LineEnd,
-			Snippet:   loc.Snippet,
+			FilePath:  locations[i].FilePath,
+			LineStart: locations[i].LineStart,
+			LineEnd:   locations[i].LineEnd,
+			Snippet:   locations[i].Snippet,
 			IsOutlier: false,
 		}
 		if _, err := e.memory.AddPatternLocation(memLoc); err != nil {
@@ -495,15 +496,15 @@ func (e *Engine) saveLocations(patternID string, locations, outliers []Location)
 		}
 	}
 
-	for _, loc := range outliers {
+	for i := range outliers {
 		memLoc := memory.PatternLocation{
 			PatternID:     patternID,
-			FilePath:      loc.FilePath,
-			LineStart:     loc.LineStart,
-			LineEnd:       loc.LineEnd,
-			Snippet:       loc.Snippet,
+			FilePath:      outliers[i].FilePath,
+			LineStart:     outliers[i].LineStart,
+			LineEnd:       outliers[i].LineEnd,
+			Snippet:       outliers[i].Snippet,
 			IsOutlier:     true,
-			OutlierReason: loc.OutlierReason,
+			OutlierReason: outliers[i].OutlierReason,
 		}
 		if _, err := e.memory.AddPatternLocation(memLoc); err != nil {
 			return err

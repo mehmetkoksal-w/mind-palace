@@ -347,13 +347,13 @@ func ExecuteContractsList(opts ContractsOptions) error {
 
 			mismatchInfo := ""
 			if len(c.Mismatches) > 0 {
-				errors := c.ErrorCount()
-				warnings := c.WarningCount()
-				if errors > 0 {
-					mismatchInfo = fmt.Sprintf(" [%d errors]", errors)
+				errCount := c.ErrorCount()
+				warnCount := c.WarningCount()
+				if errCount > 0 {
+					mismatchInfo = fmt.Sprintf(" [%d errors]", errCount)
 				}
-				if warnings > 0 {
-					mismatchInfo += fmt.Sprintf(" [%d warnings]", warnings)
+				if warnCount > 0 {
+					mismatchInfo += fmt.Sprintf(" [%d warnings]", warnCount)
 				}
 			}
 

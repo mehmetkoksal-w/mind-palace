@@ -31,19 +31,17 @@ func NewTestPatternDetector() *TestPatternDetector {
 
 var (
 	// Go test patterns
-	goTestFuncPattern   = regexp.MustCompile(`func\s+(Test[A-Z]\w*)\s*\(`)
-	goBenchmarkPattern  = regexp.MustCompile(`func\s+(Benchmark[A-Z]\w*)\s*\(`)
-	goTableTestPattern  = regexp.MustCompile(`tests?\s*:?=\s*\[\]struct`)
-	goSubtestPattern    = regexp.MustCompile(`t\.Run\s*\(`)
-	goAssertPattern     = regexp.MustCompile(`(assert\.|require\.|t\.(Error|Fatal|Fail))`)
-	goMockPattern       = regexp.MustCompile(`(mock\.|Mock[A-Z]|NewMock)`)
+	goTestFuncPattern  = regexp.MustCompile(`func\s+(Test[A-Z]\w*)\s*\(`)
+	goTableTestPattern = regexp.MustCompile(`tests?\s*:?=\s*\[\]struct`)
+	goSubtestPattern   = regexp.MustCompile(`t\.Run\s*\(`)
+	goAssertPattern    = regexp.MustCompile(`(assert\.|require\.|t\.(Error|Fatal|Fail))`)
+	goMockPattern      = regexp.MustCompile(`(mock\.|Mock[A-Z]|NewMock)`)
 
 	// JavaScript/TypeScript test patterns
-	jsDescribePattern   = regexp.MustCompile(`describe\s*\(\s*["'\x60]`)
-	jsItPattern         = regexp.MustCompile(`(it|test)\s*\(\s*["'\x60]`)
-	jsBeforePattern     = regexp.MustCompile(`(beforeEach|beforeAll|afterEach|afterAll)\s*\(`)
-	jsExpectPattern     = regexp.MustCompile(`expect\s*\(`)
-	jsMockPattern       = regexp.MustCompile(`(jest\.mock|vi\.mock|sinon\.|Mock[A-Z])`)
+	jsDescribePattern = regexp.MustCompile(`describe\s*\(\s*["'\x60]`)
+	jsItPattern       = regexp.MustCompile(`(it|test)\s*\(\s*["'\x60]`)
+	jsExpectPattern   = regexp.MustCompile(`expect\s*\(`)
+	jsMockPattern     = regexp.MustCompile(`(jest\.mock|vi\.mock|sinon\.|Mock[A-Z])`)
 
 	// Python test patterns
 	pyTestFuncPattern   = regexp.MustCompile(`def\s+(test_\w+)\s*\(`)
