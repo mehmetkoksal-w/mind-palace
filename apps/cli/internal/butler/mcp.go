@@ -7,6 +7,9 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/memory"
 )
 
 // MCPMode represents the operational mode of the MCP server.
@@ -72,6 +75,29 @@ type MCPServer struct {
 	reader *bufio.Reader
 	writer io.Writer
 	mode   MCPMode // Operational mode (agent or human)
+
+	// Session tracking for autonomy features
+	currentSessionID string // Active session ID for this connection
+	autoSessionUsed  bool   // True if current session was auto-created
+
+	// Session timeout tracking
+	lastActivity        time.Time // Time of last tool call
+	sessionAutoEnded    bool      // True if session was auto-ended due to timeout
+	sessionAutoEndedMsg string    // Message to show on next tool call
+
+	// Background goroutine management
+	stopTimeout chan struct{} // Channel to stop timeout checker
+
+	// Proactive intelligence: conflict monitoring
+	trackedFiles map[string]time.Time // Files accessed by this session with last access time
+
+	// Proactive intelligence: briefing updates
+	lastBriefingTime time.Time // Time of last briefing update shown
+
+	// Smart context management
+	currentTaskFocus  string   // Current task/goal for context prioritization
+	focusKeywords     []string // Keywords extracted from current focus
+	contextPriorityUp []string // Record IDs to prioritize (pinned)
 }
 
 // JSON-RPC types
@@ -121,10 +147,24 @@ type mcpInitializeResult struct {
 	ServerInfo      mcpServerInfo   `json:"serverInfo"`
 }
 
+// mcpToolAutonomy provides metadata for agent autonomy guidance.
+// This helps agents understand when and how to use tools without explicit instructions.
+type mcpToolAutonomy struct {
+	// Level indicates how critical this tool is: "required", "recommended", or "optional"
+	Level string `json:"level"`
+	// Prerequisites lists tools that should be called before this one
+	Prerequisites []string `json:"prerequisites,omitempty"`
+	// Triggers describes when this tool should be called
+	Triggers []string `json:"triggers,omitempty"`
+	// Frequency indicates how often: "once_per_session", "per_file", "as_needed"
+	Frequency string `json:"frequency,omitempty"`
+}
+
 type mcpTool struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description,omitempty"`
 	InputSchema map[string]interface{} `json:"inputSchema"`
+	Autonomy    *mcpToolAutonomy       `json:"autonomy,omitempty"`
 }
 
 type mcpResource struct {
@@ -195,8 +235,260 @@ func (s *MCPServer) Mode() MCPMode {
 	return s.mode
 }
 
+// CurrentSessionID returns the active session ID for this connection.
+func (s *MCPServer) CurrentSessionID() string {
+	return s.currentSessionID
+}
+
+// SetCurrentSessionID sets the active session ID.
+func (s *MCPServer) SetCurrentSessionID(sessionID string) {
+	s.currentSessionID = sessionID
+	s.autoSessionUsed = false
+}
+
+// IsAutoSessionUsed returns true if the current session was auto-created.
+func (s *MCPServer) IsAutoSessionUsed() bool {
+	return s.autoSessionUsed
+}
+
+// startSessionTimeoutChecker starts a background goroutine that checks for stale sessions.
+func (s *MCPServer) startSessionTimeoutChecker() {
+	cfg := s.butler.Config()
+	if cfg == nil || cfg.Autonomy == nil || cfg.Autonomy.SessionTimeoutMinutes <= 0 {
+		return // Timeout checking disabled
+	}
+
+	s.stopTimeout = make(chan struct{})
+	timeout := time.Duration(cfg.Autonomy.SessionTimeoutMinutes) * time.Minute
+	checkInterval := timeout / 6 // Check every 1/6 of timeout period (min 1 min)
+	if checkInterval < time.Minute {
+		checkInterval = time.Minute
+	}
+
+	go func() {
+		ticker := time.NewTicker(checkInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-s.stopTimeout:
+				return
+			case <-ticker.C:
+				s.checkSessionTimeout(timeout)
+			}
+		}
+	}()
+}
+
+// stopSessionTimeoutChecker stops the background timeout checker.
+func (s *MCPServer) stopSessionTimeoutChecker() {
+	if s.stopTimeout != nil {
+		close(s.stopTimeout)
+		s.stopTimeout = nil
+	}
+}
+
+// checkSessionTimeout checks if the current session has timed out.
+func (s *MCPServer) checkSessionTimeout(timeout time.Duration) {
+	if s.currentSessionID == "" || s.lastActivity.IsZero() {
+		return
+	}
+
+	if time.Since(s.lastActivity) > timeout {
+		// Auto-end the session
+		summary := "Auto-ended due to inactivity"
+		if err := s.butler.EndSession(s.currentSessionID, "timeout", summary); err == nil {
+			s.sessionAutoEndedMsg = fmt.Sprintf("⚠️ **Session Auto-Ended** (ID: `%s`)\n\nThe previous session was automatically ended due to inactivity (%d minutes).\nCall `session_init` to start a new session.\n\n---\n\n",
+				s.currentSessionID, int(timeout.Minutes()))
+			s.sessionAutoEnded = true
+			s.currentSessionID = ""
+			s.autoSessionUsed = false
+		}
+	}
+}
+
+// updateLastActivity records the time of the last tool call.
+func (s *MCPServer) updateLastActivity() {
+	s.lastActivity = time.Now()
+}
+
+// trackFileAccess records that a file was accessed by this session.
+func (s *MCPServer) trackFileAccess(filePath string) {
+	if filePath == "" {
+		return
+	}
+	if s.trackedFiles == nil {
+		s.trackedFiles = make(map[string]time.Time)
+	}
+	s.trackedFiles[filePath] = time.Now()
+}
+
+// checkFileConflicts checks if any tracked files have been modified by other agents.
+// Returns a list of conflict warnings to show in the response.
+func (s *MCPServer) checkFileConflicts() []string {
+	// Check if conflict monitoring is enabled
+	cfg := s.butler.Config()
+	if cfg == nil || cfg.Autonomy == nil || !cfg.Autonomy.ConflictMonitoring {
+		return nil
+	}
+
+	if len(s.trackedFiles) == 0 || s.currentSessionID == "" {
+		return nil
+	}
+
+	var warnings []string
+	mem := s.butler.Memory()
+
+	for filePath, lastAccess := range s.trackedFiles {
+		// Check if another agent has modified this file since we last accessed it
+		conflict, err := mem.CheckConflict(filePath, s.currentSessionID)
+		if err != nil || conflict == nil {
+			continue
+		}
+
+		// Only warn if the conflict is newer than our last access
+		if conflict.LastTouched.After(lastAccess) {
+			warnings = append(warnings, fmt.Sprintf("⚠️ File `%s` was modified by **%s** since you last accessed it (at %s)",
+				filePath, conflict.OtherAgent, conflict.LastTouched.Format("15:04:05")))
+		}
+	}
+
+	return warnings
+}
+
+// formatConflictWarnings formats conflict warnings for inclusion in response.
+func (s *MCPServer) formatConflictWarnings(warnings []string) string {
+	if len(warnings) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("## ⚠️ Conflict Warnings\n\n")
+	for _, w := range warnings {
+		sb.WriteString(w)
+		sb.WriteString("\n")
+	}
+	sb.WriteString("\n---\n\n")
+	return sb.String()
+}
+
+// checkBriefingUpdates checks for new learnings, decisions, or postmortems since last briefing.
+// Returns a formatted update string or empty if no updates or rate limited.
+func (s *MCPServer) checkBriefingUpdates() string {
+	// Check if proactive briefing is enabled
+	cfg := s.butler.Config()
+	if cfg == nil || cfg.Autonomy == nil || !cfg.Autonomy.ProactiveBriefing {
+		return ""
+	}
+
+	// Rate limit: max 1 update per 5 minutes
+	if !s.lastBriefingTime.IsZero() && time.Since(s.lastBriefingTime) < 5*time.Minute {
+		return ""
+	}
+
+	// If no session, no briefing updates
+	if s.currentSessionID == "" {
+		return ""
+	}
+
+	// Get counts of new items since last briefing
+	mem := s.butler.Memory()
+	since := s.lastBriefingTime
+	if since.IsZero() {
+		// First time - use session start or 1 hour ago
+		since = time.Now().Add(-1 * time.Hour)
+	}
+
+	var updates []string
+
+	// Check for new learnings
+	if learnings, err := mem.GetLearningsSince(since); err == nil && len(learnings) > 0 {
+		updates = append(updates, fmt.Sprintf("📚 **%d new learning(s)** added to the knowledge base", len(learnings)))
+	}
+
+	// Check for new decisions
+	if decisions, err := mem.GetDecisionsSince(since, 10); err == nil && len(decisions) > 0 {
+		updates = append(updates, fmt.Sprintf("📋 **%d new decision(s)** recorded", len(decisions)))
+	}
+
+	// Check for new postmortems
+	if postmortems, err := mem.GetPostmortemsSince(since); err == nil && len(postmortems) > 0 {
+		updates = append(updates, fmt.Sprintf("🔥 **%d new postmortem(s)** - review for critical learnings!", len(postmortems)))
+	}
+
+	if len(updates) == 0 {
+		return ""
+	}
+
+	// Update last briefing time
+	s.lastBriefingTime = time.Now()
+
+	var sb strings.Builder
+	sb.WriteString("## 📰 Context Updates\n\n")
+	for _, u := range updates {
+		sb.WriteString("- ")
+		sb.WriteString(u)
+		sb.WriteString("\n")
+	}
+	sb.WriteString("\nUse `recall` or `recall_decisions` to explore these updates.\n\n---\n\n")
+	return sb.String()
+}
+
+// cleanupOnDisconnect ends any active session when the MCP connection is closed.
+func (s *MCPServer) cleanupOnDisconnect() {
+	if s.currentSessionID == "" {
+		return
+	}
+
+	// End the session with "disconnected" outcome
+	summary := "MCP connection closed"
+	if err := s.butler.EndSession(s.currentSessionID, "disconnected", summary); err != nil {
+		// Log the error but don't fail - we're already shutting down
+		fmt.Fprintf(os.Stderr, "Warning: failed to cleanup session %s on disconnect: %v\n", s.currentSessionID, err)
+		return
+	}
+
+	s.currentSessionID = ""
+	s.autoSessionUsed = false
+}
+
+// ensureSession auto-creates a session if needed and returns the session ID.
+// Returns empty string if auto-session is disabled or if creation fails.
+func (s *MCPServer) ensureSession(agentName string) (string, bool, error) {
+	// If we already have a session, return it
+	if s.currentSessionID != "" {
+		return s.currentSessionID, false, nil
+	}
+
+	// Check if auto-session is enabled
+	cfg := s.butler.Config()
+	if cfg == nil || cfg.Autonomy == nil || !cfg.Autonomy.AutoSession {
+		return "", false, nil
+	}
+
+	// Auto-create session
+	if agentName == "" {
+		agentName = "unknown"
+	}
+	// StartSession takes (agentType, agentID, goal)
+	agentID := fmt.Sprintf("auto-%s-%d", agentName, time.Now().UnixNano())
+	session, err := s.butler.Memory().StartSession(agentName, agentID, "auto-created session")
+	if err != nil {
+		return "", false, err
+	}
+
+	s.currentSessionID = session.ID
+	s.autoSessionUsed = true
+	return session.ID, true, nil
+}
+
 // Serve runs the MCP server, reading JSON-RPC requests from stdin.
 func (s *MCPServer) Serve() error {
+	// Start session timeout checker (if configured)
+	s.startSessionTimeoutChecker()
+	defer s.stopSessionTimeoutChecker()
+	defer s.cleanupOnDisconnect() // Cleanup sessions on exit
+
 	for {
 		line, err := s.reader.ReadString('\n')
 		if err != nil {
@@ -288,8 +580,67 @@ func (s *MCPServer) handleToolsList(req jsonRPCRequest) jsonRPCResponse {
 	}
 }
 
+// toolsRequiringSession lists tools that benefit from session tracking.
+// These are tools that perform actions (not just queries) and need context.
+var toolsRequiringSession = map[string]bool{
+	"file_context":        true,
+	"store":               true,
+	"store_direct":        true,
+	"recall_outcome":      true,
+	"recall_link":         true,
+	"recall_unlink":       true,
+	"recall_obsolete":     true,
+	"recall_archive":      true,
+	"session_log":         true,
+	"context_auto_inject": true,
+}
+
+// toolsCreatingSession lists tools that create their own sessions.
+var toolsCreatingSession = map[string]bool{
+	"session_init":  true,
+	"session_start": true,
+}
+
+// autoActivityMapping maps tool names to their auto-log activity kinds.
+var autoActivityMapping = map[string]struct {
+	kind   string
+	target func(args map[string]interface{}) string
+}{
+	"file_context": {
+		kind:   "file_focus",
+		target: func(args map[string]interface{}) string { v, _ := args["file_path"].(string); return v },
+	},
+	"context_auto_inject": {
+		kind:   "file_focus",
+		target: func(args map[string]interface{}) string { v, _ := args["file_path"].(string); return v },
+	},
+	"explore": {
+		kind:   "search",
+		target: func(args map[string]interface{}) string { v, _ := args["query"].(string); return v },
+	},
+	"explore_context": {
+		kind:   "search",
+		target: func(args map[string]interface{}) string { v, _ := args["task"].(string); return v },
+	},
+	"store": {
+		kind:   "knowledge_create",
+		target: func(args map[string]interface{}) string { v, _ := args["as"].(string); return v },
+	},
+	"recall": {
+		kind:   "knowledge_query",
+		target: func(args map[string]interface{}) string { v, _ := args["query"].(string); return v },
+	},
+	"recall_decisions": {
+		kind:   "knowledge_query",
+		target: func(args map[string]interface{}) string { v, _ := args["query"].(string); return v },
+	},
+}
+
 // handleToolsCall dispatches a tool call to the appropriate handler.
 func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
+	// Update activity timestamp for session timeout tracking
+	s.updateLastActivity()
+
 	var params mcpToolCallParams
 	if err := json.Unmarshal(req.Params, &params); err != nil {
 		return jsonRPCResponse{
@@ -308,169 +659,364 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 		}
 	}
 
+	// Check if session was auto-ended due to timeout and capture the message
+	var sessionTimeoutMsg string
+	if s.sessionAutoEnded {
+		sessionTimeoutMsg = s.sessionAutoEndedMsg
+		s.sessionAutoEnded = false
+		s.sessionAutoEndedMsg = ""
+	}
+
+	// Auto-session: create session if needed for tools that benefit from tracking
+	var autoSessionWarning string
+	if toolsRequiringSession[params.Name] && !toolsCreatingSession[params.Name] {
+		agentName := "unknown"
+		if name, ok := params.Arguments["agent_name"].(string); ok && name != "" {
+			agentName = name
+		} else if name, ok := params.Arguments["agentType"].(string); ok && name != "" {
+			agentName = name
+		}
+		sessionID, wasCreated, err := s.ensureSession(agentName)
+		if err != nil {
+			// Log but don't fail - auto-session is a convenience feature
+			autoSessionWarning = fmt.Sprintf("⚠️ Warning: Could not auto-create session: %v\n\n", err)
+		} else if wasCreated {
+			autoSessionWarning = fmt.Sprintf("⚠️ **Auto-Session Created** (ID: `%s`)\n\nFor better tracking, call `session_init` at the start of your work.\n\n---\n\n", sessionID)
+		}
+	}
+
+	// Proactive conflict monitoring: check for conflicts on tracked files
+	conflictWarnings := s.checkFileConflicts()
+
+	// Dispatch to tool handler
+	resp := s.dispatchTool(req.ID, params)
+
+	// Track file access for file-related tools (after successful dispatch)
+	if resp.Error == nil {
+		if filePath := s.extractFilePath(params.Name, params.Arguments); filePath != "" {
+			s.trackFileAccess(filePath)
+		}
+	}
+
+	// Auto-activity logging: log activities transparently
+	s.autoLogActivity(params.Name, params.Arguments, resp.Error == nil)
+
+	// Proactive briefing: check for knowledge updates
+	briefingUpdates := s.checkBriefingUpdates()
+
+	// Prepend any notification messages to the response
+	if resp.Error == nil {
+		if result, ok := resp.Result.(mcpToolResult); ok && len(result.Content) > 0 {
+			var prefix strings.Builder
+			if sessionTimeoutMsg != "" {
+				prefix.WriteString(sessionTimeoutMsg)
+			}
+			if conflictWarningsStr := s.formatConflictWarnings(conflictWarnings); conflictWarningsStr != "" {
+				prefix.WriteString(conflictWarningsStr)
+			}
+			if briefingUpdates != "" {
+				prefix.WriteString(briefingUpdates)
+			}
+			if autoSessionWarning != "" {
+				prefix.WriteString(autoSessionWarning)
+			}
+			if prefix.Len() > 0 {
+				result.Content[0].Text = prefix.String() + result.Content[0].Text
+				resp.Result = result
+			}
+		}
+	}
+
+	return resp
+}
+
+// extractFilePath extracts a file path from tool arguments if applicable.
+func (s *MCPServer) extractFilePath(toolName string, args map[string]interface{}) string {
+	switch toolName {
+	case "file_context", "context_auto_inject", "brief_file":
+		if path, ok := args["file_path"].(string); ok {
+			return path
+		}
+		if path, ok := args["path"].(string); ok {
+			return path
+		}
+	case "explore_file", "explore_impact":
+		if path, ok := args["file"].(string); ok {
+			return path
+		}
+		if path, ok := args["target"].(string); ok {
+			return path
+		}
+	}
+	return ""
+}
+
+// autoLogActivity logs an activity if auto-logging is enabled for this tool.
+func (s *MCPServer) autoLogActivity(toolName string, args map[string]interface{}, success bool) {
+	// Check if we have a session to log to
+	if s.currentSessionID == "" {
+		return
+	}
+
+	// Check if auto-logging is enabled
+	cfg := s.butler.Config()
+	if cfg == nil || cfg.Autonomy == nil || !cfg.Autonomy.AutoActivityLog {
+		return
+	}
+
+	// Check if this tool has auto-logging mapping
+	mapping, ok := autoActivityMapping[toolName]
+	if !ok {
+		return
+	}
+
+	// Get target from the mapping function
+	target := mapping.target(args)
+	if target == "" {
+		target = toolName // fallback to tool name
+	}
+
+	// Determine outcome
+	outcome := "success"
+	if !success {
+		outcome = "failure"
+	}
+
+	// Log the activity (fire and forget - don't affect the response)
+	act := memory.Activity{
+		Kind:    mapping.kind,
+		Target:  target,
+		Outcome: outcome,
+	}
+	_ = s.butler.Memory().LogActivity(s.currentSessionID, act)
+}
+
+// dispatchTool routes the tool call to the appropriate handler.
+//
+func (s *MCPServer) dispatchTool(id any, params mcpToolCallParams) jsonRPCResponse {
 	switch params.Name {
+	// Composite tools - streamlined workflows
+	case "session_init":
+		return s.toolSessionInit(id, params.Arguments)
+	case "file_context":
+		return s.toolFileContext(id, params.Arguments)
+
 	// Explore tools - search, context, symbols, graphs
 	case "explore":
-		return s.toolExplore(req.ID, params.Arguments)
+		return s.toolExplore(id, params.Arguments)
 	case "explore_rooms":
-		return s.toolExploreRooms(req.ID)
+		return s.toolExploreRooms(id)
 	case "explore_context":
-		return s.toolExploreContext(req.ID, params.Arguments)
+		return s.toolExploreContext(id, params.Arguments)
 	case "explore_impact":
-		return s.toolExploreImpact(req.ID, params.Arguments)
+		return s.toolExploreImpact(id, params.Arguments)
 	case "explore_symbols":
-		return s.toolExploreSymbols(req.ID, params.Arguments)
+		return s.toolExploreSymbols(id, params.Arguments)
 	case "explore_symbol":
-		return s.toolExploreSymbol(req.ID, params.Arguments)
+		return s.toolExploreSymbol(id, params.Arguments)
 	case "explore_file":
-		return s.toolExploreFile(req.ID, params.Arguments)
+		return s.toolExploreFile(id, params.Arguments)
 	case "explore_deps":
-		return s.toolExploreDeps(req.ID, params.Arguments)
+		return s.toolExploreDeps(id, params.Arguments)
 	case "explore_callers":
-		return s.toolExploreCallers(req.ID, params.Arguments)
+		return s.toolExploreCallers(id, params.Arguments)
 	case "explore_callees":
-		return s.toolExploreCallees(req.ID, params.Arguments)
+		return s.toolExploreCallees(id, params.Arguments)
 	case "explore_graph":
-		return s.toolExploreGraph(req.ID, params.Arguments)
+		return s.toolExploreGraph(id, params.Arguments)
 	case "get_route":
-		return s.toolGetRoute(req.ID, params.Arguments)
+		return s.toolGetRoute(id, params.Arguments)
 
 	// Store tools - store ideas, decisions, learnings
 	case "store":
-		return s.toolStore(req.ID, params.Arguments)
+		return s.toolStore(id, params.Arguments)
 	case "store_direct":
-		return s.toolStoreDirect(req.ID, params.Arguments)
+		return s.toolStoreDirect(id, params.Arguments)
 
 	// Governance tools - approve/reject proposals (human mode only)
 	case "approve":
-		return s.toolApprove(req.ID, params.Arguments)
+		return s.toolApprove(id, params.Arguments)
 	case "reject":
-		return s.toolReject(req.ID, params.Arguments)
+		return s.toolReject(id, params.Arguments)
 
 	// Recall tools - retrieve knowledge and manage relationships
 	case "recall":
-		return s.toolRecall(req.ID, params.Arguments)
+		return s.toolRecall(id, params.Arguments)
 	case "recall_decisions":
-		return s.toolRecallDecisions(req.ID, params.Arguments)
+		return s.toolRecallDecisions(id, params.Arguments)
 	case "recall_ideas":
-		return s.toolRecallIdeas(req.ID, params.Arguments)
+		return s.toolRecallIdeas(id, params.Arguments)
 	case "recall_outcome":
-		return s.toolRecallOutcome(req.ID, params.Arguments)
+		return s.toolRecallOutcome(id, params.Arguments)
 	case "recall_link":
-		return s.toolRecallLink(req.ID, params.Arguments)
+		return s.toolRecallLink(id, params.Arguments)
 	case "recall_links":
-		return s.toolRecallLinks(req.ID, params.Arguments)
+		return s.toolRecallLinks(id, params.Arguments)
 	case "recall_unlink":
-		return s.toolRecallUnlink(req.ID, params.Arguments)
+		return s.toolRecallUnlink(id, params.Arguments)
 
 	// Brief tools - get briefings and file intel
 	case "brief":
-		return s.toolBrief(req.ID, params.Arguments)
+		return s.toolBrief(id, params.Arguments)
 	case "brief_file":
-		return s.toolBriefFile(req.ID, params.Arguments)
+		return s.toolBriefFile(id, params.Arguments)
 	case "briefing_smart":
-		return s.toolBriefingSmart(req.ID, params.Arguments)
+		return s.toolBriefingSmart(id, params.Arguments)
 
 	// Session tools - manage agent sessions
 	case "session_start":
-		return s.toolSessionStart(req.ID, params.Arguments)
+		return s.toolSessionStart(id, params.Arguments)
 	case "session_log":
-		return s.toolSessionLog(req.ID, params.Arguments)
+		return s.toolSessionLog(id, params.Arguments)
 	case "session_end":
-		return s.toolSessionEnd(req.ID, params.Arguments)
+		return s.toolSessionEnd(id, params.Arguments)
 	case "session_conflict":
-		return s.toolSessionConflict(req.ID, params.Arguments)
+		return s.toolSessionConflict(id, params.Arguments)
 	case "session_list":
-		return s.toolSessionList(req.ID, params.Arguments)
+		return s.toolSessionList(id, params.Arguments)
+	case "session_resume":
+		return s.toolSessionResume(id, params.Arguments)
+	case "session_status":
+		return s.toolSessionStatus(id, params.Arguments)
+
+	// Handoff tools - multi-agent task handoff
+	case "handoff_create":
+		return s.toolHandoffCreate(id, params.Arguments)
+	case "handoff_list":
+		return s.toolHandoffList(id, params.Arguments)
+	case "handoff_accept":
+		return s.toolHandoffAccept(id, params.Arguments)
+	case "handoff_complete":
+		return s.toolHandoffComplete(id, params.Arguments)
 
 	// Conversation tools - store and search conversations
 	case "conversation_store":
-		return s.toolConversationStore(req.ID, params.Arguments)
+		return s.toolConversationStore(id, params.Arguments)
 	case "conversation_search":
-		return s.toolConversationSearch(req.ID, params.Arguments)
+		return s.toolConversationSearch(id, params.Arguments)
 	case "conversation_extract":
-		return s.toolConversationExtract(req.ID, params.Arguments)
+		return s.toolConversationExtract(id, params.Arguments)
 
 	// Corridor tools - personal cross-workspace learnings
 	case "corridor_learnings":
-		return s.toolCorridorLearnings(req.ID, params.Arguments)
+		return s.toolCorridorLearnings(id, params.Arguments)
 	case "corridor_links":
-		return s.toolCorridorLinks(req.ID, params.Arguments)
+		return s.toolCorridorLinks(id, params.Arguments)
 	case "corridor_stats":
-		return s.toolCorridorStats(req.ID, params.Arguments)
+		return s.toolCorridorStats(id, params.Arguments)
 	case "corridor_promote":
-		return s.toolCorridorPromote(req.ID, params.Arguments)
+		return s.toolCorridorPromote(id, params.Arguments)
 	case "corridor_reinforce":
-		return s.toolCorridorReinforce(req.ID, params.Arguments)
+		return s.toolCorridorReinforce(id, params.Arguments)
 
 	// Semantic Search Tools
 	case "search_semantic":
-		return s.toolSearchSemantic(req.ID, params.Arguments)
+		return s.toolSearchSemantic(id, params.Arguments)
 	case "search_hybrid":
-		return s.toolSearchHybrid(req.ID, params.Arguments)
+		return s.toolSearchHybrid(id, params.Arguments)
 	case "search_similar":
-		return s.toolSearchSimilar(req.ID, params.Arguments)
+		return s.toolSearchSimilar(id, params.Arguments)
 
 	// Embedding Management Tools
 	case "embedding_sync":
-		return s.toolEmbeddingSync(req.ID, params.Arguments)
+		return s.toolEmbeddingSync(id, params.Arguments)
 	case "embedding_stats":
-		return s.toolEmbeddingStats(req.ID, params.Arguments)
+		return s.toolEmbeddingStats(id, params.Arguments)
 
 	// Learning Lifecycle Tools
 	case "recall_learning_link":
-		return s.toolRecallLearningLink(req.ID, params.Arguments)
+		return s.toolRecallLearningLink(id, params.Arguments)
 	case "recall_obsolete":
-		return s.toolRecallObsolete(req.ID, params.Arguments)
+		return s.toolRecallObsolete(id, params.Arguments)
 	case "recall_archive":
-		return s.toolRecallArchive(req.ID, params.Arguments)
+		return s.toolRecallArchive(id, params.Arguments)
 	case "recall_learnings_by_status":
-		return s.toolRecallLearningsByStatus(req.ID, params.Arguments)
+		return s.toolRecallLearningsByStatus(id, params.Arguments)
 
 	// Contradiction Detection Tools
 	case "recall_contradictions":
-		return s.toolRecallContradictions(req.ID, params.Arguments)
+		return s.toolRecallContradictions(id, params.Arguments)
 	case "recall_contradiction_check":
-		return s.toolRecallContradictionCheck(req.ID, params.Arguments)
+		return s.toolRecallContradictionCheck(id, params.Arguments)
 	case "recall_contradiction_summary":
-		return s.toolRecallContradictionSummary(req.ID, params.Arguments)
+		return s.toolRecallContradictionSummary(id, params.Arguments)
 
 	// Decay Tools
 	case "decay_stats":
-		return s.toolDecayStats(req.ID, params.Arguments)
+		return s.toolDecayStats(id, params.Arguments)
 	case "decay_preview":
-		return s.toolDecayPreview(req.ID, params.Arguments)
+		return s.toolDecayPreview(id, params.Arguments)
 	case "decay_apply":
-		return s.toolDecayApply(req.ID, params.Arguments)
+		return s.toolDecayApply(id, params.Arguments)
 	case "decay_reinforce":
-		return s.toolDecayReinforce(req.ID, params.Arguments)
+		return s.toolDecayReinforce(id, params.Arguments)
 	case "decay_boost":
-		return s.toolDecayBoost(req.ID, params.Arguments)
+		return s.toolDecayBoost(id, params.Arguments)
 
 	// Context & Scope Tools
 	case "context_auto_inject":
-		return s.toolContextAutoInject(req.ID, params.Arguments)
+		return s.toolContextAutoInject(id, params.Arguments)
+	case "context_focus":
+		return s.toolContextFocus(id, params.Arguments)
+	case "context_get":
+		return s.toolContextGet(id, params.Arguments)
+	case "context_pin":
+		return s.toolContextPin(id, params.Arguments)
 	case "scope_explain":
-		return s.toolScopeExplain(req.ID, params.Arguments)
+		return s.toolScopeExplain(id, params.Arguments)
 
 	// Postmortem Tools
 	case "store_postmortem":
-		return s.toolStorePostmortem(req.ID, params.Arguments)
+		return s.toolStorePostmortem(id, params.Arguments)
 	case "get_postmortems":
-		return s.toolGetPostmortems(req.ID, params.Arguments)
+		return s.toolGetPostmortems(id, params.Arguments)
 	case "get_postmortem":
-		return s.toolGetPostmortem(req.ID, params.Arguments)
+		return s.toolGetPostmortem(id, params.Arguments)
 	case "resolve_postmortem":
-		return s.toolResolvePostmortem(req.ID, params.Arguments)
+		return s.toolResolvePostmortem(id, params.Arguments)
 	case "postmortem_stats":
-		return s.toolPostmortemStats(req.ID, params.Arguments)
+		return s.toolPostmortemStats(id, params.Arguments)
 	case "postmortem_to_learnings":
-		return s.toolPostmortemToLearnings(req.ID, params.Arguments)
+		return s.toolPostmortemToLearnings(id, params.Arguments)
+
+	// Analytics tools - workspace insights
+	case "analytics_sessions":
+		return s.toolSessionAnalytics(id, params.Arguments)
+	case "analytics_learnings":
+		return s.toolLearningEffectiveness(id, params.Arguments)
+	case "analytics_health":
+		return s.toolWorkspaceHealth(id, params.Arguments)
+
+	// Pattern tools - detected code pattern management
+	case "patterns_get":
+		return s.toolPatternsGet(id, params.Arguments)
+	case "pattern_show":
+		return s.toolPatternShow(id, params.Arguments)
+	case "pattern_approve":
+		return s.toolPatternApprove(id, params.Arguments)
+	case "pattern_ignore":
+		return s.toolPatternIgnore(id, params.Arguments)
+	case "pattern_stats":
+		return s.toolPatternStats(id, params.Arguments)
+
+	// Contract tools - FE-BE API contract management
+	case "contracts_get":
+		return s.toolContractsGet(id, params.Arguments)
+	case "contract_show":
+		return s.toolContractShow(id, params.Arguments)
+	case "contract_verify":
+		return s.toolContractVerify(id, params.Arguments)
+	case "contract_ignore":
+		return s.toolContractIgnore(id, params.Arguments)
+	case "contract_stats":
+		return s.toolContractStats(id, params.Arguments)
+	case "contract_mismatches":
+		return s.toolContractMismatches(id, params.Arguments)
 
 	default:
 		return jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      req.ID,
+			ID:      id,
 			Error:   &rpcError{Code: -32602, Message: fmt.Sprintf("Unknown tool: %s", params.Name)},
 		}
 	}

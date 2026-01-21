@@ -121,6 +121,18 @@ func (s *Server) Start(openBrowser bool) error {
 	mux.HandleFunc("/api/scope/explain", s.handleScopeExplain)
 	mux.HandleFunc("/api/scope/hierarchy", s.handleScopeHierarchy)
 
+	// Patterns API endpoints (Sprint 1)
+	mux.HandleFunc("/api/patterns/stats", s.handlePatternStats)
+	mux.HandleFunc("/api/patterns/bulk-approve", s.handlePatternBulkApprove)
+	mux.HandleFunc("/api/patterns/", s.handlePatternDetail)
+	mux.HandleFunc("/api/patterns", s.handlePatterns)
+
+	// Contracts API endpoints (Sprint 2)
+	mux.HandleFunc("/api/contracts/stats", s.handleContractStats)
+	mux.HandleFunc("/api/contracts/mismatches", s.handleContractMismatches)
+	mux.HandleFunc("/api/contracts/", s.handleContractDetail)
+	mux.HandleFunc("/api/contracts", s.handleContracts)
+
 	// Favicon handler (serves inline SVG regardless of which dashboard is used)
 	mux.HandleFunc("/favicon.ico", s.handleFavicon)
 	mux.HandleFunc("/favicon.svg", s.handleFavicon)

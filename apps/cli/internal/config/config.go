@@ -87,6 +87,9 @@ type PalaceConfig struct {
 
 	// Scope configuration for inheritance rules
 	Scope *ScopeConfig `json:"scope,omitempty"`
+
+	// Autonomy configuration for agent automation features
+	Autonomy *AutonomyConfig `json:"autonomy,omitempty"`
 }
 
 // DecayConfig holds configuration for confidence decay of learnings.
@@ -150,6 +153,37 @@ func DefaultScopeConfig() *ScopeConfig {
 		InheritFromPalace:   true,
 		InheritFromCorridor: false,
 		RoomDetection:       "first_dir",
+	}
+}
+
+// AutonomyConfig holds configuration for agent autonomy features.
+type AutonomyConfig struct {
+	// AutoSession: auto-create session when tools are called without active session
+	AutoSession bool `json:"autoSession"`
+	// AutoActivityLog: auto-log activities when certain tools are called
+	AutoActivityLog bool `json:"autoActivityLog"`
+	// SessionTimeoutMinutes: auto-end sessions after inactivity (0 = disabled)
+	SessionTimeoutMinutes int `json:"sessionTimeoutMinutes"`
+	// ConflictMonitoring: check for conflicts in background
+	ConflictMonitoring bool `json:"conflictMonitoring"`
+	// ProactiveBriefing: include context updates in responses
+	ProactiveBriefing bool `json:"proactiveBriefing"`
+	// ContradictionPreCheck: check for contradictions before store
+	ContradictionPreCheck bool `json:"contradictionPreCheck"`
+	// AutoApproveThreshold: auto-approve learnings with confidence >= threshold (0 = disabled)
+	AutoApproveThreshold float64 `json:"autoApproveThreshold"`
+}
+
+// DefaultAutonomyConfig returns the default autonomy configuration.
+func DefaultAutonomyConfig() *AutonomyConfig {
+	return &AutonomyConfig{
+		AutoSession:           true,
+		AutoActivityLog:       true,
+		SessionTimeoutMinutes: 30,
+		ConflictMonitoring:    true,
+		ProactiveBriefing:     true,
+		ContradictionPreCheck: true,
+		AutoApproveThreshold:  0, // Disabled by default
 	}
 }
 

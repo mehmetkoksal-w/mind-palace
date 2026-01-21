@@ -312,6 +312,37 @@ func (m *Memory) CountProposals(status string) (int, error) {
 	return count, err
 }
 
+// GetProposalsBySession returns proposals created during a specific session.
+func (m *Memory) GetProposalsBySession(sessionID string) ([]Proposal, error) {
+	query := `SELECT id, proposed_as, content, context, rationale, scope, scope_path, source, session_id, agent_type, evidence_refs, classification_confidence, classification_signals, dedupe_key, status, reviewed_by, reviewed_at, review_note, promoted_to_id, created_at, expires_at, archived_at
+		FROM proposals WHERE session_id = ?
+		ORDER BY created_at DESC`
+
+	rows, err := m.db.QueryContext(context.Background(), query, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("query proposals by session: %w", err)
+	}
+	defer rows.Close()
+
+	var proposals []Proposal
+	for rows.Next() {
+		var p Proposal
+		var createdAt, expiresAt, reviewedAt, archivedAt string
+		if err := rows.Scan(&p.ID, &p.ProposedAs, &p.Content, &p.Context, &p.Rationale, &p.Scope, &p.ScopePath, &p.Source, &p.SessionID, &p.AgentType, &p.EvidenceRefs, &p.ClassificationConfidence, &p.ClassificationSignals, &p.DedupeKey, &p.Status, &p.ReviewedBy, &reviewedAt, &p.ReviewNote, &p.PromotedToID, &createdAt, &expiresAt, &archivedAt); err != nil {
+			continue
+		}
+		p.CreatedAt = parseTimeOrZero(createdAt)
+		p.ExpiresAt = parseTimeOrZero(expiresAt)
+		p.ReviewedAt = parseTimeOrZero(reviewedAt)
+		p.ArchivedAt = parseTimeOrZero(archivedAt)
+		proposals = append(proposals, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate proposals by session: %w", err)
+	}
+	return proposals, nil
+}
+
 // ApproveProposal approves a proposal and creates the corresponding decision/learning.
 // Returns the ID of the promoted record.
 func (m *Memory) ApproveProposal(proposalID, reviewedBy, reviewNote string) (string, error) {

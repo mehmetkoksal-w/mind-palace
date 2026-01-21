@@ -193,6 +193,7 @@ func (m *Memory) SearchDecisionsWithAuthority(query string, limit int, authorita
 		}
 	}
 
+	//nolint:gosec // G202: authFilter is built from constant authority values, not user input
 	sqlQuery := `
 		SELECT d.id, d.content, d.rationale, d.context, d.status, d.outcome, d.outcome_note, d.outcome_at, d.scope, d.scope_path, d.session_id, d.source, d.authority, d.promoted_from_proposal_id, d.created_at, d.updated_at
 		FROM decisions d
@@ -230,6 +231,8 @@ func (m *Memory) SearchDecisionsWithAuthority(query string, limit int, authorita
 }
 
 // searchDecisionsLike is a fallback search using LIKE.
+//
+//nolint:unparam // limit is a parameter for API consistency
 func (m *Memory) searchDecisionsLike(query string, limit int) ([]Decision, error) {
 	return m.searchDecisionsLikeWithAuthority(query, limit, true)
 }
@@ -247,6 +250,7 @@ func (m *Memory) searchDecisionsLikeWithAuthority(query string, limit int, autho
 		}
 	}
 
+	//nolint:gosec // G202: authFilter is built from constant authority values, not user input
 	sqlQuery := `
 		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at
 		FROM decisions
@@ -393,6 +397,7 @@ func (m *Memory) GetDecisionsAwaitingReview(olderThanDays, limit int) ([]Decisio
 	authVals := AuthoritativeValuesStrings()
 	authPlaceholders := SQLPlaceholders(len(authVals))
 
+	//nolint:gosec // G202: authPlaceholders is computed from constant authority values count
 	query := `
 		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at
 		FROM decisions
@@ -437,6 +442,7 @@ func (m *Memory) GetDecisionsSince(since time.Time, limit int) ([]Decision, erro
 	authVals := AuthoritativeValuesStrings()
 	authPlaceholders := SQLPlaceholders(len(authVals))
 
+	//nolint:gosec // G202: authPlaceholders is computed from constant authority values count
 	query := `
 		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at
 		FROM decisions
@@ -638,6 +644,7 @@ func (m *Memory) GetDecisionTimeline(scope, scopePath string, limit int) ([]Deci
 	authVals := AuthoritativeValuesStrings()
 	authPlaceholders := SQLPlaceholders(len(authVals))
 
+	//nolint:gosec // G202: authPlaceholders is computed from constant authority values count
 	query := `
 		SELECT id, content, rationale, context, status, outcome, outcome_note, outcome_at, scope, scope_path, session_id, source, authority, promoted_from_proposal_id, created_at, updated_at
 		FROM decisions

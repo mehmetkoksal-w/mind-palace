@@ -536,3 +536,94 @@ func (m *Memory) GetDecisionsForLearning(learningID string) ([]Decision, error) 
 	}
 	return decisions, nil
 }
+
+// GetLearningsByEffectiveness returns learnings sorted by effectiveness metrics.
+// sortBy can be: "use_count", "confidence", or "combined" (default)
+func (m *Memory) GetLearningsByEffectiveness(limit int, sortBy string) ([]Learning, error) {
+	authVals := AuthoritativeValuesStrings()
+	authPlaceholders := SQLPlaceholders(len(authVals))
+
+	orderClause := "use_count DESC, confidence DESC" // default: combined
+	switch sortBy {
+	case "use_count":
+		orderClause = "use_count DESC"
+	case "confidence":
+		orderClause = "confidence DESC"
+	}
+
+	query := `
+		SELECT id, session_id, scope, scope_path, content, confidence, source, authority, promoted_from_proposal_id, created_at, last_used, use_count
+		FROM learnings
+		WHERE authority IN (` + authPlaceholders + `)
+		ORDER BY ` + orderClause + `
+		LIMIT ?
+	`
+	args := []interface{}{}
+	for _, v := range authVals {
+		args = append(args, v)
+	}
+	args = append(args, limit)
+
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query learnings by effectiveness: %w", err)
+	}
+	defer rows.Close()
+
+	var learnings []Learning
+	for rows.Next() {
+		var l Learning
+		var createdAt, lastUsed string
+		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &l.Authority, &l.PromotedFromProposalID, &createdAt, &lastUsed, &l.UseCount); err != nil {
+			return nil, fmt.Errorf("scan learning: %w", err)
+		}
+		l.CreatedAt = parseTimeOrZero(createdAt)
+		l.LastUsed = parseTimeOrZero(lastUsed)
+		learnings = append(learnings, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
+	}
+	return learnings, nil
+}
+
+// GetLearningsSince returns learnings created after the given time.
+// Used for proactive briefing updates.
+func (m *Memory) GetLearningsSince(since time.Time) ([]Learning, error) {
+	authVals := AuthoritativeValuesStrings()
+	authPlaceholders := SQLPlaceholders(len(authVals))
+
+	query := `
+		SELECT id, session_id, scope, scope_path, content, confidence, source, authority, promoted_from_proposal_id, created_at, last_used, use_count
+		FROM learnings
+		WHERE created_at > ? AND authority IN (` + authPlaceholders + `)
+		ORDER BY created_at DESC
+		LIMIT 10
+	`
+	args := []interface{}{since.Format(time.RFC3339)}
+	for _, v := range authVals {
+		args = append(args, v)
+	}
+
+	rows, err := m.db.QueryContext(context.Background(), query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query learnings since: %w", err)
+	}
+	defer rows.Close()
+
+	var learnings []Learning
+	for rows.Next() {
+		var l Learning
+		var createdAt, lastUsed string
+		if err := rows.Scan(&l.ID, &l.SessionID, &l.Scope, &l.ScopePath, &l.Content, &l.Confidence, &l.Source, &l.Authority, &l.PromotedFromProposalID, &createdAt, &lastUsed, &l.UseCount); err != nil {
+			return nil, fmt.Errorf("scan learning: %w", err)
+		}
+		l.CreatedAt = parseTimeOrZero(createdAt)
+		l.LastUsed = parseTimeOrZero(lastUsed)
+		learnings = append(learnings, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learnings: %w", err)
+	}
+	return learnings, nil
+}

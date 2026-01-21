@@ -31,6 +31,7 @@ type Result struct {
 }
 
 // Run collects context from the palace index for the given root and diff range.
+//
 func Run(root, diffRange string, opts Options) (Result, error) {
 	rootPath, err := filepath.Abs(root)
 	if err != nil {
@@ -246,7 +247,7 @@ func collectEntryPoints(rootPath, roomName string) []string {
 	if err := jsonc.DecodeFile(roomPath, &room); err != nil {
 		return nil
 	}
-	var entries []string
+	entries := make([]string, 0, len(room.EntryPoints))
 	for _, ep := range room.EntryPoints {
 		entries = append(entries, filepath.ToSlash(ep))
 	}

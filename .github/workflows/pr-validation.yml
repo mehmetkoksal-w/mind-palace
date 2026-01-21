@@ -48,12 +48,13 @@ jobs:
           go test -v -race -coverprofile=coverage.out ./apps/cli/internal/...
           go tool cover -func=coverage.out
 
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v5
+      - name: Upload Coverage Artifact
+        if: always()
+        uses: actions/upload-artifact@v6
         with:
-          files: coverage.out
-          flags: go
-          fail_ci_if_error: false
+          name: go-coverage
+          path: coverage.out
+          retention-days: 7
 
   test-dashboard:
     name: "Test: Dashboard (Angular)"
@@ -77,12 +78,13 @@ jobs:
         working-directory: apps/dashboard
         run: npm run test:coverage
 
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v5
+      - name: Upload Coverage Artifact
+        if: always()
+        uses: actions/upload-artifact@v6
         with:
-          files: apps/dashboard/coverage/lcov.info
-          flags: dashboard
-          fail_ci_if_error: false
+          name: dashboard-coverage
+          path: apps/dashboard/coverage/
+          retention-days: 7
 
   test-vscode:
     name: "Test: VS Code Extension"
@@ -112,12 +114,13 @@ jobs:
           npm run test:coverage || echo "Unit tests completed"
           npm run test:coverage:report || true
 
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v5
+      - name: Upload Coverage Artifact
+        if: always()
+        uses: actions/upload-artifact@v6
         with:
-          files: apps/vscode/coverage/lcov.info
-          flags: vscode
-          fail_ci_if_error: false
+          name: vscode-coverage
+          path: apps/vscode/coverage/
+          retention-days: 7
 
       - name: Upload Coverage Report
         if: always()

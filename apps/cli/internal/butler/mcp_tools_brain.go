@@ -133,24 +133,84 @@ func (s *MCPServer) toolStore(id any, args map[string]interface{}) jsonRPCRespon
 
 	var output strings.Builder
 	if isProposal {
-		output.WriteString("# Proposal Created\n\n")
-		fmt.Fprintf(&output, "**ID:** `%s`\n", recordID)
-		fmt.Fprintf(&output, "**Type:** %s (proposal)\n", kind)
-		fmt.Fprintf(&output, "**Status:** pending\n")
-		fmt.Fprintf(&output, "**Classification Confidence:** %.0f%%\n", classification.Confidence*100)
-		if len(classification.Signals) > 0 {
-			fmt.Fprintf(&output, "**Signals:** %v\n", classification.Signals)
+		// Pre-check for contradictions if enabled (proactive warning for proposals)
+		var preCheckContradictions []memory.ContradictionResult
+		cfg := s.butler.Config()
+		if cfg != nil && cfg.Autonomy != nil && cfg.Autonomy.ContradictionPreCheck {
+			if llmClient, err := s.butler.GetLLMClient(); err == nil && llmClient != nil {
+				analyzer := memory.NewLLMContradictionAnalyzer(llmClient)
+				embedder := s.butler.GetEmbedder()
+				preCheckContradictions, _ = mem.PreCheckContradictions(content, string(kind), analyzer, embedder)
+			}
 		}
-		fmt.Fprintf(&output, "**Scope:** %s", scope)
-		if scopePath != "" {
-			fmt.Fprintf(&output, " (%s)", scopePath)
+
+		// Auto-approve: if threshold is set, confidence is high enough, and no contradictions
+		autoApproved := false
+		var promotedID string
+		if cfg != nil && cfg.Autonomy != nil && cfg.Autonomy.AutoApproveThreshold > 0 {
+			threshold := cfg.Autonomy.AutoApproveThreshold
+			if classification.Confidence >= threshold && len(preCheckContradictions) == 0 {
+				// Attempt auto-approve
+				if approved, approveErr := mem.ApproveProposal(recordID, "auto-approve", fmt.Sprintf("Auto-approved: confidence %.0f%% >= threshold %.0f%%", classification.Confidence*100, threshold*100)); approveErr == nil {
+					autoApproved = true
+					promotedID = approved
+				}
+			}
 		}
-		output.WriteString("\n")
-		fmt.Fprintf(&output, "\n**Content:** %s\n", content)
-		output.WriteString("\n---\n")
-		output.WriteString("This proposal requires human approval before becoming authoritative.\n")
-		output.WriteString("Use `palace proposals` to view pending proposals.\n")
-		output.WriteString("Use `palace approve <id>` to approve this proposal.\n")
+
+		if autoApproved {
+			output.WriteString("# ✅ Proposal Auto-Approved\n\n")
+			fmt.Fprintf(&output, "**Proposal ID:** `%s`\n", recordID)
+			fmt.Fprintf(&output, "**Promoted Record ID:** `%s`\n", promotedID)
+			fmt.Fprintf(&output, "**Type:** %s\n", kind)
+			fmt.Fprintf(&output, "**Classification Confidence:** %.0f%%\n", classification.Confidence*100)
+			if len(classification.Signals) > 0 {
+				fmt.Fprintf(&output, "**Signals:** %v\n", classification.Signals)
+			}
+			fmt.Fprintf(&output, "**Scope:** %s", scope)
+			if scopePath != "" {
+				fmt.Fprintf(&output, " (%s)", scopePath)
+			}
+			output.WriteString("\n")
+			fmt.Fprintf(&output, "\n**Content:** %s\n", content)
+			output.WriteString("\n---\n")
+			output.WriteString("This proposal was automatically approved because:\n")
+			fmt.Fprintf(&output, "- Classification confidence (%.0f%%) >= auto-approve threshold (%.0f%%)\n", classification.Confidence*100, cfg.Autonomy.AutoApproveThreshold*100)
+			output.WriteString("- No contradictions were detected\n")
+		} else {
+			output.WriteString("# Proposal Created\n\n")
+			fmt.Fprintf(&output, "**ID:** `%s`\n", recordID)
+			fmt.Fprintf(&output, "**Type:** %s (proposal)\n", kind)
+			fmt.Fprintf(&output, "**Status:** pending\n")
+			fmt.Fprintf(&output, "**Classification Confidence:** %.0f%%\n", classification.Confidence*100)
+			if len(classification.Signals) > 0 {
+				fmt.Fprintf(&output, "**Signals:** %v\n", classification.Signals)
+			}
+			fmt.Fprintf(&output, "**Scope:** %s", scope)
+			if scopePath != "" {
+				fmt.Fprintf(&output, " (%s)", scopePath)
+			}
+			output.WriteString("\n")
+			fmt.Fprintf(&output, "\n**Content:** %s\n", content)
+
+			// Show contradiction warnings if any
+			if len(preCheckContradictions) > 0 {
+				output.WriteString("\n---\n\n")
+				output.WriteString("## ⚠️ Potential Contradictions Detected\n\n")
+				output.WriteString("The following existing records may contradict this proposal:\n\n")
+				for i, c := range preCheckContradictions {
+					fmt.Fprintf(&output, "### %d. `%s` (%.0f%% confidence)\n\n", i+1, c.Record2ID, c.Confidence*100)
+					fmt.Fprintf(&output, "**Type:** %s\n", c.ContradictType)
+					fmt.Fprintf(&output, "**Explanation:** %s\n\n", c.Explanation)
+				}
+				output.WriteString("Consider reviewing these records before approval.\n")
+			}
+
+			output.WriteString("\n---\n")
+			output.WriteString("This proposal requires human approval before becoming authoritative.\n")
+			output.WriteString("Use `palace proposals` to view pending proposals.\n")
+			output.WriteString("Use `palace approve <id>` to approve this proposal.\n")
+		}
 	} else {
 		output.WriteString("# Thought Remembered\n\n")
 		fmt.Fprintf(&output, "**ID:** `%s`\n", recordID)
@@ -326,6 +386,22 @@ func (s *MCPServer) toolRecallDecisions(id any, args map[string]interface{}) jso
 				fmt.Fprintf(&output, "**Rationale:** %s\n", d.Rationale)
 			}
 			fmt.Fprintf(&output, "**Created:** %s\n\n", d.CreatedAt.Format(time.RFC3339))
+		}
+	}
+
+	// Related Knowledge Suggestions: when querying, also suggest related learnings
+	if query != "" {
+		cfg := s.butler.Config()
+		if cfg != nil && cfg.Autonomy != nil && cfg.Autonomy.ProactiveBriefing {
+			// Find related learnings (max 3)
+			if learnings, lErr := s.butler.SearchLearnings(query, 3); lErr == nil && len(learnings) > 0 {
+				output.WriteString("---\n\n## 💡 Related Learnings\n\n")
+				for i := range learnings {
+					l := &learnings[i]
+					fmt.Fprintf(&output, "- `%s` (%.0f%%): %s\n", l.ID, l.Confidence*100, truncateString(l.Content, 80))
+				}
+				output.WriteString("\nUse `recall` to explore these further.\n")
+			}
 		}
 	}
 

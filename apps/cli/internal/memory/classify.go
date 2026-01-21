@@ -198,7 +198,7 @@ func (m *Memory) ClassifyAndStore(text, source, sessionID string) (string, Recor
 		}
 		id, err = m.AddIdea(idea)
 		if err == nil && len(tags) > 0 {
-			m.SetTags(id, string(RecordKindIdea), tags)
+			_ = m.SetTags(id, string(RecordKindIdea), tags)
 		}
 
 	case RecordKindDecision:
@@ -209,7 +209,7 @@ func (m *Memory) ClassifyAndStore(text, source, sessionID string) (string, Recor
 		}
 		id, err = m.AddDecision(decision)
 		if err == nil && len(tags) > 0 {
-			m.SetTags(id, string(RecordKindDecision), tags)
+			_ = m.SetTags(id, string(RecordKindDecision), tags)
 		}
 
 	case RecordKindLearning:
@@ -220,7 +220,7 @@ func (m *Memory) ClassifyAndStore(text, source, sessionID string) (string, Recor
 		}
 		id, err = m.AddLearning(learning)
 		if err == nil && len(tags) > 0 {
-			m.SetTags(id, string(RecordKindLearning), tags)
+			_ = m.SetTags(id, string(RecordKindLearning), tags)
 		}
 	}
 

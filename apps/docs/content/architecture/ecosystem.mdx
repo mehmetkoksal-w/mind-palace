@@ -5,6 +5,7 @@ Mind Palace is a monorepo containing all ecosystem components.
 | Component | Language | Location |
 |-----------|----------|----------|
 | CLI | Go | `apps/cli`, `apps/cli/internal/` |
+| LSP Server | Go | `apps/cli/internal/lsp/` |
 | Dashboard | Angular | `apps/dashboard` |
 | VS Code Extension | TypeScript | `apps/vscode` |
 | Public API | Go | `pkg/` |
@@ -24,7 +25,7 @@ Mind Palace is a monorepo containing all ecosystem components.
 │                 │  │   (Observer)    │      │ (Claude, etc.)  │
 └────────┬────────┘  └────────┬────────┘      └────────┬────────┘
          │                    │                         │
-         │ CLI commands       │ Spawns CLI              │ MCP protocol
+         │ CLI commands       │ LSP + CLI               │ MCP protocol
          │                    │                         │
          └────────────────────┼─────────────────────────┘
                               │
@@ -35,7 +36,7 @@ Mind Palace is a monorepo containing all ecosystem components.
 │  │  scan    │ │ collect  │ │  verify  │ │   ask    │ │  serve   │  │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘  │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
-│  │ session  │ │  learn   │ │ corridor │ │dashboard │ │  update  │  │
+│  │ session  │ │  learn   │ │ corridor │ │dashboard │ │   lsp    │  │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘  │
 └─────────────────────────────────────────────────────────────────────┘
                               │

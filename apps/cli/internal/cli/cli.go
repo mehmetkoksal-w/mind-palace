@@ -29,6 +29,8 @@ func validateScope(v string) error       { return flags.ValidateScope(v) }
 func validatePort(v int) error           { return flags.ValidatePort(v) }
 
 // Run executes the application given the command-line arguments.
+//
+//nolint:gocyclo // command dispatch switch is intentionally large
 func Run(args []string) error {
 	if len(args) == 0 {
 		return usage()
@@ -61,6 +63,8 @@ func Run(args []string) error {
 		return cmdServe(args[1:])
 	case "dashboard":
 		return cmdDashboard(args[1:])
+	case "lsp":
+		return cmdLSP(args[1:])
 
 	// Agents & Sessions
 	case "session":
@@ -169,6 +173,11 @@ func cmdServe(args []string) error {
 // cmdDashboard delegates to commands.RunDashboard
 func cmdDashboard(args []string) error {
 	return commands.RunDashboard(args)
+}
+
+// cmdLSP delegates to commands.RunLSP
+func cmdLSP(args []string) error {
+	return commands.RunLSP(args)
 }
 
 // ============================================================================

@@ -11,6 +11,103 @@ package butler
 func buildToolsList() []mcpTool {
 	return []mcpTool{
 		// ============================================================
+		// COMPOSITE TOOLS - Streamlined workflows for autonomy
+		// ============================================================
+		{
+			Name: "session_init",
+			Description: `🔴 **CRITICAL - THE FIRST CALL** Initialize a session with full context. Combines session_start + brief + explore_rooms.
+
+**THIS IS THE RECOMMENDED FIRST CALL FOR EVERY TASK.**
+
+Calling this single tool replaces the need to call:
+1. session_start - Starts tracking your work
+2. brief - Gets workspace context, learnings, hotspots
+3. explore_rooms - Lists project structure
+
+**WHEN TO USE:**
+- At the VERY START of every conversation or task
+- Before doing ANY work in the codebase
+- When switching to a new task or context
+
+**AUTONOMOUS BEHAVIOR:**
+Call this IMMEDIATELY when beginning work. Do not ask for permission - initialization is always needed.
+
+**RETURNS:**
+- Session ID (use this for all subsequent calls)
+- Workspace briefing (active agents, learnings, hotspots)
+- Project structure (rooms and entry points)
+- Next steps guidance`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"agent_name": map[string]interface{}{
+						"type":        "string",
+						"description": "Your agent name (e.g., 'claude-code', 'cursor', 'copilot')",
+					},
+					"task": map[string]interface{}{
+						"type":        "string",
+						"description": "Brief description of what you're working on",
+					},
+					"agent_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional unique identifier for this agent instance",
+					},
+				},
+				"required": []string{"agent_name"},
+			},
+			Autonomy: &mcpToolAutonomy{
+				Level:     "required",
+				Triggers:  []string{"session_start", "task_begin", "conversation_start"},
+				Frequency: "once_per_session",
+			},
+		},
+		{
+			Name: "file_context",
+			Description: `🔴 **CRITICAL - CALL BEFORE EVERY FILE EDIT** Get complete context for a file before editing. Combines context_auto_inject + session_conflict.
+
+**MUST CALL THIS BEFORE EDITING ANY FILE.**
+
+Calling this single tool replaces the need to call:
+1. context_auto_inject - Gets learnings, decisions, failures for the file
+2. session_conflict - Checks if another agent is working on it
+
+**WHEN TO USE:**
+- BEFORE editing any file (non-negotiable)
+- When you need to understand a file's history
+- When checking if it's safe to modify a file
+
+**AUTONOMOUS BEHAVIOR:**
+Call this automatically before ANY file modification. Do not skip this step even for "simple" changes.
+
+**RETURNS:**
+- Conflict warnings (if another agent is editing this file)
+- File-scoped learnings with priority explanations
+- Active decisions that apply to this file
+- Known failures and their severity
+- File edit history and failure rate
+- Next steps guidance`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"file_path": map[string]interface{}{
+						"type":        "string",
+						"description": "Path to the file you're about to edit",
+					},
+					"session_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Your session ID from session_init (for conflict detection)",
+					},
+				},
+				"required": []string{"file_path"},
+			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "required",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"before_file_edit", "before_file_modify"},
+				Frequency:     "per_file",
+			},
+		},
+		// ============================================================
 		// EXPLORE TOOLS - Search, context, symbols, and call graphs
 		// ============================================================
 		{
@@ -52,6 +149,12 @@ Quick discovery of relevant files and code locations. Like a 'smart grep' that u
 				},
 				"required": []string{"query"},
 			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "recommended",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"unknown_location", "feature_discovery", "code_search"},
+				Frequency:     "as_needed",
+			},
 		},
 		{
 			Name: "explore_rooms",
@@ -71,6 +174,12 @@ Understanding the conceptual organization of the project. Rooms are curated area
 			InputSchema: map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
+			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "recommended",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"session_start", "codebase_orientation"},
+				Frequency:     "once_per_session",
 			},
 		},
 		{
@@ -449,6 +558,12 @@ Agents should call this automatically after completing tasks, solving problems, 
 				},
 				"required": []string{"content"},
 			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "recommended",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"after_problem_solved", "after_decision_made", "after_pattern_discovered"},
+				Frequency:     "as_needed",
+			},
 		},
 		{
 			Name: "store_direct",
@@ -626,6 +741,12 @@ Agents should proactively search learnings when working in areas that might have
 						"default":     10,
 					},
 				},
+			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "optional",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"before_implementation", "knowledge_lookup", "pattern_search"},
+				Frequency:     "as_needed",
 			},
 		},
 		{
@@ -1023,6 +1144,12 @@ Activity logs build file intelligence (hotspots, failure rates), enable conflict
 				},
 				"required": []string{"sessionId", "kind", "target"},
 			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "recommended",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"after_file_edit", "after_file_read", "after_search", "after_command"},
+				Frequency:     "per_activity",
+			},
 		},
 		{
 			Name: "session_end",
@@ -1057,6 +1184,12 @@ Ending sessions properly releases file locks, records outcomes for learning conf
 					},
 				},
 				"required": []string{"sessionId"},
+			},
+			Autonomy: &mcpToolAutonomy{
+				Level:         "required",
+				Prerequisites: []string{"session_init"},
+				Triggers:      []string{"task_complete", "conversation_end", "context_switch"},
+				Frequency:     "once_per_session",
 			},
 		},
 		{
@@ -1118,6 +1251,62 @@ Provides visibility into workspace activity and helps diagnose coordination issu
 						"default":     20,
 					},
 				},
+			},
+		},
+		{
+			Name: "session_resume",
+			Description: `🟢 **RECOMMENDED** Resume a previous session to continue work.
+
+**WHEN TO USE:**
+- When continuing work from a previous conversation
+- When the agent was interrupted mid-task
+- To pick up where a timed-out session left off
+- When user says 'continue what we were doing' or 'resume'
+
+**AUTONOMOUS BEHAVIOR:**
+Offer to resume if a recent unfinished session exists for this agent type. Check for active handoffs associated with the session.
+
+**WHAT IT DOES:**
+- Reactivates a previous session
+- Restores context focus and tracked files
+- Shows previous activity and any active handoffs
+- Sets the resumed session as current`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"sessionId": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the session to resume. If not provided, finds the most recent resumable session.",
+					},
+					"agentType": map[string]interface{}{
+						"type":        "string",
+						"description": "Agent type to find a resumable session for (if sessionId not provided).",
+					},
+				},
+			},
+		},
+		{
+			Name: "session_status",
+			Description: `🟢 **RECOMMENDED** Get the current session status and context.
+
+**WHEN TO USE:**
+- To check if a session is active
+- To see current context focus and tracked files
+- When debugging session issues
+- To understand current working state
+
+**AUTONOMOUS BEHAVIOR:**
+Use when uncertain about current session state. Quick way to see what's active.
+
+**RETURNS:**
+- Current session info (ID, agent, task, duration)
+- Context focus and keywords
+- Tracked files
+- Activity summary
+- Active handoffs`,
+			InputSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
 			},
 		},
 
@@ -1835,6 +2024,93 @@ Understanding how scope inheritance works and why certain context is included fo
 				"required": []string{"file_path"},
 			},
 		},
+		{
+			Name: "context_focus",
+			Description: `🟢 **RECOMMENDED** Set your current task focus for smart context prioritization.
+
+**WHEN TO USE:**
+- At the start of a complex task to get focused context
+- When switching between different aspects of work
+- To ensure context is relevant to your current goal
+
+**WHAT IT DOES:**
+- Extracts keywords from your task description
+- Prioritizes learnings and decisions based on relevance to task
+- Allows pinning specific records for guaranteed inclusion
+
+**AUTONOMOUS BEHAVIOR:**
+Call this when starting a non-trivial task to improve context quality.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task": map[string]interface{}{
+						"type":        "string",
+						"description": "Description of your current task/goal. Leave empty to see current focus.",
+					},
+					"pin": map[string]interface{}{
+						"type":        "array",
+						"items":       map[string]interface{}{"type": "string"},
+						"description": "Optional list of record IDs to always include in context.",
+					},
+				},
+			},
+		},
+		{
+			Name: "context_get",
+			Description: `🟢 **RECOMMENDED** Get prioritized context based on current task focus.
+
+**WHEN TO USE:**
+- After setting context_focus to get relevant knowledge
+- When you need focused, prioritized context for the current task
+- Before starting work on a complex feature
+
+**WHAT IT RETURNS:**
+- Pinned learnings (always included)
+- Relevant learnings prioritized by task keywords
+- Active decisions
+- Warnings about contradictions or issues
+- Token usage estimate`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"file": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional file path to include file-specific context.",
+					},
+					"maxTokens": map[string]interface{}{
+						"type":        "integer",
+						"description": "Maximum tokens for context (default: 2000).",
+						"default":     2000,
+					},
+				},
+			},
+		},
+		{
+			Name: "context_pin",
+			Description: `🟡 **UTILITY** Pin or unpin specific records to always include in context.
+
+**WHEN TO USE:**
+- To ensure critical learnings are always visible
+- To pin a decision that affects all work in the session
+- To unpin records that are no longer relevant
+
+**AUTONOMOUS BEHAVIOR:**
+Use when you discover a learning or decision that's critical to the current work.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "Record ID to pin/unpin. Leave empty to list pinned records.",
+					},
+					"unpin": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Set to true to unpin the record.",
+						"default":     false,
+					},
+				},
+			},
+		},
 
 		// ============================================================
 		// POSTMORTEM TOOLS - Failure memory and analysis
@@ -2038,6 +2314,238 @@ Transforms postmortem insights into queryable, reusable learnings. Prevents same
 		},
 
 		// ============================================================
+		// ANALYTICS TOOLS - Workspace insights and metrics
+		// ============================================================
+		{
+			Name: "analytics_sessions",
+			Description: `🟢 **RECOMMENDED** Get aggregate statistics about sessions over time.
+
+**WHEN TO USE:**
+- When analyzing workspace activity patterns
+- When user asks about session history or trends
+- For understanding agent productivity
+- When debugging coordination issues
+
+**RETURNS:**
+- Session counts (total, completed, abandoned, active)
+- Average session duration
+- Sessions by agent type
+- Activity success rates
+- Handoff statistics`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"days": map[string]interface{}{
+						"type":        "integer",
+						"description": "Number of days to analyze. Default: 30.",
+						"default":     30,
+					},
+				},
+			},
+		},
+		{
+			Name: "analytics_learnings",
+			Description: `🟢 **RECOMMENDED** Track learning effectiveness and usage patterns.
+
+**WHEN TO USE:**
+- When reviewing knowledge quality
+- When user asks which learnings are most useful
+- For identifying unused or low-value learnings
+- To optimize the knowledge base
+
+**RETURNS:**
+- Learning usage statistics
+- High/low confidence distribution
+- Most effective learnings (by usage)
+- Suggestions for improvement`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"limit": map[string]interface{}{
+						"type":        "integer",
+						"description": "Maximum learnings to analyze. Default: 20.",
+						"default":     20,
+					},
+					"sort": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"use_count", "confidence", "combined"},
+						"description": "Sort order. Default: 'combined' (use_count + confidence).",
+					},
+				},
+			},
+		},
+		{
+			Name: "analytics_health",
+			Description: `🟢 **RECOMMENDED** Get overall workspace health dashboard.
+
+**WHEN TO USE:**
+- For quick workspace status overview
+- When user asks 'how healthy is this workspace?'
+- At the start of a work session
+- When monitoring workspace quality
+
+**RETURNS:**
+- Knowledge health (active vs at-risk learnings)
+- Contradiction health
+- Session success rates
+- Failure tracking (postmortems)
+- Handoff status
+- Overall health score (0-100)`,
+			InputSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+
+		// ============================================================
+		// HANDOFF TOOLS - Multi-agent task handoff
+		// ============================================================
+		{
+			Name: "handoff_create",
+			Description: `🟡 **IMPORTANT** Create a handoff to pass a task to another agent or future session.
+
+**WHEN TO USE:**
+- When ending work but task isn't complete
+- To delegate part of a task to a specialist agent
+- When context needs to be preserved for continuation
+- For shift handoffs between agent sessions
+
+**AUTONOMOUS BEHAVIOR:**
+Offer to create a handoff when session ends with pending work. Include relevant context and pinned learnings.
+
+**WHAT IT DOES:**
+- Creates a handoff record with task description
+- Includes context, pending work items, and priority
+- Pins relevant learnings/decisions for the next agent
+- Sets expiration time (default 24 hours)`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task": map[string]interface{}{
+						"type":        "string",
+						"description": "Description of the task to hand off.",
+					},
+					"to": map[string]interface{}{
+						"type":        "string",
+						"description": "Target agent type (or 'any' for any agent). Default: 'any'.",
+					},
+					"context": map[string]interface{}{
+						"type":        "string",
+						"description": "Relevant context for the task (findings, approach, etc.).",
+					},
+					"pending": map[string]interface{}{
+						"type":        "array",
+						"description": "List of pending work items (strings).",
+						"items": map[string]interface{}{
+							"type": "string",
+						},
+					},
+					"pin": map[string]interface{}{
+						"type":        "array",
+						"description": "Record IDs to pin (learnings/decisions to include).",
+						"items": map[string]interface{}{
+							"type": "string",
+						},
+					},
+					"priority": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"low", "normal", "high", "urgent"},
+						"description": "Priority level. Default: 'normal'.",
+					},
+					"expires_in_hours": map[string]interface{}{
+						"type":        "number",
+						"description": "Hours until handoff expires. Default: 24.",
+					},
+				},
+				"required": []string{"task"},
+			},
+		},
+		{
+			Name: "handoff_list",
+			Description: `🟢 **RECOMMENDED** List available handoffs waiting to be picked up.
+
+**WHEN TO USE:**
+- At session start to check for pending work
+- When looking for tasks to continue
+- To see what work is waiting for attention
+
+**AUTONOMOUS BEHAVIOR:**
+Check for pending handoffs during session_init. Notify user if high-priority handoffs exist.
+
+**RETURNS:**
+List of handoffs with ID, task summary, priority, and age.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"status": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"pending", "accepted", "completed"},
+						"description": "Filter by status. Default: 'pending'.",
+					},
+				},
+			},
+		},
+		{
+			Name: "handoff_accept",
+			Description: `🟡 **IMPORTANT** Accept a handoff and receive full context.
+
+**WHEN TO USE:**
+- To take ownership of a pending handoff
+- When continuing work from another agent
+- To get full task context including pinned learnings
+
+**AUTONOMOUS BEHAVIOR:**
+After listing handoffs, offer to accept relevant ones. Accepting sets your context focus automatically.
+
+**WHAT IT DOES:**
+- Marks handoff as accepted
+- Sets your task focus to the handoff task
+- Pins the handoff's records to your context
+- Returns full task details and pending work`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the handoff to accept.",
+					},
+				},
+				"required": []string{"id"},
+			},
+		},
+		{
+			Name: "handoff_complete",
+			Description: `🟢 **RECOMMENDED** Mark a handoff as completed.
+
+**WHEN TO USE:**
+- After finishing all pending work from a handoff
+- To signal task completion to the creating agent
+- When handoff work is done
+
+**AUTONOMOUS BEHAVIOR:**
+Mark handoffs complete when their pending items are done. Include a summary of what was accomplished.
+
+**WHAT IT DOES:**
+- Updates handoff status to completed
+- Stores completion summary
+- Clears the handoff from the pending queue`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the handoff to complete.",
+					},
+					"summary": map[string]interface{}{
+						"type":        "string",
+						"description": "Summary of what was accomplished.",
+					},
+				},
+				"required": []string{"id"},
+			},
+		},
+
+		// ============================================================
 		// CORRIDOR TOOLS - Personal cross-workspace learnings
 		// ============================================================
 		{
@@ -2160,6 +2668,294 @@ Increases confidence of cross-workspace knowledge. Signals that general knowledg
 					},
 				},
 				"required": []string{"learningId"},
+			},
+		},
+
+		// ============================================================
+		// PATTERN TOOLS - Detected code pattern management
+		// ============================================================
+		{
+			Name: "patterns_get",
+			Description: `🟢 **RECOMMENDED** Get detected code patterns from the codebase.
+
+**WHEN TO USE:**
+- To see what patterns have been detected in the codebase
+- When user asks about code conventions or patterns
+- Before making changes to understand existing patterns
+- When reviewing code quality
+
+**AUTONOMOUS BEHAVIOR:**
+Use when discussing code conventions or standards. Patterns represent detected coding styles that can become enforced learnings.
+
+**RETURNS:**
+List of patterns grouped by category with confidence scores and status.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"category": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by category (api, errors, naming, structural, testing, logging, config, documentation, complexity).",
+					},
+					"status": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by status: discovered, approved, ignored.",
+						"enum":        []string{"discovered", "approved", "ignored"},
+					},
+					"min_confidence": map[string]interface{}{
+						"type":        "number",
+						"description": "Minimum confidence threshold (0-1). Default: 0.",
+					},
+					"limit": map[string]interface{}{
+						"type":        "number",
+						"description": "Maximum patterns to return. Default: 50.",
+					},
+				},
+			},
+		},
+		{
+			Name: "pattern_show",
+			Description: `🟢 **RECOMMENDED** Show detailed information about a specific pattern.
+
+**WHEN TO USE:**
+- To understand a specific pattern in depth
+- Before approving or ignoring a pattern
+- When investigating code locations matching a pattern
+- To see confidence scoring factors
+
+**RETURNS:**
+Detailed pattern info including confidence breakdown, locations, and outliers.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"pattern_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the pattern (e.g., 'pat_abc123').",
+					},
+				},
+				"required": []string{"pattern_id"},
+			},
+		},
+		{
+			Name: "pattern_approve",
+			Description: `🟡 **IMPORTANT** Approve a detected pattern for enforcement.
+
+**WHEN TO USE:**
+- When a pattern represents a good coding practice
+- When user confirms a pattern should be followed
+- To convert high-confidence patterns into enforced learnings
+- When establishing code conventions
+
+**OPTIONS:**
+- with_learning: true - Also creates a learning from the pattern for enforcement
+
+**AUTONOMOUS BEHAVIOR:**
+Suggest approving high-confidence (>=85%) patterns. Always ask for confirmation.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"pattern_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the pattern to approve.",
+					},
+					"with_learning": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Create a learning from this pattern for enforcement. Default: false.",
+					},
+				},
+				"required": []string{"pattern_id"},
+			},
+		},
+		{
+			Name: "pattern_ignore",
+			Description: `🟡 **IMPORTANT** Ignore a detected pattern so it won't appear in future results.
+
+**WHEN TO USE:**
+- When pattern is a false positive
+- When pattern represents an anti-pattern to avoid
+- When user says 'we don't want to follow this pattern'
+- To clean up pattern list
+
+**AUTONOMOUS BEHAVIOR:**
+Suggest ignoring low-confidence (<50%) patterns. Always ask for confirmation.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"pattern_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the pattern to ignore.",
+					},
+				},
+				"required": []string{"pattern_id"},
+			},
+		},
+		{
+			Name: "pattern_stats",
+			Description: `🟢 **RECOMMENDED** Get statistics about detected patterns.
+
+**WHEN TO USE:**
+- For an overview of code pattern health
+- When reporting on code quality
+- To see how many patterns need review
+- When planning code standardization
+
+**RETURNS:**
+Statistics including total count, by status, by category, and average confidence.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+
+		// ============================================================
+		// CONTRACT TOOLS - FE-BE API contract management
+		// ============================================================
+		{
+			Name: "contracts_get",
+			Description: `🟢 **RECOMMENDED** Get FE-BE API contracts from the codebase.
+
+**WHEN TO USE:**
+- To see what API contracts exist between frontend and backend
+- When user asks about API endpoints or type mismatches
+- Before making changes to API endpoints
+- When reviewing API design
+
+**AUTONOMOUS BEHAVIOR:**
+Use when discussing API design, type safety, or frontend-backend integration.
+
+**RETURNS:**
+List of contracts grouped by HTTP method with mismatch info and status.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"method": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by HTTP method (GET, POST, PUT, PATCH, DELETE).",
+						"enum":        []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
+					},
+					"status": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by status: discovered, verified, mismatch, ignored.",
+						"enum":        []string{"discovered", "verified", "mismatch", "ignored"},
+					},
+					"endpoint": map[string]interface{}{
+						"type":        "string",
+						"description": "Filter by endpoint pattern (partial match).",
+					},
+					"has_mismatches": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Only show contracts with type mismatches. Default: false.",
+					},
+					"limit": map[string]interface{}{
+						"type":        "number",
+						"description": "Maximum contracts to return. Default: 50.",
+					},
+				},
+			},
+		},
+		{
+			Name: "contract_show",
+			Description: `🟢 **RECOMMENDED** Show detailed information about a specific contract.
+
+**WHEN TO USE:**
+- To understand a specific API contract in depth
+- Before verifying or ignoring a contract
+- When investigating type mismatches
+- To see frontend call locations
+
+**RETURNS:**
+Detailed contract info including backend, frontend calls, and mismatches.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"contract_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the contract (e.g., 'ct_abc123').",
+					},
+				},
+				"required": []string{"contract_id"},
+			},
+		},
+		{
+			Name: "contract_verify",
+			Description: `🟡 **IMPORTANT** Mark a contract as verified (correct and intentional).
+
+**WHEN TO USE:**
+- When a contract's types are correct
+- After fixing type mismatches
+- When user confirms the contract is working correctly
+- To clear false positive mismatches
+
+**AUTONOMOUS BEHAVIOR:**
+Suggest verifying contracts after confirming types match. Always ask for confirmation.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"contract_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the contract to verify.",
+					},
+				},
+				"required": []string{"contract_id"},
+			},
+		},
+		{
+			Name: "contract_ignore",
+			Description: `🟡 **IMPORTANT** Ignore a contract so it won't appear in future results.
+
+**WHEN TO USE:**
+- When contract is a false positive
+- When API is intentionally different
+- When user says 'ignore this contract'
+- To clean up contract list
+
+**AUTONOMOUS BEHAVIOR:**
+Suggest ignoring contracts that are false positives. Always ask for confirmation.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"contract_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID of the contract to ignore.",
+					},
+				},
+				"required": []string{"contract_id"},
+			},
+		},
+		{
+			Name: "contract_stats",
+			Description: `🟢 **RECOMMENDED** Get statistics about API contracts.
+
+**WHEN TO USE:**
+- For an overview of FE-BE API health
+- When reporting on type safety
+- To see how many contracts have mismatches
+- When planning API improvements
+
+**RETURNS:**
+Statistics including total count, by status, by method, and mismatch counts.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			Name: "contract_mismatches",
+			Description: `🟡 **IMPORTANT** Get all contracts with type mismatches between frontend and backend.
+
+**WHEN TO USE:**
+- To find all type safety issues
+- When reviewing API type consistency
+- Before releases to ensure FE-BE compatibility
+- When investigating runtime type errors
+
+**AUTONOMOUS BEHAVIOR:**
+Use proactively when user mentions type errors, API issues, or frontend-backend integration problems.
+
+**RETURNS:**
+All contracts with mismatches, grouped by severity.`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{},
 			},
 		},
 	}

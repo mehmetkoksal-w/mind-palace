@@ -10,6 +10,12 @@ VS Code extension for the [Mind Palace](https://github.com/mehmetkoksal-w/mind-p
 - **Blueprint Sidebar**: Interactive visualization of Rooms and files (tree & graph views)
 - **Auto-Healing**: Automatic scan & collect on file save
 - **Butler Search**: Search your codebase by intent directly from VS Code
+- **LSP Integration**: Real-time diagnostics for pattern violations and contract mismatches
+  - Pattern violation warnings with confidence scores
+  - Contract mismatch errors between frontend and backend
+  - Hover information showing pattern/contract details
+  - Code actions to approve, ignore, or verify issues
+  - Code lens showing issue counts per file
 
 ## Requirements
 
@@ -36,12 +42,16 @@ chmod +x palace && sudo mv palace /usr/local/bin/
 
 ### VS Code Settings
 
-| Setting                            | Default  | Description              |
-| ---------------------------------- | -------- | ------------------------ |
-| `mindPalace.binaryPath`            | `palace` | Path to CLI binary       |
-| `mindPalace.autoSync`              | `true`   | Auto-heal on file save   |
-| `mindPalace.autoSyncDelay`         | `3000`   | Debounce delay (ms)      |
-| `mindPalace.waitForCleanWorkspace` | `true`   | Wait for all files saved |
+| Setting                            | Default  | Description                        |
+| ---------------------------------- | -------- | ---------------------------------- |
+| `mindPalace.binaryPath`            | `palace` | Path to CLI binary                 |
+| `mindPalace.autoSync`              | `true`   | Auto-heal on file save             |
+| `mindPalace.autoSyncDelay`         | `3000`   | Debounce delay (ms)                |
+| `mindPalace.waitForCleanWorkspace` | `true`   | Wait for all files saved           |
+| `mindPalace.lsp.enabled`           | `true`   | Enable LSP diagnostics             |
+| `mindPalace.lsp.diagnostics.patterns` | `true` | Show pattern violation diagnostics |
+| `mindPalace.lsp.diagnostics.contracts` | `true` | Show contract mismatch diagnostics |
+| `mindPalace.lsp.codeLens.enabled`  | `true`   | Show code lens for issue counts    |
 
 ### Project Configuration
 
