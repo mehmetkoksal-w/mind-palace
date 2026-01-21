@@ -254,6 +254,7 @@ linters:
           - errcheck
           - nestif
           - prealloc
+          - revive
       - path: apps/cli/internal/signal/
         linters:
           - prealloc
@@ -302,6 +303,7 @@ linters:
           - prealloc
           - nestif
           - unparam
+          - revive
       - path: apps/cli/internal/contracts/extractors/.*\.go
         linters:
           - gocognit
@@ -312,6 +314,7 @@ linters:
           - prealloc
           - nestif
           - gocognit
+          - revive
       - path: apps/cli/internal/llm/
         linters:
           - prealloc
@@ -326,6 +329,9 @@ linters:
         linters:
           - revive
       - path: apps/cli/internal/(config|fsutil|jsonc|lint|project|scan|signal|stale|update|validate|verify)/
+        linters:
+          - revive
+      - path: apps/cli/internal/cli/util/
         linters:
           - revive
       - path: apps/cli/internal/cli/commands/store\.go
