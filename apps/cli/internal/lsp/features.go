@@ -141,74 +141,71 @@ func (s *Server) getCodeActions(_ *TextDocument, params CodeActionParams) []Code
 				}
 			}
 
-		//nolint:gocritic // appendCombine: keeping separate for readability with complex structs
-			actions = append(actions, CodeAction{
-				Title:       fmt.Sprintf("Approve Pattern: %s", patternID),
-				Kind:        CodeActionKindQuickFix,
-				Diagnostics: []Diagnostic{diag},
-				IsPreferred: true,
-				Command: &Command{
-					Title:     "Approve Pattern",
-					Command:   "mindPalace.approvePattern",
-					Arguments: []any{patternID},
+			actions = append(actions,
+				CodeAction{
+					Title:       fmt.Sprintf("Approve Pattern: %s", patternID),
+					Kind:        CodeActionKindQuickFix,
+					Diagnostics: []Diagnostic{diag},
+					IsPreferred: true,
+					Command: &Command{
+						Title:     "Approve Pattern",
+						Command:   "mindPalace.approvePattern",
+						Arguments: []any{patternID},
+					},
 				},
-			})
-
-			actions = append(actions, CodeAction{
-				Title:       fmt.Sprintf("Ignore Pattern: %s", patternID),
-				Kind:        CodeActionKindQuickFix,
-				Diagnostics: []Diagnostic{diag},
-				Command: &Command{
-					Title:     "Ignore Pattern",
-					Command:   "mindPalace.ignorePattern",
-					Arguments: []any{patternID},
+				CodeAction{
+					Title:       fmt.Sprintf("Ignore Pattern: %s", patternID),
+					Kind:        CodeActionKindQuickFix,
+					Diagnostics: []Diagnostic{diag},
+					Command: &Command{
+						Title:     "Ignore Pattern",
+						Command:   "mindPalace.ignorePattern",
+						Arguments: []any{patternID},
+					},
 				},
-			})
-
-			actions = append(actions, CodeAction{
-				Title:       "Show Pattern Details",
-				Kind:        CodeActionKindQuickFix,
-				Diagnostics: []Diagnostic{diag},
-				Command: &Command{
-					Title:     "Show Pattern Details",
-					Command:   "mindPalace.showPattern",
-					Arguments: []any{patternID},
-				},
-			})
+				CodeAction{
+					Title:       "Show Pattern Details",
+					Kind:        CodeActionKindQuickFix,
+					Diagnostics: []Diagnostic{diag},
+					Command: &Command{
+						Title:     "Show Pattern Details",
+						Command:   "mindPalace.showPattern",
+						Arguments: []any{patternID},
+					},
+				})
 
 		case "contract":
 			contractID, _ := data["contractId"].(string)
 
-			actions = append(actions, CodeAction{
-				Title:       fmt.Sprintf("Verify Contract: %s", contractID),
-				Kind:        CodeActionKindQuickFix,
-				Diagnostics: []Diagnostic{diag},
-				IsPreferred: true,
-				Command: &Command{
-					Title:     "Verify Contract",
-					Command:   "mindPalace.verifyContract",
-					Arguments: []any{contractID},
+			actions = append(actions,
+				CodeAction{
+					Title:       fmt.Sprintf("Verify Contract: %s", contractID),
+					Kind:        CodeActionKindQuickFix,
+					Diagnostics: []Diagnostic{diag},
+					IsPreferred: true,
+					Command: &Command{
+						Title:     "Verify Contract",
+						Command:   "mindPalace.verifyContract",
+						Arguments: []any{contractID},
+					},
 				},
-			})
-
-			actions = append(actions, CodeAction{
-				Title:       fmt.Sprintf("Ignore Contract: %s", contractID),
-				Kind:        CodeActionKindQuickFix,
-				Diagnostics: []Diagnostic{diag},
-				Command: &Command{
-					Title:     "Ignore Contract",
-					Command:   "mindPalace.ignoreContract",
-					Arguments: []any{contractID},
+				CodeAction{
+					Title:       fmt.Sprintf("Ignore Contract: %s", contractID),
+					Kind:        CodeActionKindQuickFix,
+					Diagnostics: []Diagnostic{diag},
+					Command: &Command{
+						Title:     "Ignore Contract",
+						Command:   "mindPalace.ignoreContract",
+						Arguments: []any{contractID},
+					},
 				},
-			})
-
-			actions = append(actions, CodeAction{
-				Title:       "Show Contract Details",
-				Kind:        CodeActionKindQuickFix,
-				Diagnostics: []Diagnostic{diag},
-				Command: &Command{
-					Title:     "Show Contract Details",
-					Command:   "mindPalace.showContract",
+				CodeAction{
+					Title:       "Show Contract Details",
+					Kind:        CodeActionKindQuickFix,
+					Diagnostics: []Diagnostic{diag},
+					Command: &Command{
+						Title:     "Show Contract Details",
+						Command:   "mindPalace.showContract",
 					Arguments: []any{contractID},
 				},
 			})
@@ -216,28 +213,27 @@ func (s *Server) getCodeActions(_ *TextDocument, params CodeActionParams) []Code
 		default:
 			// Generic fallback for unknown diagnostic types
 			if code, ok := diag.Code.(string); ok {
-				//nolint:gocritic // appendCombine: keeping separate for readability with complex structs
-				actions = append(actions, CodeAction{
-					Title:       fmt.Sprintf("Approve: %s", code),
-					Kind:        CodeActionKindQuickFix,
-					Diagnostics: []Diagnostic{diag},
-					Command: &Command{
-						Title:     "Approve",
-						Command:   "mindPalace.approve",
-						Arguments: []any{code},
+				actions = append(actions,
+					CodeAction{
+						Title:       fmt.Sprintf("Approve: %s", code),
+						Kind:        CodeActionKindQuickFix,
+						Diagnostics: []Diagnostic{diag},
+						Command: &Command{
+							Title:     "Approve",
+							Command:   "mindPalace.approve",
+							Arguments: []any{code},
+						},
 					},
-				})
-
-				actions = append(actions, CodeAction{
-					Title:       fmt.Sprintf("Ignore: %s", code),
-					Kind:        CodeActionKindQuickFix,
-					Diagnostics: []Diagnostic{diag},
-					Command: &Command{
-						Title:     "Ignore",
-						Command:   "mindPalace.ignore",
-						Arguments: []any{code},
-					},
-				})
+					CodeAction{
+						Title:       fmt.Sprintf("Ignore: %s", code),
+						Kind:        CodeActionKindQuickFix,
+						Diagnostics: []Diagnostic{diag},
+						Command: &Command{
+							Title:     "Ignore",
+							Command:   "mindPalace.ignore",
+							Arguments: []any{code},
+						},
+					})
 			}
 		}
 	}

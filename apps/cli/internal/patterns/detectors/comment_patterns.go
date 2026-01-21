@@ -173,7 +173,7 @@ func (d *CommentPatternDetector) Detect(_ context.Context, dctx *patterns.Detect
 	// Mark undocumented exported functions as outliers (for Go)
 	if lang == "go" && undocumentedFunctions > 0 {
 		for _, fn := range functions {
-			if len(fn.Name) > 0 && fn.Name[0] >= 'A' && fn.Name[0] <= 'Z' {
+			if fn.Name != "" && fn.Name[0] >= 'A' && fn.Name[0] <= 'Z' {
 				// Exported function
 				if fn.LineStart > 1 {
 					prevLine := lines[fn.LineStart-2]

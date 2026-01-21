@@ -68,7 +68,7 @@ func CalculateSpreadScore(filesWithPattern, totalFiles int) float64 {
 
 // CalculateAgeScore calculates the age score based on how long the pattern has existed.
 // Older patterns are considered more established.
-func CalculateAgeScore(firstSeen time.Time, now time.Time) float64 {
+func CalculateAgeScore(firstSeen, now time.Time) float64 {
 	if firstSeen.IsZero() || now.Before(firstSeen) {
 		return 0.0
 	}

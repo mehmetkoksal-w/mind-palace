@@ -184,7 +184,7 @@ func (e *GoTypeExtractor) parseFieldDeclaration(node *sitter.Node, content []byt
 	// Add each field to the schema
 	for _, name := range names {
 		// Skip unexported fields
-		if len(name) == 0 || name[0] < 'A' || name[0] > 'Z' {
+		if name == "" || name[0] < 'A' || name[0] > 'Z' {
 			continue
 		}
 

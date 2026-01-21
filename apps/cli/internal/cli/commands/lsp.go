@@ -57,7 +57,8 @@ func ExecuteLSP(opts LSPOptions) error {
 	// Set up logging
 	var logWriter = io.Discard // Don't log to stderr by default (it's for JSON-RPC)
 	if opts.LogFile != "" {
-		logFile, err := os.OpenFile(opts.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		//nolint:gosec // G302: log file intentionally world-readable
+		logFile, err := os.OpenFile(opts.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 		if err != nil {
 			return fmt.Errorf("open log file: %w", err)
 		}

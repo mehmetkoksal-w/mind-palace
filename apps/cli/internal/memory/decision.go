@@ -231,6 +231,8 @@ func (m *Memory) SearchDecisionsWithAuthority(query string, limit int, authorita
 }
 
 // searchDecisionsLike is a fallback search using LIKE.
+//
+//nolint:unparam // limit is a parameter for API consistency
 func (m *Memory) searchDecisionsLike(query string, limit int) ([]Decision, error) {
 	return m.searchDecisionsLikeWithAuthority(query, limit, true)
 }

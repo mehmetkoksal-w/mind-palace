@@ -278,7 +278,7 @@ func (e *AxiosExtractor) extractMethodFromConfig(configArg string) string {
 	return "GET"
 }
 
-func (e *AxiosExtractor) extractFromConfigObject(configArg string) (url string, method string) {
+func (e *AxiosExtractor) extractFromConfigObject(configArg string) (url, method string) {
 	method = "GET"
 
 	// Extract url

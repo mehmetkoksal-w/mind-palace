@@ -331,6 +331,7 @@ func TestSanitizePath(t *testing.T) {
 	}
 }
 
+//nolint:unparam // test helper uses consistent end marker
 func extractBetween(s, start, end string) string {
 	startIdx := strings.Index(s, start)
 	if startIdx == -1 {

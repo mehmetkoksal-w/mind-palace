@@ -101,10 +101,7 @@ func (s *Server) handleContracts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	hasMismatches := false
-	if hasMismatchesStr == "true" {
-		hasMismatches = true
-	}
+	hasMismatches := hasMismatchesStr == "true"
 
 	// Build filter
 	filter := contracts.ContractFilter{
