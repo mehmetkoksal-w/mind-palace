@@ -313,7 +313,7 @@ func TestMCPToolHandlersMemory(t *testing.T) {
 	}
 
 	resp = server.toolSessionEnd(8, map[string]interface{}{"sessionId": sessionID, "outcome": "success"})
-	if text := toolText(t, resp); !strings.Contains(text, "ended") {
+	if text := toolText(t, resp); !strings.Contains(text, "Ended") {
 		t.Fatalf("end session output unexpected: %s", text)
 	}
 }

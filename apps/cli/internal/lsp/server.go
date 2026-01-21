@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -107,7 +108,7 @@ func (s *Server) Run(ctx context.Context) error {
 		// Read message
 		msg, err := s.readMessage()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				s.logger.Println("EOF received, shutting down")
 				return nil
 			}

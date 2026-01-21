@@ -3,6 +3,7 @@ package contracts
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -169,7 +170,7 @@ func (s *Store) GetContract(id string) (*Contract, error) {
 		&requestSchema, &responseSchema,
 		&status, &contract.Authority, &contract.Confidence, &contract.FirstSeen, &contract.LastSeen,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -180,10 +181,10 @@ func (s *Store) GetContract(id string) (*Contract, error) {
 
 	// Unmarshal schemas
 	if requestSchema != "" {
-		json.Unmarshal([]byte(requestSchema), &contract.Backend.RequestSchema)
+		_ = json.Unmarshal([]byte(requestSchema), &contract.Backend.RequestSchema)
 	}
 	if responseSchema != "" {
-		json.Unmarshal([]byte(responseSchema), &contract.Backend.ResponseSchema)
+		_ = json.Unmarshal([]byte(responseSchema), &contract.Backend.ResponseSchema)
 	}
 
 	// Load frontend calls
@@ -221,7 +222,7 @@ func (s *Store) getFrontendCalls(contractID string) ([]FrontendCall, error) {
 			return nil, err
 		}
 		if expectedSchema != "" {
-			json.Unmarshal([]byte(expectedSchema), &call.ExpectedSchema)
+			_ = json.Unmarshal([]byte(expectedSchema), &call.ExpectedSchema)
 		}
 		calls = append(calls, call)
 	}
@@ -336,13 +337,13 @@ func (s *Store) GetStats() (*ContractStats, error) {
 	}
 
 	// Total contracts
-	s.db.QueryRow(`SELECT COUNT(*) FROM contracts`).Scan(&stats.Total)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contracts`).Scan(&stats.Total)
 
 	// Contracts by status
-	s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'discovered'`).Scan(&stats.Discovered)
-	s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'verified'`).Scan(&stats.Verified)
-	s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'mismatch'`).Scan(&stats.Mismatch)
-	s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'ignored'`).Scan(&stats.Ignored)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'discovered'`).Scan(&stats.Discovered)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'verified'`).Scan(&stats.Verified)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'mismatch'`).Scan(&stats.Mismatch)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contracts WHERE status = 'ignored'`).Scan(&stats.Ignored)
 
 	// Contracts by method
 	rows, err := s.db.Query(`SELECT method, COUNT(*) FROM contracts GROUP BY method`)
@@ -354,16 +355,16 @@ func (s *Store) GetStats() (*ContractStats, error) {
 	for rows.Next() {
 		var method string
 		var count int
-		rows.Scan(&method, &count)
+		_ = rows.Scan(&method, &count)
 		stats.ByMethod[method] = count
 	}
 
 	// Total mismatches (errors and warnings)
-	s.db.QueryRow(`SELECT COUNT(*) FROM contract_mismatches WHERE severity = 'error'`).Scan(&stats.TotalErrors)
-	s.db.QueryRow(`SELECT COUNT(*) FROM contract_mismatches WHERE severity = 'warning'`).Scan(&stats.TotalWarnings)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contract_mismatches WHERE severity = 'error'`).Scan(&stats.TotalErrors)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contract_mismatches WHERE severity = 'warning'`).Scan(&stats.TotalWarnings)
 
 	// Total frontend calls
-	s.db.QueryRow(`SELECT COUNT(*) FROM contract_frontend_calls`).Scan(&stats.TotalCalls)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM contract_frontend_calls`).Scan(&stats.TotalCalls)
 
 	return stats, nil
 }
