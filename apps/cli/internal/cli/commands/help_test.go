@@ -133,7 +133,7 @@ func TestExplainAll(t *testing.T) {
 	}
 
 	// Check for expected sections (Canonical commands)
-	expectedSections := []string{"SCAN", "CHECK", "EXPLORE", "BRIEF", "CLEAN"}
+	expectedSections := []string{"INDEX", "SCAN", "CHECK", "EXPLORE", "STATUS", "CLEAN"}
 	for _, section := range expectedSections {
 		if !strings.Contains(result, section) {
 			t.Errorf("ExplainAll should contain section %q", section)

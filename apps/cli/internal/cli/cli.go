@@ -45,18 +45,23 @@ func Run(args []string) error {
 		return cmdStore(args[1:])
 	case "recall":
 		return cmdRecall(args[1:])
-	case "brief":
-		return cmdBrief(args[1:])
+	case "status", "brief":
+		return cmdStatus(args[1:])
 
 	// Setup & Index
 	case "init":
 		return cmdInit(args[1:])
+	case "index":
+		return cmdIndex(args[1:])
 	case "scan":
-		return cmdScan(args[1:])
+		// Redirect to index scan for backward compatibility
+		return cmdIndex(append([]string{"scan"}, args[1:]...))
 	case "check":
-		return cmdCheck(args[1:])
+		// Redirect to index check for backward compatibility
+		return cmdIndex(append([]string{"check"}, args[1:]...))
 	case "stats":
-		return cmdStats(args[1:])
+		// Redirect to status --full for backward compatibility
+		return cmdStatus(append([]string{"--full"}, args[1:]...))
 
 	// Services
 	case "serve":
@@ -77,10 +82,6 @@ func Run(args []string) error {
 	// Governance
 	case "proposals":
 		return cmdProposals(args[1:])
-	case "approve":
-		return cmdApprove(args[1:])
-	case "reject":
-		return cmdReject(args[1:])
 
 	// Housekeeping
 	case "clean":
@@ -132,9 +133,9 @@ func cmdRecall(args []string) error {
 	return commands.RunRecall(args)
 }
 
-// cmdBrief delegates to commands.RunBrief
-func cmdBrief(args []string) error {
-	return commands.RunBrief(args)
+// cmdStatus delegates to commands.RunStatus
+func cmdStatus(args []string) error {
+	return commands.RunStatus(args)
 }
 
 // ============================================================================
@@ -146,19 +147,9 @@ func cmdInit(args []string) error {
 	return commands.RunInit(args)
 }
 
-// cmdScan delegates to commands.RunScan
-func cmdScan(args []string) error {
-	return commands.RunScan(args)
-}
-
-// cmdCheck delegates to commands.RunCheck
-func cmdCheck(args []string) error {
-	return commands.RunCheck(args)
-}
-
-// cmdStats delegates to commands.RunStats
-func cmdStats(args []string) error {
-	return commands.RunStats(args)
+// cmdIndex delegates to commands.RunIndex
+func cmdIndex(args []string) error {
+	return commands.RunIndex(args)
 }
 
 // ============================================================================
@@ -201,16 +192,6 @@ func cmdCorridor(args []string) error {
 // cmdProposals delegates to commands.RunProposals
 func cmdProposals(args []string) error {
 	return commands.RunProposals(args)
-}
-
-// cmdApprove delegates to commands.RunApprove
-func cmdApprove(args []string) error {
-	return commands.RunApprove(args)
-}
-
-// cmdReject delegates to commands.RunReject
-func cmdReject(args []string) error {
-	return commands.RunReject(args)
 }
 
 // ============================================================================

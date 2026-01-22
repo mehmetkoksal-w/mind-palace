@@ -380,7 +380,7 @@ func TestExplainAll(t *testing.T) {
 	}
 
 	// Check for expected sections (Canonical commands)
-	expectedSections := []string{"SCAN", "CHECK", "EXPLORE", "BRIEF", "CLEAN"}
+	expectedSections := []string{"INDEX", "SCAN", "CHECK", "EXPLORE", "STATUS", "CLEAN"}
 	for _, section := range expectedSections {
 		if !strings.Contains(result, section) {
 			t.Errorf("ExplainAll() should contain section %q", section)
@@ -396,14 +396,14 @@ func TestCmdInitInvalidFlag(t *testing.T) {
 }
 
 func TestCmdScanInvalidFlag(t *testing.T) {
-	err := cmdScan([]string{"--invalid-flag"})
+	err := cmdIndex([]string{"scan", "--invalid-flag"})
 	if err == nil {
 		t.Error("expected error for invalid flag")
 	}
 }
 
 func TestCmdCheckInvalidFlag(t *testing.T) {
-	err := cmdCheck([]string{"--invalid-flag"})
+	err := cmdIndex([]string{"check", "--invalid-flag"})
 	if err == nil {
 		t.Error("expected error for invalid flag")
 	}
@@ -576,7 +576,7 @@ func TestCmdRecallInvalidFlag(t *testing.T) {
 }
 
 func TestCmdBriefInvalidFlag(t *testing.T) {
-	err := cmdBrief([]string{"--invalid-flag"})
+	err := cmdStatus([]string{"--invalid-flag"})
 	if err == nil {
 		t.Error("expected error for invalid flag")
 	}
@@ -833,7 +833,7 @@ func TestCmdStoreRecallBrief(t *testing.T) {
 	}
 
 	// Test brief with file path (includes file intel)
-	if err := cmdBrief([]string{"--root", root, "src/main.go"}); err != nil {
-		t.Fatalf("cmdBrief() error: %v", err)
+	if err := cmdStatus([]string{"--root", root, "src/main.go"}); err != nil {
+		t.Fatalf("cmdStatus() error: %v", err)
 	}
 }
