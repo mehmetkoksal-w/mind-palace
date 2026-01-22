@@ -583,6 +583,7 @@ func (s *MCPServer) handleToolsList(req jsonRPCRequest) jsonRPCResponse {
 // toolsRequiringSession lists tools that benefit from session tracking.
 // These are tools that perform actions (not just queries) and need context.
 var toolsRequiringSession = map[string]bool{
+	// Legacy tool names
 	"file_context":        true,
 	"store":               true,
 	"store_direct":        true,
@@ -593,6 +594,11 @@ var toolsRequiringSession = map[string]bool{
 	"recall_archive":      true,
 	"session_log":         true,
 	"context_auto_inject": true,
+	// Consolidated tool names (same tools, action-based)
+	"recall":  true, // Actions: outcome, link, unlink, obsolete, archive
+	"session": true, // Actions: log, end, etc.
+	"context": true, // Actions: auto_inject
+	"govern":  true, // Actions: approve, reject
 }
 
 // toolsCreatingSession lists tools that create their own sessions.
@@ -611,6 +617,10 @@ var autoActivityMapping = map[string]struct {
 		target: func(args map[string]interface{}) string { v, _ := args["file_path"].(string); return v },
 	},
 	"context_auto_inject": {
+		kind:   "file_focus",
+		target: func(args map[string]interface{}) string { v, _ := args["file_path"].(string); return v },
+	},
+	"context": {
 		kind:   "file_focus",
 		target: func(args map[string]interface{}) string { v, _ := args["file_path"].(string); return v },
 	},
@@ -813,7 +823,6 @@ func (s *MCPServer) autoLogActivity(toolName string, args map[string]interface{}
 }
 
 // dispatchTool routes the tool call to the appropriate handler.
-//
 func (s *MCPServer) dispatchTool(id any, params mcpToolCallParams) jsonRPCResponse {
 	switch params.Name {
 	// Composite tools - streamlined workflows
