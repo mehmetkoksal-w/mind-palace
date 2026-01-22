@@ -794,9 +794,9 @@ func TestMCPToolCallModeEnforcement(t *testing.T) {
 	// Agent should be blocked from calling admin-only actions
 	// In consolidated mode, these are actions within tools, not separate tools
 	testCases := []struct {
-		tool   string
-		args   map[string]interface{}
-		desc   string
+		tool string
+		args map[string]interface{}
+		desc string
 	}{
 		{"store", map[string]interface{}{"direct": true, "content": "test", "as": "decision"}, "store with direct=true"},
 		{"govern", map[string]interface{}{"action": "approve", "id": "test-id"}, "govern with action=approve"},
