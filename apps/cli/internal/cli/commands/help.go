@@ -32,13 +32,11 @@ CORE COMMANDS
   explore   Search code, get context, or trace call relationships
   store     Store knowledge in the palace (idea, decision, or learning)
   recall    Retrieve knowledge from the palace
-  brief     Get briefing on workspace or file
+  status    Show workspace status, index stats, and active agents
 
 SETUP & INDEX
   init      Initialize the palace in the current directory
-  scan      Build/refresh the code index
-  check     Verify index freshness and optionally generate CI outputs
-  stats     Show index and knowledge statistics
+  index     Manage code index (scan, check, stats)
 
 SERVICES
   serve     Start MCP server for AI agents
@@ -47,6 +45,9 @@ SERVICES
 
 AGENTS & SESSIONS
   session   Manage agent sessions
+
+GOVERNANCE
+  proposals Manage proposals (list, approve, reject)
 
 CROSS-WORKSPACE
   corridor  Cross-workspace knowledge sharing
@@ -68,9 +69,20 @@ STORE & RECALL EXAMPLES
   palace recall                            # List learnings
   palace recall "auth"                     # Search knowledge
 
-BRIEF EXAMPLES
-  palace brief                             # Workspace briefing
-  palace brief src/auth.go                 # File-specific briefing
+INDEX EXAMPLES
+  palace index scan                        # Build/refresh code index
+  palace index check                       # Verify index freshness
+  palace index stats                       # Show index statistics
+
+STATUS EXAMPLES
+  palace status                            # Quick workspace briefing
+  palace status --full                     # Detailed statistics
+  palace status src/auth.go                # File-specific briefing
+
+PROPOSALS EXAMPLES
+  palace proposals                         # List pending proposals
+  palace proposals approve prop_abc123     # Approve a proposal
+  palace proposals reject prop_abc123      # Reject a proposal
 
 Run 'palace help <command>' for detailed help on a command.
 `)
@@ -95,10 +107,32 @@ Examples:
   palace init
   palace init --detect
 `)
-	case "scan":
-		fmt.Print(`palace scan - Build or refresh the code index
+	case "index":
+		fmt.Print(`palace index - Manage the code index
 
-Usage: palace scan [options]
+Usage: palace index <subcommand> [options]
+
+Subcommands:
+  scan      Build or refresh the code index
+  check     Verify index freshness and optionally generate CI outputs
+  stats     Show detailed index statistics
+
+Examples:
+  palace index scan                  # Incremental scan (auto-detects git)
+  palace index scan --full           # Force full rescan
+  palace index check                 # Verify index is fresh
+  palace index check --diff HEAD~5   # Check against a diff range
+  palace index stats                 # Show index statistics
+
+Aliases:
+  palace scan    → palace index scan
+  palace check   → palace index check
+`)
+	case "scan":
+		fmt.Print(`palace index scan - Build or refresh the code index
+
+Usage: palace index scan [options]
+       palace scan [options]  (alias)
 
 Options:
   --root <path>    Workspace root (default: current directory)
@@ -115,16 +149,17 @@ to find changed files (faster). Otherwise, uses hash-based change detection.
 For Dart/Flutter projects, deep analysis runs automatically to extract accurate call graphs.
 
 Examples:
-  palace scan                  # Auto-detect: git-based if possible
-  palace scan --full           # Force full rescan
-  palace scan --incremental    # Force git-based incremental
-  palace scan -v               # Show progress details
-  palace scan --debug          # Debug mode for troubleshooting
+  palace index scan                  # Auto-detect: git-based if possible
+  palace index scan --full           # Force full rescan
+  palace index scan --incremental    # Force git-based incremental
+  palace scan -v                     # Show progress details (alias)
+  palace scan --debug                # Debug mode for troubleshooting (alias)
 `)
 	case "check":
-		fmt.Print(`palace check - Verify index freshness
+		fmt.Print(`palace index check - Verify index freshness
 
-Usage: palace check [options]
+Usage: palace index check [options]
+       palace check [options]  (alias)
 
 Options:
   --root <path>       Workspace root (default: current directory)
@@ -193,6 +228,33 @@ Subcommands:
 
 Starts a Model Context Protocol server on stdio.
 `)
+	case "proposals":
+		fmt.Print(`palace proposals - Manage proposals
+
+Usage: palace proposals [options]
+       palace proposals approve <proposal-id> [options]
+       palace proposals reject <proposal-id> [options]
+
+Subcommands:
+  list      List proposals (default if no subcommand)
+  approve   Approve a pending proposal
+  reject    Reject a pending proposal
+
+Options for list:
+  --status <status>  Filter: pending, approved, rejected, expired, all
+  --type <type>      Filter by type: decision, learning
+  --limit <n>        Maximum proposals to show (default: 20)
+
+Options for approve/reject:
+  --by <name>        Reviewer identifier (default: cli)
+  --note <text>      Review note (recommended for reject)
+
+Examples:
+  palace proposals                           # List pending proposals
+  palace proposals --status all              # List all proposals
+  palace proposals approve prop_abc123       # Approve a proposal
+  palace proposals reject prop_abc123 --note "Duplicate"  # Reject with reason
+`)
 	case "lsp":
 		fmt.Print(`palace lsp - Start Language Server Protocol server
 
@@ -226,13 +288,25 @@ Usage: palace session <command> [options]
 Commands:
   start, end, list, show
 `)
-	case "brief":
-		fmt.Print(`palace brief - Get briefing on workspace or file
+	case "brief", "status":
+		fmt.Print(`palace status - Show workspace status, index stats, and active agents
 
-Usage: palace brief [file-path] [options]
+Usage: palace status [file-path] [options]
+       palace brief [file-path] [options]  (alias)
 
 Options:
+  --root <path>     Workspace root (default: current directory)
+  --full            Show detailed statistics (symbols by kind, etc.)
   --sessions        Show detailed session information
+
+The status command shows a quick operational briefing of your workspace.
+Use --full for detailed statistics (equivalent to old 'stats' command).
+
+Examples:
+  palace status                   # Quick workspace briefing
+  palace status --full            # Detailed statistics
+  palace status src/auth.go       # File-specific briefing
+  palace status --sessions        # Include session details
 `)
 	case "corridor":
 		fmt.Print(`palace corridor - Cross-workspace knowledge sharing
@@ -302,17 +376,20 @@ Config file locations (macOS):
   opencode:       ~/.config/opencode/opencode.json
 `)
 	case "stats":
-		fmt.Print(`palace stats - Show index and knowledge statistics
+		fmt.Print(`palace status --full - Show detailed statistics
 
-Usage: palace stats [options]
+Usage: palace status --full [options]
+       palace stats [options]  (alias)
 
 Options:
   --root <path>     Workspace root (default: current directory)
 
-Displays statistics about:
+Displays detailed statistics about:
 - Index: files, symbols (by kind), relationships, last scan
 - Knowledge: ideas, decisions, learnings
 - Sessions: total and active count
+
+For quick operational briefing, use 'palace status' without --full.
 `)
 	case "artifacts":
 		fmt.Print(`Mind Palace Artifacts
@@ -323,7 +400,7 @@ Generated: .palace/index/*, .palace/outputs/*
 	case "all":
 		fmt.Println(ExplainAll())
 	default:
-		return fmt.Errorf("unknown help topic: %s\n\nAvailable topics: explore, store, recall, brief, init, scan, check, stats, serve, lsp, session, corridor, dashboard, clean, mcp-config, artifacts", topic)
+		return fmt.Errorf("unknown help topic: %s\n\nAvailable topics: explore, store, recall, status, init, index, scan, check, serve, lsp, session, proposals, corridor, dashboard, clean, mcp-config, artifacts", topic)
 	}
 	return nil
 }
@@ -332,20 +409,29 @@ Generated: .palace/index/*, .palace/outputs/*
 func ExplainAll() string {
 	return `Mind Palace - Complete Reference
 
-SCAN
-  Purpose: Build/refresh the SQLite index and symbols.
+INDEX
+  Subcommands: scan, check, stats
+  Purpose: Manage the SQLite code index.
   Outputs: .palace/index/palace.db
 
-CHECK (formerly verify + lint)
-  Purpose: Detect staleness and validate configuration.
-  Modes: Default (fast mtime check), --strict (full hash check)
+  SCAN
+    Purpose: Build/refresh the code index using Tree-sitter.
+    Modes: Auto-detect, --full (force rescan), --incremental (git-based)
+
+  CHECK
+    Purpose: Detect staleness and validate configuration.
+    Modes: Default (fast mtime check), --strict (full hash check)
+
+  STATS
+    Purpose: Show detailed index statistics.
+
+STATUS
+  Purpose: Quick operational briefing on workspace.
+  Use --full for detailed statistics.
 
 EXPLORE
   Purpose: Search codebase and trace relationships.
   Features: Full-text search, call graphs (--map), full context (--full).
-
-BRIEF
-  Purpose: Get briefing on workspace or file.
 
 STORE
   Purpose: Capture ideas, decisions, and learnings.
@@ -353,12 +439,16 @@ STORE
 RECALL
   Purpose: Retrieve knowledge and record outcomes.
 
+PROPOSALS
+  Subcommands: list (default), approve, reject
+  Purpose: Manage agent-proposed knowledge that needs human approval.
+
 CLEAN
   Purpose: Cleanup stale sessions and decay old learnings.
 
 CI INTEGRATION
-  Check:   palace check --diff <range>
-  Context: palace check --collect --diff <range>
-  Signal:  palace check --signal --diff <range>
+  Check:   palace index check --diff <range>
+  Context: palace index check --collect --diff <range>
+  Signal:  palace index check --signal --diff <range>
 `
 }

@@ -16,20 +16,8 @@ func init() {
 	Register(&Command{
 		Name:        "proposals",
 		Aliases:     []string{"props"},
-		Description: "List pending proposals awaiting approval",
+		Description: "Manage proposals: list, approve, or reject",
 		Run:         RunProposals,
-	})
-	Register(&Command{
-		Name:        "approve",
-		Aliases:     []string{},
-		Description: "Approve a pending proposal",
-		Run:         RunApprove,
-	})
-	Register(&Command{
-		Name:        "reject",
-		Aliases:     []string{},
-		Description: "Reject a pending proposal",
-		Run:         RunReject,
 	})
 }
 
@@ -43,6 +31,23 @@ type ProposalsOptions struct {
 
 // RunProposals executes the proposals command.
 func RunProposals(args []string) error {
+	// Check for subcommands first
+	if len(args) > 0 {
+		switch args[0] {
+		case "approve":
+			return RunApprove(args[1:])
+		case "reject":
+			return RunReject(args[1:])
+		case "list":
+			return runProposalsList(args[1:])
+		}
+	}
+	// Default: list proposals
+	return runProposalsList(args)
+}
+
+// runProposalsList executes the proposals list subcommand.
+func runProposalsList(args []string) error {
 	fs := flag.NewFlagSet("proposals", flag.ContinueOnError)
 	root := flags.AddRootFlag(fs)
 	status := fs.String("status", "pending", "filter by status: pending, approved, rejected, expired, all")
@@ -139,8 +144,8 @@ func ExecuteProposals(opts ProposalsOptions) error {
 
 	fmt.Println()
 	if opts.Status == memory.ProposalStatusPending || opts.Status == "" {
-		fmt.Println("Use 'palace approve <id>' to approve a proposal")
-		fmt.Println("Use 'palace reject <id> --note \"reason\"' to reject a proposal")
+		fmt.Println("Use 'palace proposals approve <id>' to approve a proposal")
+		fmt.Println("Use 'palace proposals reject <id> --note \"reason\"' to reject a proposal")
 	}
 
 	return nil
@@ -166,7 +171,7 @@ func RunApprove(args []string) error {
 
 	remaining := fs.Args()
 	if len(remaining) == 0 {
-		return errors.New(`usage: palace approve <proposal-id> [options]
+		return errors.New(`usage: palace proposals approve <proposal-id> [options]
 
 Approve a pending proposal, creating the corresponding decision or learning.
 
@@ -178,9 +183,9 @@ Options:
   --note <text>    Optional review note
 
 Examples:
-  palace approve prop_abc123
-  palace approve prop_abc123 --note "Looks good"
-  palace approve prop_abc123 --by "john"`)
+  palace proposals approve prop_abc123
+  palace proposals approve prop_abc123 --note "Looks good"
+  palace proposals approve prop_abc123 --by "john"`)
 	}
 
 	return ExecuteApprove(ApproveOptions{
@@ -261,7 +266,7 @@ func RunReject(args []string) error {
 
 	remaining := fs.Args()
 	if len(remaining) == 0 {
-		return errors.New(`usage: palace reject <proposal-id> [options]
+		return errors.New(`usage: palace proposals reject <proposal-id> [options]
 
 Reject a pending proposal.
 
@@ -273,8 +278,8 @@ Options:
   --note <text>    Reason for rejection (recommended)
 
 Examples:
-  palace reject prop_abc123 --note "Not accurate"
-  palace reject prop_abc123 --note "Duplicate of existing decision d_xyz"`)
+  palace proposals reject prop_abc123 --note "Not accurate"
+  palace proposals reject prop_abc123 --note "Duplicate of existing decision d_xyz"`)
 	}
 
 	return ExecuteReject(RejectOptions{

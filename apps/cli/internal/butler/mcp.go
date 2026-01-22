@@ -561,13 +561,13 @@ func (s *MCPServer) handleInitialize(req jsonRPCRequest) jsonRPCResponse {
 
 // handleToolsList returns the list of available tools filtered by mode.
 func (s *MCPServer) handleToolsList(req jsonRPCRequest) jsonRPCResponse {
-	allTools := buildToolsList()
+	allTools := getToolsList()
 
 	// Filter tools based on mode
 	var tools []mcpTool
 	for _, tool := range allTools {
 		// Skip admin-only tools in agent mode
-		if s.mode == MCPModeAgent && IsAdminOnlyTool(tool.Name) {
+		if s.mode == MCPModeAgent && IsAdminOnlyToolConsolidated(tool.Name) {
 			continue
 		}
 		tools = append(tools, tool)
@@ -651,11 +651,27 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 	}
 
 	// Enforce mode restrictions - reject admin-only tools in agent mode
-	if s.mode == MCPModeAgent && IsAdminOnlyTool(params.Name) {
+	if s.mode == MCPModeAgent && IsAdminOnlyToolConsolidated(params.Name) {
 		return jsonRPCResponse{
 			JSONRPC: "2.0",
 			ID:      req.ID,
 			Error:   &rpcError{Code: -32602, Message: fmt.Sprintf("Tool %q not available in agent mode", params.Name)},
+		}
+	}
+
+	// Enforce mode restrictions for admin-only actions within tools
+	if s.mode == MCPModeAgent && IsAdminOnlyActionConsolidated(params.Name, params.Arguments) {
+		action := ""
+		if a, ok := params.Arguments["action"].(string); ok {
+			action = a
+		}
+		if d, ok := params.Arguments["direct"].(bool); ok && d {
+			action = "direct"
+		}
+		return jsonRPCResponse{
+			JSONRPC: "2.0",
+			ID:      req.ID,
+			Error:   &rpcError{Code: -32602, Message: fmt.Sprintf("Action %q on tool %q not available in agent mode", action, params.Name)},
 		}
 	}
 
@@ -688,8 +704,13 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 	// Proactive conflict monitoring: check for conflicts on tracked files
 	conflictWarnings := s.checkFileConflicts()
 
-	// Dispatch to tool handler
-	resp := s.dispatchTool(req.ID, params)
+	// Dispatch to tool handler - use consolidated or legacy dispatcher
+	var resp jsonRPCResponse
+	if useConsolidatedTools {
+		resp = s.dispatchConsolidatedTool(req.ID, params)
+	} else {
+		resp = s.dispatchTool(req.ID, params)
+	}
 
 	// Track file access for file-related tools (after successful dispatch)
 	if resp.Error == nil {
