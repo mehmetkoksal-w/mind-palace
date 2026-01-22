@@ -66,11 +66,8 @@ type StatusKnowledgeStats struct {
 // RunStatus executes the status command.
 func RunStatus(args []string) error {
 	// Check for subcommands first
-	if len(args) > 0 {
-		switch args[0] {
-		case "full":
-			return runStatusFull(args[1:])
-		}
+	if len(args) > 0 && args[0] == "full" {
+		return runStatusFull(args[1:])
 	}
 
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)

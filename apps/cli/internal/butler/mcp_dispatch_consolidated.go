@@ -518,12 +518,12 @@ func (s *MCPServer) toolListProposals(id any, args map[string]interface{}) jsonR
 		result = fmt.Sprintf("No proposals with status '%s'.", status)
 	} else {
 		result = fmt.Sprintf("## Proposals (%d %s)\n\n", len(proposals), status)
-		for _, p := range proposals {
-			summary := p.Content
+		for i := range proposals {
+			summary := proposals[i].Content
 			if len(summary) > 60 {
 				summary = summary[:57] + "..."
 			}
-			result += fmt.Sprintf("- **%s** [%s]: %s\n", p.ID, p.ProposedAs, summary)
+			result += fmt.Sprintf("- **%s** [%s]: %s\n", proposals[i].ID, proposals[i].ProposedAs, summary)
 		}
 	}
 
