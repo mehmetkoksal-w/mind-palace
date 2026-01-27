@@ -82,11 +82,13 @@ func Open(root string) (*Memory, error) {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 
-	// Enable WAL mode and foreign keys
+	// Enable WAL mode, foreign keys, and auto-vacuum
 	pragmas := []string{
 		"PRAGMA journal_mode=WAL",
 		"PRAGMA foreign_keys=ON",
 		"PRAGMA busy_timeout=5000",
+		"PRAGMA auto_vacuum=INCREMENTAL", // Reduce db size over time
+		"PRAGMA page_size=4096",          // Standard page size
 	}
 	for _, pragma := range pragmas {
 		if _, err := db.ExecContext(context.Background(), pragma); err != nil {

@@ -99,18 +99,20 @@ Don't let your architectural knowledge rot in Slack or Jira. Commit it to the co
 1.  **Capture**: `palace store "Decision: use FTS5 for search"`
 2.  **Link**: `palace recall link d_search --inspired-by d_sqlite`
 3.  **Outcome**: `palace recall update d_search success`
-4.  **Review**: See the timeline in the **Dashboard**.
+4.  **Review**: Use `palace explore --type decision` to see the timeline.
 
 ---
 
-## Visualizing with the Dashboard
+## Exploration Commands
 
 For a high-level view of your palace:
 
 ```sh
-palace dashboard
+palace explore --rooms           # Browse logical modules
+palace explore --map <symbol>    # Visualize call graph
+palace brief <file>              # Get file intelligence
 ```
 
-- **Hotspot Map**: See which files are changing most frequently.
-- **Dependency Graph**: Explore how rooms and services interact.
-- **Knowledge Timeline**: See the history of project decisions.
+- **Hotspot Analysis**: Use `palace brief --failures` to see frequently changing files.
+- **Dependency Graph**: Use `palace explore --map` to explore how functions interact.
+- **Knowledge Timeline**: Use `palace explore --type decision` to see project decisions.

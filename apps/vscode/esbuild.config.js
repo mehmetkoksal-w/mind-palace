@@ -15,48 +15,16 @@ const extensionConfig = {
   minify: production,
 };
 
-// Blueprint webview bundle (runs in browser)
-const blueprintWebviewConfig = {
-  entryPoints: ["src/webviews/webview-scripts/blueprint.ts"],
-  bundle: true,
-  outfile: "out/webviews/blueprint.js",
-  format: "iife", // Immediately Invoked Function Expression
-  platform: "browser",
-  sourcemap: true,
-  minify: production,
-  target: ["es2020"],
-};
-
-// Knowledge graph webview bundle (runs in browser)
-const knowledgeGraphWebviewConfig = {
-  entryPoints: ["src/webviews/webview-scripts/knowledge-graph.ts"],
-  bundle: true,
-  outfile: "out/webviews/knowledge-graph.js",
-  format: "iife",
-  platform: "browser",
-  sourcemap: true,
-  minify: production,
-  target: ["es2020"],
-};
-
 async function build() {
   try {
     if (watch) {
       // Watch mode for development
-      const contexts = await Promise.all([
-        esbuild.context(extensionConfig),
-        esbuild.context(blueprintWebviewConfig),
-        esbuild.context(knowledgeGraphWebviewConfig),
-      ]);
-      await Promise.all(contexts.map((ctx) => ctx.watch()));
+      const ctx = await esbuild.context(extensionConfig);
+      await ctx.watch();
       console.log("[esbuild] Watching for changes...");
     } else {
       // Production build
-      await Promise.all([
-        esbuild.build(extensionConfig),
-        esbuild.build(blueprintWebviewConfig),
-        esbuild.build(knowledgeGraphWebviewConfig),
-      ]);
+      await esbuild.build(extensionConfig);
       console.log("[esbuild] Build complete");
     }
   } catch (error) {

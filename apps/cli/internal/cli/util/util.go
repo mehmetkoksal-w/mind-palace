@@ -34,6 +34,15 @@ func TruncateLine(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
+// TruncateID safely truncates an ID string to maxLen characters.
+// Returns the full string if it's shorter than maxLen.
+func TruncateID(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen]
+}
+
 // PrintScope prints scope information for a command.
 func PrintScope(cmd string, fullScope bool, source, diffRange string, fileCount int, rootPath string) {
 	mode := "diff"

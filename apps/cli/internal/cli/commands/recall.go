@@ -41,6 +41,18 @@ func RunRecall(args []string) error {
 
 // runRecallList lists/searches knowledge.
 func runRecallList(args []string) error {
+	// Type shortcuts: "recall decisions" -> "recall --type decision"
+	if len(args) > 0 {
+		switch strings.ToLower(args[0]) {
+		case "decisions", "decision":
+			args = append([]string{"--type", "decision"}, args[1:]...)
+		case "ideas", "idea":
+			args = append([]string{"--type", "idea"}, args[1:]...)
+		case "learnings", "learning":
+			args = append([]string{"--type", "learning"}, args[1:]...)
+		}
+	}
+
 	fs := flag.NewFlagSet("recall", flag.ContinueOnError)
 	root := flags.AddRootFlag(fs)
 	scope := fs.String("scope", "", "filter by scope (file, room, palace)")
@@ -89,16 +101,121 @@ func runRecallList(args []string) error {
 		return recallPending(mem, *since, *all, *limit)
 	}
 
-	// Handle --type filter or default to learnings
+	// Handle --type filter or default to all types
 	switch *typeFilter {
 	case "decision":
 		return recallDecisions(mem, query, *scope, *path, *limit)
 	case "idea":
 		return recallIdeas(mem, query, *scope, *path, *limit)
-	case "learning", "":
+	case "learning":
 		return recallLearnings(mem, query, *scope, *path, *limit)
+	case "":
+		// No type filter - show all types
+		return recallAll(mem, query, *scope, *path, *limit)
 	}
 
+	return nil
+}
+
+// recallAll retrieves all knowledge types (decisions, ideas, learnings).
+func recallAll(mem *memory.Memory, query, scope, scopePath string, limit int) error {
+	// Get data for each type (divide limit across types)
+	perTypeLimit := max(3, limit/3)
+
+	// Get decisions
+	var decisions []memory.Decision
+	var err error
+	if query != "" {
+		decisions, err = mem.SearchDecisions(query, perTypeLimit)
+	} else {
+		decisions, err = mem.GetDecisions("", "", scope, scopePath, perTypeLimit)
+	}
+	if err != nil {
+		return fmt.Errorf("recall decisions: %w", err)
+	}
+
+	// Get ideas
+	var ideas []memory.Idea
+	if query != "" {
+		ideas, err = mem.SearchIdeas(query, perTypeLimit)
+	} else {
+		ideas, err = mem.GetIdeas("", scope, scopePath, perTypeLimit)
+	}
+	if err != nil {
+		return fmt.Errorf("recall ideas: %w", err)
+	}
+
+	// Get learnings
+	var learnings []memory.Learning
+	if query != "" {
+		learnings, err = mem.SearchLearnings(query, perTypeLimit)
+	} else {
+		learnings, err = mem.GetLearnings(scope, scopePath, perTypeLimit)
+	}
+	if err != nil {
+		return fmt.Errorf("recall learnings: %w", err)
+	}
+
+	// Check if anything found
+	if len(decisions) == 0 && len(ideas) == 0 && len(learnings) == 0 {
+		fmt.Println("No knowledge found.")
+		if query != "" {
+			fmt.Printf("Try a different search query or use 'palace recall' without arguments.\n")
+		} else {
+			fmt.Printf("Use 'palace store' to record decisions, ideas, and learnings.\n")
+		}
+		return nil
+	}
+
+	// Print each section if it has items
+	if len(decisions) > 0 {
+		fmt.Printf("\n🔨 Decisions (%d)\n", len(decisions))
+		fmt.Println(strings.Repeat("─", 60))
+		for i := range decisions {
+			d := &decisions[i]
+			outcomeIcon := "❓"
+			switch d.Outcome {
+			case memory.DecisionOutcomeSuccessful:
+				outcomeIcon = "✅"
+			case memory.DecisionOutcomeFailed:
+				outcomeIcon = "❌"
+			case memory.DecisionOutcomeMixed:
+				outcomeIcon = "⚖️"
+			}
+			fmt.Printf("  %s [%s] %s\n", outcomeIcon, util.TruncateID(d.ID, 12), util.TruncateLine(d.Content, 50))
+		}
+	}
+
+	if len(ideas) > 0 {
+		fmt.Printf("\n💡 Ideas (%d)\n", len(ideas))
+		fmt.Println(strings.Repeat("─", 60))
+		for j := range ideas {
+			i := &ideas[j]
+			statusIcon := "💡"
+			switch i.Status {
+			case memory.IdeaStatusExploring:
+				statusIcon = "🔍"
+			case memory.IdeaStatusImplemented:
+				statusIcon = "✅"
+			case memory.IdeaStatusDropped:
+				statusIcon = "❌"
+			}
+			fmt.Printf("  %s [%s] %s\n", statusIcon, util.TruncateID(i.ID, 12), util.TruncateLine(i.Content, 50))
+		}
+	}
+
+	if len(learnings) > 0 {
+		fmt.Printf("\n📝 Learnings (%d)\n", len(learnings))
+		fmt.Println(strings.Repeat("─", 60))
+		for k := range learnings {
+			l := &learnings[k]
+			// Show confidence as percentage to match the pattern of other types
+			confPercent := fmt.Sprintf("%3.0f%%", l.Confidence*100)
+			fmt.Printf("  %s [%s] %s\n", confPercent, util.TruncateID(l.ID, 12), util.TruncateLine(l.Content, 45))
+		}
+	}
+
+	fmt.Printf("\nUse 'palace recall --type <type>' to see more of a specific type.\n")
 	return nil
 }
 

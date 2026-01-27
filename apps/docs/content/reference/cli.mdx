@@ -11,18 +11,17 @@ All commands are deterministic. Validation uses embedded schemas.
 | `explore`   | Search codebase, symbols, call graphs | No             |
 | `store`     | Store idea/decision/learning          | Yes            |
 | `recall`    | Search and retrieve knowledge         | No             |
-| `brief`     | Get file briefing and intelligence    | No             |
+| `status`    | Show workspace status and stats       | No             |
 | `init`      | Initialize .palace/ structure         | Yes            |
-| `scan`      | Build/refresh Index                   | Yes            |
-| `check`     | Verify freshness and CI               | No             |
+| `index`     | Manage code index (scan, check, stats)| Yes            |
 | `serve`     | Start MCP server                      | No             |
 | `lsp`       | Start LSP server for editors          | No             |
 | `session`   | Manage agent sessions                 | Yes            |
 | `corridor`  | Cross-workspace sharing               | Varies         |
-| `dashboard` | Start web dashboard                   | No             |
 | `clean`     | Cleanup stale data                    | Yes            |
 | `update`    | Self-update to latest                 | Yes            |
 | `version`   | Show version info                     | No             |
+| `help`      | Show help for commands                | No             |
 
 ---
 
@@ -51,6 +50,10 @@ palace explore --rooms
 | `--depth <n>` | Recursion depth for call chain (1-10) |
 | `--direction <d>` | Trace direction: `up`, `down`, or `both` |
 
+**Note**: Flags can appear before or after the query (e.g., `palace explore "auth" --full`).
+
+**Entry Point Detection**: When tracing calls for entry points like `main`, `init`, `Test*`, or handlers, the tool explains these are called by the runtime rather than showing "no callers found".
+
 ---
 
 ### store
@@ -67,7 +70,15 @@ palace store "<content>" [options]
 | `--as <type>` | Force type: `decision`, `idea`, `learning` |
 | `--scope <scope>` | Scope: `file`, `room`, `palace` (default: `palace`) |
 | `--path <path>` | Scope path for file/room scope |
-| `--direct` | Bypass proposals workflow (human-only, creates approved records directly) |
+| `--confidence <n>` | Confidence for learnings, 0.0-1.0 (default: 0.5) |
+| `--tag <tags>` | Comma-separated tags |
+
+**Auto-Classification**: Content is classified based on natural language signals:
+- "Let's use...", "We should...", "Decision:" → decision (95%+ confidence)
+- "What if...", "Maybe...", "Idea:" → idea
+- "TIL...", "Always...", "Note:" → learning
+
+**Input Validation**: Ambiguous input (<40% confidence with no signals) is rejected with helpful tips.
 
 ---
 
@@ -77,13 +88,24 @@ Search and retrieve knowledge.
 
 ```sh
 palace recall [query] [options]
+palace recall <type>              # Shorthand: decisions, ideas, learnings
+palace recall update <id> <outcome>
+palace recall link --<rel> <target> <source>
 ```
 
 **Options**:
 | Flag | Description |
 |------|-------------|
 | `--type <type>` | Filter by type: `decision`, `idea`, `learning` |
+| `--scope <scope>` | Filter by scope: `file`, `room`, `palace` |
+| `--path <path>` | Filter by scope path |
 | `--pending` | Show decisions awaiting outcome |
+| `--limit <n>` | Maximum results (default: 10) |
+
+**Type Shortcuts**: First argument can be a type name:
+- `palace recall decisions` → same as `--type decision`
+- `palace recall ideas` → same as `--type idea`
+- `palace recall learnings` → same as `--type learning`
 
 **Subcommands**:
 
@@ -198,3 +220,12 @@ Cleanup stale sessions, agents, and old learnings.
 ```sh
 palace clean [--dry-run]
 ```
+
+Performs the following maintenance tasks:
+- **Sessions**: Marks sessions inactive for >24h as abandoned
+- **Agents**: Removes agents with no heartbeat for >5 minutes  
+- **Learnings**: Decays confidence of learnings unused for >30 days
+- **Pruning**: Removes learnings with confidence <0.1
+- **Corridor Links**: Validates and removes stale workspace links
+
+Shows status for each category even when nothing needs cleanup.

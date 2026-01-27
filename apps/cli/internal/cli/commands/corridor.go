@@ -31,7 +31,8 @@ func RunCorridor(args []string) error {
 			"  unlink    Remove a workspace link\n" +
 			"  personal  Show personal corridor learnings\n" +
 			"  promote   Promote a learning to personal corridor\n" +
-			"  search    Search across all corridors\n\n" +
+			"  search    Search across all corridors\n" +
+			"  clean     Remove low-confidence or test learnings\n\n" +
 			"run 'palace corridor <subcommand> --help' for subcommand help")
 	}
 
@@ -48,6 +49,8 @@ func RunCorridor(args []string) error {
 		return ExecuteCorridorPromote(args[1:])
 	case "search":
 		return ExecuteCorridorSearch(args[1:])
+	case "clean":
+		return ExecuteCorridorClean(args[1:])
 	default:
 		return fmt.Errorf("unknown corridor command: %s\nRun 'palace help corridor' for usage", args[0])
 	}
@@ -197,7 +200,7 @@ func ExecuteCorridorPersonal(args []string) error {
 		if l.OriginWorkspace != "" {
 			origin = fmt.Sprintf(" (from: %s)", l.OriginWorkspace)
 		}
-		fmt.Printf("\n[%s] %s (%.0f%%)%s\n", l.ID[:12], confidenceBar, l.Confidence*100, origin)
+		fmt.Printf("\n[%s] %s (%.0f%%)%s\n", util.TruncateID(l.ID, 12), confidenceBar, l.Confidence*100, origin)
 		fmt.Printf("  Used: %d times | Last: %s\n", l.UseCount, l.LastUsed.Format("2006-01-02"))
 		fmt.Printf("  %s\n", l.Content)
 	}
@@ -332,6 +335,85 @@ func ExecuteCorridorSearch(args []string) error {
 			}
 		}
 	}
+
+	fmt.Println()
+	return nil
+}
+
+// ExecuteCorridorClean removes low-confidence or unwanted learnings from the personal corridor
+func ExecuteCorridorClean(args []string) error {
+	fs := flag.NewFlagSet("clean", flag.ContinueOnError)
+	pattern := fs.String("pattern", "", "delete learnings matching this pattern (e.g., 'test', 'dummy')")
+	minConfidence := fs.Float64("min-confidence", 0.5, "delete learnings below this confidence threshold")
+	minUses := fs.Int("min-uses", 0, "only delete if use_count is at or below this value")
+	dryRun := fs.Bool("dry-run", false, "show what would be deleted without actually deleting")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	gc, err := corridor.OpenGlobal()
+	if err != nil {
+		return fmt.Errorf("open global corridor: %w", err)
+	}
+	defer gc.Close()
+
+	fmt.Println()
+	fmt.Printf("🧹 Corridor Cleanup\n")
+	fmt.Println(strings.Repeat("─", 60))
+
+	// If pattern is specified, clean by pattern
+	if *pattern != "" {
+		if *dryRun {
+			// Show matching learnings first
+			learnings, err := gc.GetPersonalLearnings(*pattern, 100)
+			if err != nil {
+				return fmt.Errorf("query learnings: %w", err)
+			}
+			fmt.Printf("\n📋 Dry run: would delete %d learnings matching '%s':\n", len(learnings), *pattern)
+			for i := range learnings {
+				l := &learnings[i]
+				fmt.Printf("  • [%.0f%%] %s\n", l.Confidence*100, util.TruncateLine(l.Content, 60))
+			}
+			return nil
+		}
+
+		deleted, err := gc.CleanByPattern(*pattern)
+		if err != nil {
+			return fmt.Errorf("clean by pattern: %w", err)
+		}
+		fmt.Printf("✅ Deleted %d learnings matching pattern '%s'\n", deleted, *pattern)
+		return nil
+	}
+
+	// Otherwise, clean by confidence threshold
+	if *dryRun {
+		// Show low-confidence learnings first
+		learnings, err := gc.GetPersonalLearnings("", 100)
+		if err != nil {
+			return fmt.Errorf("query learnings: %w", err)
+		}
+		var wouldDelete int
+		fmt.Printf("\n📋 Dry run: learnings below %.0f%% confidence with ≤%d uses:\n", *minConfidence*100, *minUses)
+		for i := range learnings {
+			l := &learnings[i]
+			if l.Confidence < *minConfidence && l.UseCount <= *minUses {
+				fmt.Printf("  • [%.0f%%] (uses: %d) %s\n", l.Confidence*100, l.UseCount, util.TruncateLine(l.Content, 50))
+				wouldDelete++
+			}
+		}
+		if wouldDelete == 0 {
+			fmt.Printf("  (no learnings match criteria)\n")
+		} else {
+			fmt.Printf("\nWould delete %d learnings\n", wouldDelete)
+		}
+		return nil
+	}
+
+	deleted, err := gc.CleanLowConfidenceLearnings(*minConfidence, *minUses)
+	if err != nil {
+		return fmt.Errorf("clean low confidence: %w", err)
+	}
+	fmt.Printf("✅ Deleted %d learnings below %.0f%% confidence (with ≤%d uses)\n", deleted, *minConfidence*100, *minUses)
 
 	fmt.Println()
 	return nil

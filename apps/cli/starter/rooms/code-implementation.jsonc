@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "code-implementation",
+  "summary": "Implementation room with test-driven approach and conflict detection.",
+  "entryPoints": ["src/"],
+  "artifacts": [
+    {
+      "name": "implementation-summary",
+      "description": "Summary of changes made",
+      "pathHint": ".palace/outputs/implementation-summary.md"
+    }
+  ],
+  "capabilities": ["read.file", "search.text", "symbols.lookup", "tests.run"],
+  "steps": [
+    {
+      "name": "Review file context",
+      "description": "Check file_context for conflicts and learnings before editing"
+    },
+    {
+      "name": "Write tests first",
+      "description": "Create or update tests that define expected behavior",
+      "capability": "tests.run"
+    },
+    {
+      "name": "Implement changes",
+      "description": "Write code to pass the tests"
+    },
+    {
+      "name": "Run tests",
+      "description": "Verify implementation passes all tests",
+      "capability": "tests.run",
+      "evidence": "test-results"
+    },
+    {
+      "name": "Document changes",
+      "description": "Store learnings about the implementation",
+      "evidence": "implementation-summary"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

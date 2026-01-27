@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/playbook",
+  "name": "dependency-update",
+  "summary": "Safe dependency update workflow with testing and verification.",
+  "rooms": [
+    "project-overview",
+    "dependency-analysis",
+    "code-implementation",
+    "code-review"
+  ],
+  "requiredEvidence": [
+    {
+      "id": "dependency-report",
+      "description": "Dependency analysis report",
+      "room": "dependency-analysis"
+    },
+    {
+      "id": "test-results",
+      "description": "Tests pass with updated dependencies",
+      "room": "code-implementation"
+    }
+  ],
+  "verification": [
+    {
+      "name": "tests",
+      "expectation": "All tests pass with updated dependencies",
+      "capability": "tests.run"
+    },
+    {
+      "name": "build",
+      "expectation": "Project builds successfully"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

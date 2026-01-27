@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/playbook",
+  "name": "refactor",
+  "summary": "Safe refactoring workflow with analysis, incremental changes, and verification.",
+  "rooms": [
+    "project-overview",
+    "refactor-analysis",
+    "refactor-execution",
+    "code-review"
+  ],
+  "requiredEvidence": [
+    {
+      "id": "refactor-plan",
+      "description": "Detailed refactoring plan",
+      "room": "refactor-analysis"
+    },
+    {
+      "id": "refactor-summary",
+      "description": "Summary of changes",
+      "room": "refactor-execution"
+    },
+    {
+      "id": "review-checklist",
+      "description": "Review confirmation",
+      "room": "code-review"
+    }
+  ],
+  "verification": [
+    {
+      "name": "tests",
+      "expectation": "All tests pass after refactoring",
+      "capability": "tests.run"
+    },
+    {
+      "name": "lint",
+      "expectation": "No lint errors",
+      "capability": "lint.run"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

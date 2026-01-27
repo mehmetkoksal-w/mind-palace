@@ -31,10 +31,31 @@ func (b *Butler) GetEnhancedContext(opts EnhancedContextOptions) (*EnhancedConte
 		opts.Limit = 20
 	}
 
+	// Build smart context options if enabled
+	var smartOpts *index.SmartContextOptions
+	var editHistory map[string]*index.FileEditInfo
+
+	if opts.EnableSmartContext {
+		smartOpts = index.DefaultSmartContextOptions()
+		smartOpts.ExpandDependencies = opts.ExpandDependencies
+		smartOpts.PrioritizeByUsage = opts.PrioritizeByUsage
+		smartOpts.BoostRecentEdits = opts.BoostRecentEdits
+		if opts.DependencyDepth > 0 {
+			smartOpts.DependencyDepth = opts.DependencyDepth
+		}
+
+		// Get edit history from memory if available
+		if b.memory != nil && opts.BoostRecentEdits {
+			editHistory = b.getEditHistory()
+		}
+	}
+
 	// Get base code context
 	codeOpts := &index.ContextOptions{
 		MaxTokens:    opts.MaxTokens,
 		IncludeTests: opts.IncludeTests,
+		SmartContext: smartOpts,
+		EditHistory:  editHistory,
 	}
 	codeContext, err := index.GetContextForTaskWithOptions(b.db, opts.Query, opts.Limit, codeOpts)
 	if err != nil {
@@ -146,6 +167,30 @@ func (b *Butler) GetEnhancedContext(opts EnhancedContextOptions) (*EnhancedConte
 	}
 
 	return result, nil
+}
+
+// getEditHistory retrieves edit history from memory for smart context scoring.
+func (b *Butler) getEditHistory() map[string]*index.FileEditInfo {
+	if b.memory == nil {
+		return nil
+	}
+
+	// Get file hotspots (most edited files)
+	hotspots, err := b.memory.GetFileHotspots(100)
+	if err != nil {
+		return nil
+	}
+
+	editHistory := make(map[string]*index.FileEditInfo)
+	for _, fi := range hotspots {
+		editHistory[fi.Path] = &index.FileEditInfo{
+			Path:       fi.Path,
+			EditCount:  fi.EditCount,
+			LastEdited: fi.LastEdited,
+		}
+	}
+
+	return editHistory
 }
 
 // GetAutoInjectionContext returns context automatically assembled for AI agents.

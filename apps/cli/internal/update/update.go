@@ -59,7 +59,11 @@ type cacheEntry struct {
 	LatestVersion string    `json:"latest_version"`
 	ReleaseURL    string    `json:"release_url"`
 	CheckedAt     time.Time `json:"checked_at"`
+	NoticeShownAt time.Time `json:"notice_shown_at,omitempty"` // When update notice was last shown
 }
+
+// NoticeTTL is the cooldown period before showing the update notice again.
+const NoticeTTL = 24 * time.Hour
 
 // Check compares the current version with the latest release on GitHub.
 func Check(currentVersion string) (*CheckResult, error) {
@@ -118,6 +122,45 @@ func CheckCached(currentVersion, cacheDir string) (*CheckResult, error) {
 	})
 
 	return result, nil
+}
+
+// ShouldShowNotice checks if the update notice should be shown based on cooldown.
+// Returns true if the notice hasn't been shown in the last 24 hours.
+func ShouldShowNotice(cacheDir string) bool {
+	cachePath := filepath.Join(cacheDir, cacheFileName)
+	data, err := os.ReadFile(cachePath)
+	if err != nil {
+		return true // No cache, show notice
+	}
+
+	var entry cacheEntry
+	if err := json.Unmarshal(data, &entry); err != nil {
+		return true
+	}
+
+	// If notice was shown within the last 24 hours, don't show again
+	if !entry.NoticeShownAt.IsZero() && time.Since(entry.NoticeShownAt) < NoticeTTL {
+		return false
+	}
+
+	return true
+}
+
+// MarkNoticeShown updates the cache to record that the update notice was shown.
+func MarkNoticeShown(cacheDir string) {
+	cachePath := filepath.Join(cacheDir, cacheFileName)
+	data, err := os.ReadFile(cachePath)
+	if err != nil {
+		return
+	}
+
+	var entry cacheEntry
+	if err := json.Unmarshal(data, &entry); err != nil {
+		return
+	}
+
+	entry.NoticeShownAt = time.Now()
+	saveCache(cachePath, entry)
 }
 
 // Update updates the palace binary to the latest version.

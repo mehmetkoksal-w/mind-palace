@@ -80,6 +80,10 @@ type ContextOptions struct {
 	ExcludeKinds    []string `json:"excludeKinds,omitempty"`    // Symbol kinds to exclude (e.g., "test")
 	MaxTokens       int      `json:"maxTokens,omitempty"`       // Token budget (0 = no limit)
 	IncludeTests    bool     `json:"includeTests,omitempty"`    // Include test files (default: false)
+
+	// Smart context options
+	SmartContext *SmartContextOptions     `json:"smartContext,omitempty"` // Enable smart context expansion
+	EditHistory  map[string]*FileEditInfo `json:"editHistory,omitempty"`  // File edit history for recency scoring
 }
 
 // DefaultExcludePatterns returns patterns for files typically excluded from AI context
@@ -289,6 +293,14 @@ func GetContextForTaskWithOptions(db *sql.DB, query string, limit int, opts *Con
 	}
 
 	result.TotalFiles = len(result.Files)
+
+	// Apply smart context expansion if configured
+	if opts != nil && opts.SmartContext != nil {
+		enhanced, err := EnhanceContextResult(db, result, opts.EditHistory, opts.SmartContext)
+		if err == nil {
+			result = enhanced
+		}
+	}
 
 	// Apply token budgeting if configured
 	if opts != nil && opts.MaxTokens > 0 {

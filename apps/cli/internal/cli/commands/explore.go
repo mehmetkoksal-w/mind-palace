@@ -46,8 +46,41 @@ type ExploreOptions struct {
 	Direction string // --direction: up, down, or both
 }
 
+// reorderArgsForFlags moves flags to the front so Go's flag package can parse them.
+// This allows "explore query --full" instead of requiring "explore --full query".
+func reorderArgsForFlags(args []string) []string {
+	var flags []string
+	var positional []string
+
+	i := 0
+	for i < len(args) {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-") {
+			flags = append(flags, arg)
+			// Check if this flag takes a value (next arg doesn't start with -)
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") && !strings.Contains(arg, "=") {
+				// Could be a flag with value, check if it's a boolean flag
+				// Boolean flags: -full, -fuzzy, -rooms
+				boolFlags := map[string]bool{"-full": true, "--full": true, "-fuzzy": true, "--fuzzy": true, "-rooms": true, "--rooms": true}
+				if !boolFlags[arg] {
+					i++
+					flags = append(flags, args[i])
+				}
+			}
+		} else {
+			positional = append(positional, arg)
+		}
+		i++
+	}
+
+	return append(flags, positional...)
+}
+
 // RunExplore executes the explore command with parsed arguments.
 func RunExplore(args []string) error {
+	// Reorder args so flags come first (allows "explore query --full")
+	args = reorderArgsForFlags(args)
+
 	fs := flag.NewFlagSet("explore", flag.ContinueOnError)
 	root := flags.AddRootFlag(fs)
 	room := fs.String("room", "", "filter to specific room")
@@ -292,8 +325,26 @@ func runExploreMapCallers(db *sql.DB, symbol string) error {
 	}
 
 	if len(calls) == 0 {
-		fmt.Printf("No callers found for '%s'\n", symbol)
-		fmt.Println("This symbol may not be called anywhere, or call tracking may not be available for this language.")
+		// Check if this is a known entry point pattern
+		lowerSymbol := strings.ToLower(symbol)
+		isEntryPoint := lowerSymbol == "main" || lowerSymbol == "init" ||
+			strings.HasPrefix(lowerSymbol, "test") ||
+			strings.HasPrefix(lowerSymbol, "benchmark") ||
+			strings.HasSuffix(lowerSymbol, "handler") ||
+			strings.HasSuffix(lowerSymbol, "controller")
+
+		if isEntryPoint {
+			fmt.Printf("'%s' is an entry point - it's called by the runtime, not by other code.\n\n", symbol)
+			fmt.Println("Entry points are typically:")
+			fmt.Println("  • main()     - Program entry, called by Go runtime")
+			fmt.Println("  • init()     - Package initializer, called before main")
+			fmt.Println("  • Test*()    - Test functions, called by go test")
+			fmt.Println("  • Handlers   - HTTP/event handlers, called by frameworks")
+			fmt.Println("\nTip: Use --map --file <path> to see what this function calls instead.")
+		} else {
+			fmt.Printf("No callers found for '%s'\n", symbol)
+			fmt.Println("This symbol may not be called anywhere, or call tracking may not be available for this language.")
+		}
 		return nil
 	}
 

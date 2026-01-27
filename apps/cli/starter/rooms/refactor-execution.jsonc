@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "refactor-execution",
+  "summary": "Refactoring execution room with incremental verification.",
+  "entryPoints": ["src/"],
+  "artifacts": [
+    {
+      "name": "refactor-summary",
+      "description": "Summary of refactoring changes",
+      "pathHint": ".palace/outputs/refactor-summary.md"
+    }
+  ],
+  "capabilities": ["read.file", "tests.run", "lint.run"],
+  "steps": [
+    {
+      "name": "Apply changes incrementally",
+      "description": "Make one logical change at a time"
+    },
+    {
+      "name": "Run tests after each change",
+      "description": "Verify no regressions after each step",
+      "capability": "tests.run"
+    },
+    {
+      "name": "Run linter",
+      "description": "Ensure code style is maintained",
+      "capability": "lint.run"
+    },
+    {
+      "name": "Document changes",
+      "description": "Store learnings about the refactoring",
+      "evidence": "refactor-summary"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

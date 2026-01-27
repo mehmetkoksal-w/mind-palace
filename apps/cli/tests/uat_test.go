@@ -161,7 +161,7 @@ func LoadConfig() Config {
 	// UAT 1: Agent can record a learning
 	t.Run("record_learning", func(t *testing.T) {
 		runPalace(t, binPath, workspace, "store", "--root", workspace,
-			"--as", "learning", "--direct",
+			"--as", "learning",
 			"Always validate configuration after loading to prevent runtime errors")
 
 		// Should be able to recall it back
@@ -175,7 +175,7 @@ func LoadConfig() Config {
 	// UAT 2: Agent can record scoped learnings
 	t.Run("record_scoped_learning", func(t *testing.T) {
 		runPalace(t, binPath, workspace, "store", "--root", workspace,
-			"--as", "learning", "--direct",
+			"--as", "learning",
 			"--scope", "file", "--path", "config.go",
 			"Config struct requires Port > 0 and valid Host")
 
@@ -527,7 +527,7 @@ func setupTestWorkspace(t *testing.T, files map[string]string) (workspace, binPa
 
 	// Build palace binary
 	root := repoRoot(t)
-	binPath = filepath.Join(t.TempDir(), "palace")
+	binPath = filepath.Join(t.TempDir(), exeName("palace"))
 	buildPalace(t, root, binPath)
 
 	// Create workspace with files

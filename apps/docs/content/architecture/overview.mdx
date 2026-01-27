@@ -10,8 +10,8 @@ This document describes the high-level architecture of Mind Palace.
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐        │
-│  │   palace     │   │  Dashboard   │   │   VS Code    │        │
-│  │    CLI       │   │   (Angular)  │   │  Extension   │        │
+│  │   palace     │   │   VS Code    │   │  AI Agents   │        │
+│  │    CLI       │   │  Extension   │   │  (via MCP)   │        │
 │  └──────┬───────┘   └──────┬───────┘   └──────┬───────┘        │
 │         │                  │                  │                 │
 │         └──────────────────┼──────────────────┘                 │
@@ -43,7 +43,7 @@ The command-line interface for all Mind Palace operations.
 - Scan and index codebases
 - Query symbols and files
 - Manage sessions and learnings
-- Start the dashboard server
+- Serve MCP and LSP servers
 
 **Key Files:**
 
@@ -114,27 +114,21 @@ Cross-workspace knowledge sharing.
 - `apps/cli/internal/corridor/global.go` - Global corridor manager
 - `apps/cli/internal/corridor/schema.go` - Database schema
 
-### 6. Dashboard (`apps/cli/internal/dashboard` + `apps/dashboard`)
+### 6. LSP Server (`apps/cli/internal/lsp`)
 
-Web-based visualization interface.
+Language Server Protocol implementation for editor integration.
 
-**Backend Responsibilities:**
+**Responsibilities:**
 
-- HTTP server
-- REST API endpoints
-- Static file serving
-
-**Frontend Responsibilities:**
-
-- Angular SPA
-- D3.js visualizations
-- Real-time updates
+- Pattern violation diagnostics
+- Contract mismatch detection
+- Hover information
+- Code actions for approvals
 
 **Key Files:**
 
-- `apps/cli/internal/dashboard/server.go` - HTTP server
-- `apps/cli/internal/dashboard/handlers.go` - API handlers
-- `apps/dashboard/src/` - Angular application
+- `apps/cli/internal/lsp/server.go` - LSP server
+- `apps/cli/internal/lsp/diagnostics.go` - Diagnostic generation
 
 ### 7. Analysis (`apps/cli/internal/analysis`)
 
@@ -275,7 +269,6 @@ mind-palace/
 │   │   ├── schemas/         # JSON schemas
 │   │   ├── starter/         # Init templates
 │   │   └── tests/           # Integration tests
-│   ├── dashboard/           # Angular web dashboard
 │   ├── docs/                # Next.js documentation
 │   └── vscode/              # VS Code extension
 ├── assets/                  # Shared branding assets
@@ -291,22 +284,20 @@ mind-palace/
 | CLI & Backend      | Go                          |
 | Database           | SQLite (modernc.org/sqlite) |
 | MCP Protocol       | JSON-RPC over stdio         |
-| Dashboard Backend  | Go net/http                 |
-| Dashboard Frontend | Angular 17+                 |
-| Visualizations     | D3.js                       |
+| LSP Server         | Go (Language Server Protocol) |
 | Parser (Go)        | go/parser, go/ast           |
 | Parser (TS/JS)     | tree-sitter                 |
+| VS Code Extension  | TypeScript                  |
 
 ## Performance Considerations
 
 - **Index**: Uses SQLite FTS5 for fast text search
 - **Memory**: Indexed queries on session and file path
-- **Dashboard**: Lazy-loaded routes, virtual scrolling for large lists
 - **Scanning**: Incremental updates based on file hash
 
 ## Security
 
-- Dashboard runs on localhost only by default
+- MCP server uses stdio (no network exposure by default)
 - No authentication required (local development tool)
 - No data transmitted externally
 - All data stored locally in `.palace` directory

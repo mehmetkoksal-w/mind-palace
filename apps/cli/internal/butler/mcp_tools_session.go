@@ -438,7 +438,11 @@ func (s *MCPServer) toolBrief(id any, args map[string]interface{}) jsonRPCRespon
 			if a.CurrentFile != "" {
 				currentFile = fmt.Sprintf(" working on `%s`", a.CurrentFile)
 			}
-			fmt.Fprintf(&output, "- **%s** (session: `%s`)%s\n", a.AgentType, a.SessionID[:12], currentFile)
+			sessionShort := a.SessionID
+			if len(sessionShort) > 12 {
+				sessionShort = sessionShort[:12]
+			}
+			fmt.Fprintf(&output, "- **%s** (session: `%s`)%s\n", a.AgentType, sessionShort, currentFile)
 		}
 		output.WriteString("\n")
 	}
@@ -447,7 +451,11 @@ func (s *MCPServer) toolBrief(id any, args map[string]interface{}) jsonRPCRespon
 	if brief.Conflict != nil {
 		output.WriteString("## ⚠️ Conflict Warning\n\n")
 		fmt.Fprintf(&output, "Another agent (**%s**) touched this file recently.\n", brief.Conflict.OtherAgent)
-		fmt.Fprintf(&output, "- Session: `%s`\n", brief.Conflict.OtherSession[:12])
+		otherSessionShort := brief.Conflict.OtherSession
+		if len(otherSessionShort) > 12 {
+			otherSessionShort = otherSessionShort[:12]
+		}
+		fmt.Fprintf(&output, "- Session: `%s`\n", otherSessionShort)
 		fmt.Fprintf(&output, "- Last touched: %s\n", brief.Conflict.LastTouched.Format("15:04:05"))
 		fmt.Fprintf(&output, "- Severity: %s\n\n", brief.Conflict.Severity)
 	}
@@ -587,7 +595,6 @@ func (s *MCPServer) toolSessionList(id any, args map[string]interface{}) jsonRPC
 }
 
 // toolSessionResume resumes a previous session for continuation.
-//
 func (s *MCPServer) toolSessionResume(id any, args map[string]interface{}) jsonRPCResponse {
 	sessionID, _ := args["sessionId"].(string)
 	if sessionID == "" {
@@ -851,7 +858,11 @@ func (s *MCPServer) toolSessionConflict(id any, args map[string]interface{}) jso
 	} else {
 		output.WriteString("⚠️ **Conflict detected!**\n\n")
 		fmt.Fprintf(&output, "- **Other Agent:** %s\n", conflict.OtherAgent)
-		fmt.Fprintf(&output, "- **Session:** `%s`\n", conflict.OtherSession[:12])
+		otherSessionShort := conflict.OtherSession
+		if len(otherSessionShort) > 12 {
+			otherSessionShort = otherSessionShort[:12]
+		}
+		fmt.Fprintf(&output, "- **Session:** `%s`\n", otherSessionShort)
 		fmt.Fprintf(&output, "- **Last Touched:** %s\n", conflict.LastTouched.Format(time.RFC3339))
 		fmt.Fprintf(&output, "- **Severity:** %s\n", conflict.Severity)
 		output.WriteString("\nConsider coordinating with the other agent before making changes.")

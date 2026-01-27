@@ -108,6 +108,58 @@
     "provenance": {
       "$ref": "#/$defs/provenance"
     },
+    "monorepo": {
+      "type": "object",
+      "description": "Monorepo detection and configuration",
+      "additionalProperties": false,
+      "properties": {
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional glob patterns to scan for subprojects (e.g., 'clients/*', 'servers/*')"
+        },
+        "excludePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Patterns to exclude from monorepo detection"
+        },
+        "preferredManager": {
+          "type": "string",
+          "enum": [
+            "pnpm",
+            "yarn",
+            "npm",
+            "lerna",
+            "turborepo",
+            "nx",
+            "rush",
+            "melos",
+            "bazel",
+            "pants",
+            "cargo-workspace",
+            "gradle-composite",
+            "maven-multi",
+            "dotnet-sln",
+            "go-workspace"
+          ],
+          "description": "Force use of a specific monorepo manager for detection"
+        },
+        "disableAutoDetect": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip automatic monorepo manager detection"
+        },
+        "detectDependencies": {
+          "type": "boolean",
+          "default": true,
+          "description": "Analyze cross-project dependencies"
+        }
+      }
+    },
     "dashboard": {
       "type": "object",
       "description": "Dashboard server configuration",

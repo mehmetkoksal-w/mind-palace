@@ -1,8 +1,8 @@
 {
   "name": "mind-palace-vscode",
-  "displayName": "Mind Palace Observer",
-  "description": "Head-Up Display for the Mind Palace CLI",
-  "version": "0.4.1-alpha",
+  "displayName": "Mind Palace",
+  "description": "Status bar and LSP integration for Mind Palace CLI",
+  "version": "0.4.2-alpha",
   "license": "MIT",
   "publisher": "mind-palace",
   "icon": "images/icon.png",
@@ -22,321 +22,16 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "mind-palace-view",
-          "title": "Mind Palace",
-          "icon": "$(heart)"
-        }
-      ]
-    },
-    "views": {
-      "mind-palace-view": [
-        {
-          "id": "mindPalace.blueprintView",
-          "name": "Blueprint",
-          "type": "webview",
-          "icon": "$(layout-sidebar-left)"
-        },
-        {
-          "id": "mindPalace.knowledgeView",
-          "name": "Knowledge",
-          "icon": "$(book)"
-        },
-        {
-          "id": "mindPalace.sessionsView",
-          "name": "Sessions",
-          "icon": "$(debug-start)"
-        },
-        {
-          "id": "mindPalace.corridorView",
-          "name": "Corridor",
-          "icon": "$(globe)"
-        }
-      ]
-    },
     "commands": [
-      {
-        "command": "mindPalace.heal",
-        "title": "Mind Palace: Heal (Scan & Collect)",
-        "icon": "$(heart)"
-      },
       {
         "command": "mindPalace.checkStatus",
         "title": "Mind Palace: Check Status",
         "icon": "$(sync)"
       },
       {
-        "command": "mindPalace.openBlueprint",
-        "title": "Mind Palace: Open Blueprint",
-        "icon": "$(layout-sidebar-left)"
-      },
-      {
-        "command": "mindPalace.refreshKnowledge",
-        "title": "Mind Palace: Refresh Knowledge",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "mindPalace.showKnowledgeDetail",
-        "title": "Mind Palace: Show Knowledge Detail"
-      },
-      {
-        "command": "mindPalace.storeIdea",
-        "title": "Mind Palace: Store as Idea",
-        "icon": "$(lightbulb)"
-      },
-      {
-        "command": "mindPalace.storeDecision",
-        "title": "Mind Palace: Store as Decision",
-        "icon": "$(law)"
-      },
-      {
-        "command": "mindPalace.storeLearning",
-        "title": "Mind Palace: Store as Learning",
-        "icon": "$(book)"
-      },
-      {
-        "command": "mindPalace.quickStore",
-        "title": "Mind Palace: Quick Store...",
-        "icon": "$(save)"
-      },
-      {
-        "command": "mindPalace.showFileIntel",
-        "title": "Mind Palace: Show File Intelligence",
-        "icon": "$(info)"
-      },
-      {
-        "command": "mindPalace.showCallGraph",
-        "title": "Mind Palace: Show Call Graph",
-        "icon": "$(type-hierarchy)"
-      },
-      {
-        "command": "mindPalace.showMenu",
-        "title": "Mind Palace: Show Menu",
-        "icon": "$(three-bars)"
-      },
-      {
-        "command": "mindPalace.refreshSessions",
-        "title": "Mind Palace: Refresh Sessions",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "mindPalace.startSession",
-        "title": "Mind Palace: Start Session",
-        "icon": "$(debug-start)"
-      },
-      {
-        "command": "mindPalace.endSession",
-        "title": "Mind Palace: End Session",
-        "icon": "$(debug-stop)"
-      },
-      {
-        "command": "mindPalace.showSessionDetail",
-        "title": "Mind Palace: Show Session Detail"
-      },
-      {
-        "command": "mindPalace.showConflictInfo",
-        "title": "Mind Palace: Check File Conflict",
-        "icon": "$(warning)"
-      },
-      {
-        "command": "mindPalace.refreshCorridor",
-        "title": "Mind Palace: Refresh Corridor",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "mindPalace.showCorridorLearningDetail",
-        "title": "Mind Palace: Show Corridor Learning Detail"
-      },
-      {
-        "command": "mindPalace.reinforceCorridorLearning",
-        "title": "Mind Palace: Reinforce Learning",
-        "icon": "$(thumbsup)"
-      },
-      {
-        "command": "mindPalace.searchConversations",
-        "title": "Mind Palace: Search Conversations",
-        "icon": "$(comment-discussion)"
-      },
-      {
-        "command": "mindPalace.showConversationDetail",
-        "title": "Mind Palace: Show Conversation Detail"
-      },
-      {
-        "command": "mindPalace.showLinks",
-        "title": "Mind Palace: Show Links",
-        "icon": "$(link)"
-      },
-      {
-        "command": "mindPalace.createLink",
-        "title": "Mind Palace: Create Link",
-        "icon": "$(link-external)"
-      },
-      {
-        "command": "mindPalace.semanticSearch",
-        "title": "Mind Palace: Semantic Search",
-        "icon": "$(search-fuzzy)"
-      },
-      {
-        "command": "mindPalace.showLearningSuggestions",
-        "title": "Mind Palace: Show Learning Suggestions",
-        "icon": "$(lightbulb)"
-      },
-      {
-        "command": "mindPalace.showLearningDetail",
-        "title": "Mind Palace: Show Learning Detail"
-      },
-      {
-        "command": "mindPalace.showKnowledgeGraph",
-        "title": "Mind Palace: Show Knowledge Graph",
-        "icon": "$(graph)"
-      },
-      {
-        "command": "palace.proposals.list",
-        "title": "Mind Palace: List Proposals",
-        "icon": "$(list-ordered)"
-      },
-      {
-        "command": "palace.proposals.approve",
-        "title": "Mind Palace: Approve Proposal",
-        "icon": "$(check)"
-      },
-      {
-        "command": "palace.proposals.reject",
-        "title": "Mind Palace: Reject Proposal",
-        "icon": "$(close)"
-      },
-      {
-        "command": "palace.proposals.reviewPending",
-        "title": "Mind Palace: Review Pending Proposals",
-        "icon": "$(checklist)"
-      },
-      {
         "command": "mindPalace.restartLsp",
         "title": "Mind Palace: Restart LSP Server",
         "icon": "$(debug-restart)"
-      }
-    ],
-    "menus": {
-      "view/title": [
-        {
-          "command": "mindPalace.refreshKnowledge",
-          "when": "view == mindPalace.knowledgeView",
-          "group": "navigation"
-        },
-        {
-          "command": "mindPalace.refreshSessions",
-          "when": "view == mindPalace.sessionsView",
-          "group": "navigation"
-        },
-        {
-          "command": "mindPalace.startSession",
-          "when": "view == mindPalace.sessionsView",
-          "group": "navigation"
-        },
-        {
-          "command": "mindPalace.refreshCorridor",
-          "when": "view == mindPalace.corridorView",
-          "group": "navigation"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "mindPalace.endSession",
-          "when": "view == mindPalace.sessionsView && viewItem == session",
-          "group": "inline"
-        },
-        {
-          "command": "mindPalace.reinforceCorridorLearning",
-          "when": "view == mindPalace.corridorView && viewItem == learning",
-          "group": "inline"
-        },
-        {
-          "command": "mindPalace.showLinks",
-          "when": "view == mindPalace.knowledgeView && viewItem =~ /^(learning|decision|idea)$/",
-          "group": "1_links@1"
-        },
-        {
-          "command": "mindPalace.createLink",
-          "when": "view == mindPalace.knowledgeView && viewItem =~ /^(learning|decision|idea)$/",
-          "group": "1_links@2"
-        }
-      ],
-      "editor/context": [
-        {
-          "submenu": "mindPalace.storeSubmenu",
-          "when": "editorHasSelection",
-          "group": "mindpalace@1"
-        }
-      ],
-      "mindPalace.storeSubmenu": [
-        {
-          "command": "mindPalace.quickStore",
-          "group": "1_store@0"
-        },
-        {
-          "command": "mindPalace.storeIdea",
-          "group": "2_types@1"
-        },
-        {
-          "command": "mindPalace.storeDecision",
-          "group": "2_types@2"
-        },
-        {
-          "command": "mindPalace.storeLearning",
-          "group": "2_types@3"
-        }
-      ]
-    },
-    "submenus": [
-      {
-        "id": "mindPalace.storeSubmenu",
-        "label": "Mind Palace",
-        "icon": "$(heart)"
-      }
-    ],
-    "keybindings": [
-      {
-        "command": "mindPalace.heal",
-        "key": "ctrl+shift+h",
-        "mac": "cmd+shift+h",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "mindPalace.checkStatus",
-        "key": "ctrl+shift+s",
-        "mac": "cmd+shift+s",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "mindPalace.openBlueprint",
-        "key": "ctrl+shift+b",
-        "mac": "cmd+shift+b",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "mindPalace.quickStore",
-        "key": "ctrl+shift+k",
-        "mac": "cmd+shift+k",
-        "when": "editorHasSelection"
-      },
-      {
-        "command": "mindPalace.semanticSearch",
-        "key": "ctrl+shift+f",
-        "mac": "cmd+shift+f",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "mindPalace.showMenu",
-        "key": "ctrl+shift+m",
-        "mac": "cmd+shift+m"
-      },
-      {
-        "command": "mindPalace.showKnowledgeGraph",
-        "key": "ctrl+shift+g",
-        "mac": "cmd+shift+g",
-        "when": "editorTextFocus"
       }
     ],
     "configuration": {
@@ -347,47 +42,15 @@
           "default": "palace",
           "description": "Path to the 'palace' binary executable."
         },
-        "mindPalace.waitForCleanWorkspace": {
-          "type": "boolean",
-          "default": false,
-          "description": "If true, auto-sync waits until ALL files in the workspace are saved. If false, it scans after the delay even if some files are unsaved."
-        },
-        "mindPalace.autoSync": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically heal (scan & collect) after file changes."
-        },
-        "mindPalace.autoSyncDelay": {
-          "type": "number",
-          "default": 1500,
-          "minimum": 500,
-          "maximum": 30000,
-          "description": "Milliseconds to wait after the last save before scanning (debounce)."
-        },
         "mindPalace.showStatusBarItem": {
           "type": "boolean",
           "default": true,
           "description": "Show the Mind Palace status item in the status bar."
         },
-        "mindPalace.showFileDecorations": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show inline decorations for learnings, ideas, and decisions in the editor."
-        },
-        "mindPalace.enableSemanticSearch": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable semantic search features (requires embedding backend configured in palace.jsonc)."
-        },
-        "mindPalace.showInlineLearnings": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show inline learning annotations in the editor (subtle decorations with confidence-based opacity)."
-        },
         "mindPalace.lsp.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable the Language Server Protocol server for real-time pattern and contract diagnostics."
+          "description": "Enable the Language Server Protocol server for real-time diagnostics."
         },
         "mindPalace.lsp.diagnostics.patterns": {
           "type": "boolean",
@@ -424,37 +87,20 @@
     "watch": "node esbuild.config.js --watch",
     "test": "node ./out/test/runTests.js",
     "test:unit": "mocha --require ts-node/register 'src/test/unit/**/*.test.ts'",
-    "test:coverage": "nyc npm run test:unit",
-    "test:coverage:report": "nyc report --reporter=text --reporter=lcov",
-    "test:coverage:html": "nyc report --reporter=html",
-    "test:coverage:check": "nyc check-coverage --lines 75 --functions 70 --branches 70",
-    "test:coverage:clean": "rimraf coverage .nyc_output",
     "pretest": "npm run compile && tsc -p ."
   },
   "devDependencies": {
-    "@types/chai": "^5.2.3",
-    "@types/cytoscape": "^3.31.0",
-    "@types/d3": "^7.4.3",
-    "@types/minimatch": "^6.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.0.9",
-    "@types/sinon": "^21.0.0",
     "@types/vscode": "^1.108.1",
     "@vscode/test-electron": "^2.5.2",
-    "chai": "^6.2.2",
     "cross-env": "^10.1.0",
-    "cytoscape": "^3.33.1",
-    "d3": "^7.9.0",
     "esbuild": "^0.27.2",
-    "minimatch": "^10.1.1",
     "mocha": "^11.7.5",
-    "nyc": "^17.1.0",
-    "sinon": "^21.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "jsonc-parser": "^3.3.1",
     "vscode-languageclient": "^9.0.1"
   }
 }

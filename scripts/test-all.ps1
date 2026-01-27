@@ -74,34 +74,6 @@ if ($Coverage -and $goSuccess) {
 }
 
 # =============================================================================
-# Dashboard Tests (Angular)
-# =============================================================================
-Write-Section "Dashboard Tests (Angular)"
-
-if (Test-Path "apps\dashboard\node_modules") {
-    Push-Location apps\dashboard
-    try {
-        $dashOutput = npm test -- --watch=false --browsers=ChromeHeadless 2>&1
-        $dashSuccess = $LASTEXITCODE -eq 0
-
-        if ($VerboseOutput -or -not $dashSuccess) {
-            $dashOutput | ForEach-Object { Write-Host $_ }
-        }
-
-        Write-Result "Dashboard Tests" $dashSuccess
-    }
-    catch {
-        Write-Result "Dashboard Tests" $false "Error: $_"
-    }
-    finally {
-        Pop-Location
-    }
-} else {
-    Write-Host "[SKIP] Dashboard tests - node_modules not installed" -ForegroundColor Yellow
-    Write-Host "       Run 'npm install' in apps/dashboard first" -ForegroundColor DarkGray
-}
-
-# =============================================================================
 # VS Code Extension Tests
 # =============================================================================
 Write-Section "VS Code Extension Tests"

@@ -1,41 +1,59 @@
 # Changelog
 
-All notable changes to the Mind Palace Observer VS Code extension will be documented in this file.
+All notable changes to the Mind Palace VS Code extension will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.1-alpha] - 2026-01-01
+## [0.4.2-alpha] - 2026-01-27
 
-### Introducing The Observer
+### Changed
 
-The Mind Palace Observer is your IDE's "Head-Up Display" for the Mind Palace ecosystem. It bridges the gap between your local source code and your digital second brain.
+- **Simplified to Status Bar + LSP**: Extension now focuses on two core features
+- **Minimal Footprint**: Removed sidebar, webviews, and most commands
 
-### Key Features
+### Removed
 
-#### The Traffic Light (Status HUD)
+- **Sidebar Views**: Blueprint, Knowledge, Sessions, and Corridor views removed
+- **Webviews**: Knowledge graph and blueprint visualizations removed
+- **Commands**: Store, session management, semantic search commands removed
+- **Keyboard Shortcuts**: Removed all shortcuts except status check
+- **File Decorations**: Inline decorations removed
+- **Auto-Heal**: Auto-sync on file save removed (use CLI `palace scan --watch` instead)
 
-- **Real-time Health Monitoring**: A status bar indicator that reflects the "freshness" of your codebase index.
-- **Smart Healing**: One-click (or auto-save) synchronization that ensures AI agents always see the current state of your code.
+### Kept
 
-#### The Blueprint Sidebar
-
-- **Project Structure Explorer**: High-fidelity tree navigation curated by the Palace.
-- **Interactive Knowledge View**: Browse, search, and manage project Ideas, Decisions, and Learnings without leaving your editor.
-- **Session Tracker**: Real-time view of AI agent sessions and their activity history.
-
-#### Deep Editor Integration
-
-- **Hybrid Semantic Search**: A powerful search interface combining keyword match with AI-powered embedding search.
-- **Inline Decorations**: Subtle visual cues for code associated with specific project learnings or decisions.
-- **Interactive Call Graphs**: Visualize complex symbol relationships directly in the side panel.
-
-#### Command Palette Mastery
-
-- **`Cmd/Ctrl+Shift+H`**: Instantly heal (scan & collect) the current workspace.
-- **`Cmd/Ctrl+Shift+K`**: Quick-store any selected text as a new project Idea or Learning.
-- **`Cmd/Ctrl+Shift+F`**: Global hybrid search for project knowledge.
+- **Status Bar**: Shows Palace status with knowledge counts (✓ Palace 2D/1I/3L)
+- **LSP Integration**: Real-time pattern and contract diagnostics
+- **2 Commands**: `checkStatus` and `restartLsp`
 
 ---
 
-_The Observer: Context at the speed of thought._
+## [0.4.1-alpha] - 2026-01-21
+
+### Added
+
+- **LSP Integration**: Full Language Server Protocol client
+  - Pattern violation diagnostics with confidence scores
+  - Contract mismatch diagnostics between frontend/backend
+  - Hover information showing pattern/contract details
+  - Code actions to approve, ignore, or verify issues
+  - Code lens showing issue counts per file
+  - Crash recovery with automatic server restart
+
+---
+
+## [0.0.1-alpha] - 2026-01-01
+
+### Initial Release
+
+- Status bar indicator for index freshness
+- Blueprint sidebar with tree and graph views
+- Knowledge view for ideas, decisions, learnings
+- Session tracking for AI agents
+- Semantic search integration
+- Auto-heal on file save
+
+---
+
+_Mind Palace: Context at the speed of thought._

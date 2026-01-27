@@ -29,21 +29,14 @@ echo "Syncing ecosystem to version: $VERSION"
 #     sed -i '' "s/buildVersion = \".*\"/buildVersion = \"$VERSION\"/" "$CLI_VERSION_FILE"
 # fi
 
-# 2. Update Dashboard version
-DASHBOARD_PKC="$ROOT_DIR/apps/dashboard/package.json"
-if [ -f "$DASHBOARD_PKC" ]; then
-    echo "Updating $DASHBOARD_PKC..."
-    sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" "$DASHBOARD_PKC"
-fi
-
-# 3. Update VS Code extension version
+# 2. Update VS Code extension version
 VSCODE_PKC="$ROOT_DIR/apps/vscode/package.json"
 if [ -f "$VSCODE_PKC" ]; then
     echo "Updating $VSCODE_PKC..."
     sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" "$VSCODE_PKC"
 fi
 
-# 4. Update Docs version
+# 3. Update Docs version
 DOCS_PKC="$ROOT_DIR/apps/docs/package.json"
 if [ -f "$DOCS_PKC" ]; then
     echo "Updating $DOCS_PKC..."
@@ -56,8 +49,7 @@ echo "Verifying synchronization..."
 # Verify all versions match
 ERRORS=0
 
-if [ -f "$DASHBOARD_PKC" ]; then
-    DASH_VER=$(grep -oP '"version":\s*"\K[^"]+' "$DASHBOARD_PKC" || echo "")
+if [ -f "$VSCODE_PKC" ]; then
     if [ "$DASH_VER" != "$VERSION" ]; then
         echo "[ERROR] Dashboard version mismatch: $DASH_VER (expected: $VERSION)"
         ERRORS=$((ERRORS + 1))

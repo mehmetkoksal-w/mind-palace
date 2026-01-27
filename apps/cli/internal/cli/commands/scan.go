@@ -6,15 +6,19 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/analysis"
 	"github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/cli/flags"
+	"github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/config"
 	"github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/index"
 	"github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/logger"
 	"github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/scan"
+	"github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/watch"
 )
 
 func init() {
@@ -29,10 +33,13 @@ func init() {
 type ScanOptions struct {
 	Root        string
 	Full        bool
-	Incremental bool // Force git-based incremental scan
-	Deep        bool // Enable deep analysis (LSP-based call tracking for Dart)
-	Verbose     bool // Show detailed progress
-	Debug       bool // Show debug information
+	Incremental bool          // Force git-based incremental scan
+	Deep        bool          // Enable deep analysis (LSP-based call tracking for Dart)
+	Verbose     bool          // Show detailed progress
+	Debug       bool          // Show debug information
+	Workers     int           // Number of parallel workers (0 = auto-detect)
+	Watch       bool          // Enable watch mode for continuous indexing
+	Debounce    time.Duration // Debounce delay for watch mode
 }
 
 // RunScan executes the scan command with parsed arguments.
@@ -44,6 +51,10 @@ func RunScan(args []string) error {
 	deep := fs.Bool("deep", false, "enable deep analysis (LSP-based call tracking for Dart/Flutter)")
 	verbose := flags.AddVerboseFlag(fs)
 	debug := fs.Bool("debug", false, "show debug information")
+	workers := fs.Int("workers", 0, "number of parallel workers (0 = auto-detect based on CPU)")
+	fs.IntVar(workers, "j", 0, "parallel workers (shorthand for --workers)")
+	watch := fs.Bool("watch", false, "watch for file changes and auto-rescan")
+	debounce := fs.Duration("debounce", 500*time.Millisecond, "debounce delay for watch mode")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -55,6 +66,9 @@ func RunScan(args []string) error {
 		Deep:        *deep,
 		Verbose:     *verbose,
 		Debug:       *debug,
+		Workers:     *workers,
+		Watch:       *watch,
+		Debounce:    *debounce,
 	})
 }
 
@@ -68,10 +82,15 @@ func ExecuteScan(opts ScanOptions) error {
 		logger.SetLevel(logger.LevelInfo)
 	}
 
+	// Handle watch mode
+	if opts.Watch {
+		return executeWatchMode(opts)
+	}
+
 	var err error
 	switch {
 	case opts.Full:
-		err = executeFullScan(opts.Root)
+		err = executeFullScanWithWorkers(opts.Root, opts.Workers)
 	case opts.Incremental:
 		err = executeGitIncrementalScan(opts.Root)
 	default:
@@ -91,6 +110,89 @@ func ExecuteScan(opts ScanOptions) error {
 	}
 
 	return nil
+}
+
+// executeWatchMode runs an initial scan and then watches for changes.
+func executeWatchMode(opts ScanOptions) error {
+	rootPath, err := filepath.Abs(opts.Root)
+	if err != nil {
+		return fmt.Errorf("resolve root: %w", err)
+	}
+
+	// Run initial scan
+	fmt.Println("Running initial scan...")
+	switch {
+	case opts.Full:
+		if err := executeFullScanWithWorkers(opts.Root, opts.Workers); err != nil {
+			return fmt.Errorf("initial scan: %w", err)
+		}
+	default:
+		if err := executeAutoIncrementalScan(opts.Root); err != nil {
+			return fmt.Errorf("initial scan: %w", err)
+		}
+	}
+
+	// Load guardrails for watch filtering
+	guardrails := config.LoadGuardrails(rootPath)
+
+	// Create watcher config
+	watchCfg := watch.DefaultConfig()
+	watchCfg.Debounce = opts.Debounce
+
+	// Track scan count for output
+	scanCount := 0
+
+	// Create the watcher
+	watcher, err := watch.New(rootPath, guardrails, func(changes []watch.FileChange) error {
+		scanCount++
+		if opts.Verbose {
+			fmt.Printf("\n[%s] Detected %d changes, rescanning...\n",
+				time.Now().Format("15:04:05"), len(changes))
+			for _, c := range changes {
+				fmt.Printf("  %s: %s\n", c.Action, c.Path)
+			}
+		} else {
+			fmt.Printf("\r[%s] Scan #%d: processing %d changes...",
+				time.Now().Format("15:04:05"), scanCount, len(changes))
+		}
+
+		// Run incremental scan
+		if err := executeAutoIncrementalScan(opts.Root); err != nil {
+			fmt.Fprintf(os.Stderr, "\nrescan error: %v\n", err)
+			return nil // Don't stop watching on scan errors
+		}
+
+		if !opts.Verbose {
+			fmt.Printf("\r[%s] Scan #%d: complete                    \n",
+				time.Now().Format("15:04:05"), scanCount)
+		}
+
+		return nil
+	}, watchCfg)
+
+	if err != nil {
+		return fmt.Errorf("create watcher: %w", err)
+	}
+
+	// Print watch status
+	fmt.Printf("\n👁️  Watching for changes (debounce: %v)\n", opts.Debounce)
+	fmt.Println("Press Ctrl+C to stop")
+
+	// Set up signal handling for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sigChan
+		fmt.Println("\n\nStopping watcher...")
+		cancel()
+	}()
+
+	// Start watching (blocks until context is cancelled)
+	return watcher.Start(ctx)
 }
 
 // isDartFlutterProject checks if the workspace is a Dart/Flutter project
@@ -121,7 +223,11 @@ func isDartFlutterProject(rootPath string) bool {
 }
 
 func executeFullScan(root string) error {
-	summary, fileCount, err := scan.Run(root)
+	return executeFullScanWithWorkers(root, 0)
+}
+
+func executeFullScanWithWorkers(root string, workers int) error {
+	summary, fileCount, err := scan.RunWithOptions(root, scan.RunOptions{Workers: workers})
 	if err != nil {
 		return err
 	}

@@ -1,337 +1,38 @@
-# Dashboard
+# Dashboard (Deprecated)
 
-The Mind Palace Dashboard provides a visual interface to explore your codebase, monitor agent activity, and manage learnings.
+> **Note:** The Dashboard has been deprecated as of v0.4.2. All functionality is available through CLI commands.
 
-## Starting the Dashboard
+## Migration Guide
+
+The following CLI commands replace Dashboard functionality:
+
+| Dashboard Feature | CLI Alternative |
+|-------------------|-----------------|
+| Rooms Explorer | `palace explore --rooms` |
+| Call Graph | `palace explore --map <symbol>` |
+| Sessions | `palace session list` |
+| Learnings | `palace explore --type learning` |
+| File Intelligence | `palace brief <file>` |
+| Proposals | `palace proposals` |
+| Health Overview | `palace check` |
+
+### Examples
 
 ```bash
-palace dashboard
+# Browse all rooms
+palace explore --rooms
+
+# Visualize call graph for a function
+palace explore --map handleUserLogin
+
+# List all sessions
+palace session list
+
+# Get file intelligence
+palace brief src/auth/jwt.go
+
+# Check workspace health
+palace check
 ```
 
-Options:
-```bash
-palace dashboard --port 3001    # Custom port
-palace dashboard --no-browser   # Don't auto-open browser
-```
-
-The dashboard runs locally at `http://localhost:3001`.
-
-## Views
-
-### Overview
-
-The home page provides a high-level summary:
-
-- **Active Sessions**: Number of agents currently working
-- **Total Sessions**: Historical session count
-- **Learnings**: Number of stored learnings
-- **Files Tracked**: Files with activity history
-
-### Rooms Explorer
-
-Visual exploration of your codebase's logical structure.
-
-**Features:**
-- Browse all rooms (logical modules)
-- See files per room
-- View entry points (exported functions/types)
-- Filter rooms by name
-
-**How to Use:**
-1. Click on a room to expand details
-2. View the list of files in that room
-3. See entry points that serve as the room's public API
-
-### Call Graph
-
-Interactive D3.js visualization of function call relationships.
-
-**Features:**
-- Enter a function name to visualize its call graph
-- See callers (who calls this function)
-- See callees (what this function calls)
-- Click nodes to explore further
-- Drag nodes to reposition
-- Zoom and pan the graph
-
-**Controls:**
-- **Show Callers**: Toggle caller nodes
-- **Show Callees**: Toggle callee nodes
-- **Reset View**: Reset zoom and position
-
-### Sessions
-
-Monitor agent work sessions.
-
-**Features:**
-- List all sessions (past and current)
-- Filter by active sessions only
-- View session details:
-  - Agent type and ID
-  - Goal
-  - Start time and duration
-  - State (active/completed/abandoned)
-- See activities within each session
-
-### Learnings
-
-Browse and search captured learnings.
-
-**Features:**
-- View all learnings
-- Filter by scope (file/room/palace)
-- Search by content
-- See confidence scores
-- View use counts
-- Track learning sources
-
-### File Intelligence
-
-Heat map visualization of file activity.
-
-**Three View Modes:**
-
-1. **Heat Map**: Visual grid showing edit frequency
-   - Color intensity indicates edit count
-   - Red border indicates files with failures
-   - Click to see file details
-
-2. **List View**: Sorted list of files
-   - Shows edit counts and failure rates
-   - Progress bars for visual comparison
-   - Separate section for fragile files
-
-3. **Tree View**: Hierarchical file browser
-   - Navigate folder structure
-   - Color-coded by activity level
-   - Expand/collapse folders
-
-**Metrics Shown:**
-- Total files tracked
-- Total edits
-- Fragile files (high failure rate)
-- Total failures
-
-### Corridors
-
-Manage cross-project knowledge sharing.
-
-**Features:**
-- View personal corridor stats
-- See linked workspaces
-- Browse personal learnings
-- View average confidence levels
-
-### Insights
-
-The Insights section provides advanced knowledge management views:
-
-#### Sessions
-Track AI agent work sessions with activity timelines.
-
-#### Learnings
-Browse, search, and manage captured learnings with confidence scores.
-
-#### Ideas
-View and manage captured ideas with status tracking (draft, active, archived).
-
-#### Decisions
-Track architectural decisions with rationale and outcome recording.
-
-#### Corridors
-Manage cross-workspace knowledge sharing.
-
-#### Conversations
-Browse past AI conversations with full transcripts and extracted knowledge.
-
-#### Contradictions
-Detect and resolve conflicting learnings or decisions.
-
-#### Postmortems
-Track and learn from failures:
-- **Severity levels**: Low, Medium, High, Critical
-- **Status tracking**: Open, Resolved, Recurring
-- **Structured analysis**: What happened, root cause, lessons learned
-- **Convert to learnings**: Promote lessons to permanent learnings
-- **File linking**: Associate affected files with failures
-
-#### Decision Timeline
-Visualize the evolution of architectural decisions:
-- **Horizontal timeline**: See decisions over time
-- **Outcome colors**: Green (success), Red (failed), Yellow (mixed), Gray (unknown)
-- **Decision chains**: Track predecessors and successors
-- **Scope filtering**: Filter by file, room, or palace scope
-
-#### Context Preview
-Preview what context AI agents will receive:
-- **File path input**: Enter any file path to preview
-- **Token budget**: See breakdown of token usage
-- **Toggles**: Include/exclude learnings, decisions, failures
-- **Priority scores**: Understand why items are included
-
-#### Scope Explorer
-Visualize knowledge inheritance:
-- **4-level hierarchy**: File → Room → Palace → Corridor
-- **Record counts**: See how many records at each scope
-- **Inheritance chain**: Visualize how knowledge flows
-- **Scope resolution**: Understand what applies to any file
-
-## API Reference
-
-The dashboard exposes a REST API:
-
-### Health & Stats
-
-```
-GET /api/health
-GET /api/stats
-```
-
-### Sessions
-
-```
-GET /api/sessions?active=true&limit=50
-GET /api/sessions/{id}
-```
-
-### Activity
-
-```
-GET /api/activity?sessionId=xxx&path=xxx&limit=50
-```
-
-### Learnings
-
-```
-GET /api/learnings?scope=file&scopePath=xxx&query=xxx&limit=50
-```
-
-### Ideas
-
-```
-GET /api/ideas?scope=palace&status=active&limit=50
-GET /api/ideas/{id}
-```
-
-### Decisions
-
-```
-GET /api/decisions?scope=palace&status=unknown&limit=50
-GET /api/decisions/{id}
-GET /api/decisions/{id}/chain
-GET /api/decisions/timeline?scope=palace&limit=100
-```
-
-### Postmortems
-
-```
-GET /api/postmortems?status=open&severity=high&limit=50
-GET /api/postmortems/{id}
-POST /api/postmortems
-POST /api/postmortems/{id}/resolve
-POST /api/postmortems/{id}/learnings
-GET /api/postmortems/stats
-```
-
-### Conversations
-
-```
-GET /api/conversations?sessionId=xxx&limit=50
-GET /api/conversations/{id}
-```
-
-### Contradictions
-
-```
-GET /api/contradictions?resolved=false&limit=50
-GET /api/contradictions/summary
-```
-
-### Context & Scope
-
-```
-POST /api/context/preview
-POST /api/scope/explain
-GET /api/scope/hierarchy
-```
-
-### File Intelligence
-
-```
-GET /api/file-intel?path=src/main.go
-GET /api/hotspots?limit=20
-```
-
-### Corridors
-
-```
-GET /api/corridors
-GET /api/corridors/personal?query=xxx&limit=50
-GET /api/corridors/links
-```
-
-### Search
-
-```
-GET /api/search?q=authentication&limit=20
-```
-
-### Graph
-
-```
-GET /api/graph/{symbol}?file=xxx
-```
-
-### Briefing
-
-```
-GET /api/brief?path=src/main.go
-```
-
-### Active Agents
-
-```
-GET /api/agents
-```
-
-## Configuration
-
-Dashboard settings in `palace.jsonc`:
-
-```json
-{
-  "dashboard": {
-    "port": 3001,
-    "autoOpen": true,
-    "theme": "dark"
-  }
-}
-```
-
-## Troubleshooting
-
-### Dashboard Won't Start
-
-1. Check if port is in use: `lsof -i :3001`
-2. Try a different port: `palace dashboard --port 3002`
-3. Check for errors in terminal output
-
-### No Data Showing
-
-1. Ensure you've run `palace scan` first
-2. Verify `.palace/index/palace.db` exists
-3. Check the backend is running and accessible
-
-### Slow Performance
-
-1. Large codebases may take time to load
-2. Consider filtering or limiting results
-3. Check browser developer console for errors
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `/` | Focus search |
-| `Escape` | Close panels |
-| `?` | Show help |
+For more details, see the [CLI Reference](/reference/cli).

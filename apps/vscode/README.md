@@ -1,21 +1,30 @@
-# Mind Palace Observer
+# Mind Palace
 
-<!-- TODO: Add logo/icon here -->
-
-VS Code extension for the [Mind Palace](https://github.com/mehmetkoksal-w/mind-palace) ecosystem.
+Minimal VS Code extension for the [Mind Palace](https://github.com/mehmetkoksal-w/mind-palace) ecosystem.
 
 ## Features
 
-- **Traffic Light HUD**: Status bar indicator showing index freshness (Fresh/Stale/Scanning)
-- **Blueprint Sidebar**: Interactive visualization of Rooms and files (tree & graph views)
-- **Auto-Healing**: Automatic scan & collect on file save
-- **Butler Search**: Search your codebase by intent directly from VS Code
-- **LSP Integration**: Real-time diagnostics for pattern violations and contract mismatches
-  - Pattern violation warnings with confidence scores
-  - Contract mismatch errors between frontend and backend
-  - Hover information showing pattern/contract details
-  - Code actions to approve, ignore, or verify issues
-  - Code lens showing issue counts per file
+### Status Bar
+
+Shows Mind Palace status at a glance:
+
+| State | Display | Meaning |
+|-------|---------|--------|
+| Fresh | `✓ Palace 2D/1I/3L` | Index fresh, shows knowledge counts |
+| Stale | `⚠ Palace` | Files changed since last scan |
+| Not initialized | `ℹ Palace: Not initialized` | Run `palace init` |
+
+Click the status bar item to refresh.
+
+### LSP Integration
+
+Real-time diagnostics powered by the Language Server Protocol:
+
+- Pattern violation warnings with confidence scores
+- Contract mismatch errors between frontend and backend
+- Hover information showing pattern/contract details
+- Code actions to approve, ignore, or verify issues
+- Code lens showing issue counts per file
 
 ## Requirements
 
@@ -35,49 +44,43 @@ chmod +x palace && sudo mv palace /usr/local/bin/
 
 1. Install this extension
 2. Open a project with Mind Palace initialized (`palace init`)
-3. The status bar shows sync status automatically
-4. Open the Blueprint sidebar to explore your project structure
+3. The status bar shows index status automatically
+4. Use CLI for full functionality (`palace explore`, `palace recall`, etc.)
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `Mind Palace: Check Status` | Refresh status bar |
+| `Mind Palace: Restart LSP Server` | Restart LSP if needed |
 
 ## Configuration
 
-### VS Code Settings
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `mindPalace.binaryPath` | `palace` | Path to CLI binary |
+| `mindPalace.showStatusBarItem` | `true` | Show status bar indicator |
+| `mindPalace.lsp.enabled` | `true` | Enable LSP diagnostics |
+| `mindPalace.lsp.diagnostics.patterns` | `true` | Show pattern diagnostics |
+| `mindPalace.lsp.diagnostics.contracts` | `true` | Show contract diagnostics |
+| `mindPalace.lsp.codeLens.enabled` | `true` | Show code lens |
 
-| Setting                            | Default  | Description                        |
-| ---------------------------------- | -------- | ---------------------------------- |
-| `mindPalace.binaryPath`            | `palace` | Path to CLI binary                 |
-| `mindPalace.autoSync`              | `true`   | Auto-heal on file save             |
-| `mindPalace.autoSyncDelay`         | `3000`   | Debounce delay (ms)                |
-| `mindPalace.waitForCleanWorkspace` | `true`   | Wait for all files saved           |
-| `mindPalace.lsp.enabled`           | `true`   | Enable LSP diagnostics             |
-| `mindPalace.lsp.diagnostics.patterns` | `true` | Show pattern violation diagnostics |
-| `mindPalace.lsp.diagnostics.contracts` | `true` | Show contract mismatch diagnostics |
-| `mindPalace.lsp.codeLens.enabled`  | `true`   | Show code lens for issue counts    |
+## Philosophy
 
-### Project Configuration
+This extension is intentionally minimal. Mind Palace is designed for **AI agents**, not humans.
 
-Settings can also be specified in `.palace/palace.jsonc`:
+- **CLI** is the source of truth for all operations
+- **MCP Server** (`palace serve`) provides AI agent integration
+- **LSP Server** (`palace lsp`) provides real-time editor diagnostics
+- **Extension** provides status visibility and LSP client
 
-```jsonc
-{
-  "vscode": {
-    "autoSync": true,
-    "autoSyncDelay": 5000,
-    "decorations": { "enabled": true },
-    "sidebar": { "defaultView": "graph" }
-  }
-}
-```
-
-Project config takes precedence over VS Code settings.
+For full functionality, use the CLI directly or connect your AI agent via MCP.
 
 ## Documentation
 
-Full documentation lives in the CLI repository:
-
-- [Ecosystem Overview](https://github.com/mehmetkoksal-w/mind-palace/blob/main/docs/ecosystem.md)
-- [Extension Guide](https://github.com/mehmetkoksal-w/mind-palace/blob/main/docs/extension.md)
-- [Compatibility Matrix](https://github.com/mehmetkoksal-w/mind-palace/blob/main/docs/COMPATIBILITY.md)
-- [Workflows](https://github.com/mehmetkoksal-w/mind-palace/blob/main/docs/workflows.md)
+- [CLI Reference](https://mind-palace.dev/reference/cli)
+- [MCP Server](https://mind-palace.dev/reference/mcp)
+- [LSP Server](https://mind-palace.dev/reference/lsp)
 
 ## Version Compatibility
 

@@ -161,6 +161,14 @@ func (b *Butler) ListRooms() []model.Room {
 	return rooms
 }
 
+// reloadRooms clears and reloads room manifests from disk.
+// Used after room create/update/delete operations.
+func (b *Butler) reloadRooms() {
+	b.rooms = make(map[string]model.Room)
+	b.entryPoints = make(map[string]string)
+	_ = b.loadRooms() // Ignore error, rooms may be temporarily invalid
+}
+
 // ReadFile reads indexed content for a file path.
 func (b *Butler) ReadFile(path string) (string, error) {
 	// First, try to read from the chunks table for indexed content

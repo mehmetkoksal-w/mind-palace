@@ -90,7 +90,14 @@ Results are ranked using BM25 with entry-point boosting.
 palace store "We decided to use JWT for authentication"
 ```
 
-Auto-classifies as decision, idea, or learning (95%+ accuracy).
+Auto-classifies as decision, idea, or learning (95%+ accuracy). Ambiguous input is rejected with helpful tips.
+
+**Type shortcuts for recall:**
+```sh
+palace recall decisions    # Show all decisions
+palace recall ideas        # Show all ideas  
+palace recall learnings    # Show all learnings
+```
 
 ### 5. Get Context for AI Agents
 

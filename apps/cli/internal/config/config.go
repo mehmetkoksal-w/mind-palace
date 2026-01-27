@@ -44,6 +44,30 @@ type CORSConfig struct {
 	AllowedOrigins []string `json:"allowedOrigins,omitempty"`
 }
 
+// MonorepoConfig holds configuration for monorepo detection and handling.
+type MonorepoConfig struct {
+	// Patterns are additional glob patterns to scan for projects
+	Patterns []string `json:"patterns,omitempty"`
+	// ExcludePatterns are patterns to exclude from detection
+	ExcludePatterns []string `json:"excludePatterns,omitempty"`
+	// PreferredManager forces use of a specific manager detection
+	PreferredManager string `json:"preferredManager,omitempty"`
+	// DisableAutoDetect skips automatic manager detection
+	DisableAutoDetect bool `json:"disableAutoDetect,omitempty"`
+	// DetectDependencies enables cross-project dependency analysis
+	DetectDependencies *bool `json:"detectDependencies,omitempty"`
+}
+
+// DefaultMonorepoConfig returns the default monorepo configuration.
+func DefaultMonorepoConfig() *MonorepoConfig {
+	detectDeps := true
+	return &MonorepoConfig{
+		Patterns:           []string{},
+		ExcludePatterns:    []string{},
+		DetectDependencies: &detectDeps,
+	}
+}
+
 type PalaceConfig struct {
 	SchemaVersion string `json:"schemaVersion"`
 	Kind          string `json:"kind"`
@@ -56,6 +80,7 @@ type PalaceConfig struct {
 	DefaultRoom string                    `json:"defaultRoom"`
 	Guardrails  Guardrails                `json:"guardrails"`
 	Neighbors   map[string]NeighborConfig `json:"neighbors,omitempty"`
+	Monorepo    *MonorepoConfig           `json:"monorepo,omitempty"`
 	Provenance  any                       `json:"provenance"`
 	Dashboard   *DashboardConfig          `json:"dashboard,omitempty"`
 

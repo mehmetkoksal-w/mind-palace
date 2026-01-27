@@ -95,30 +95,6 @@ if [ "$COVERAGE" = "true" ] && [ "$GO_SUCCESS" = "true" ]; then
 fi
 
 # =============================================================================
-# Dashboard Tests (Angular)
-# =============================================================================
-write_section "Dashboard Tests (Angular)"
-
-if [ -d "apps/dashboard/node_modules" ]; then
-    cd apps/dashboard
-    if DASH_OUTPUT=$(npm test -- --watch=false --browsers=ChromeHeadless 2>&1); then
-        DASH_SUCCESS=true
-    else
-        DASH_SUCCESS=false
-    fi
-    cd "$PROJECT_ROOT"
-
-    if [ "$VERBOSE" = "true" ] || [ "$DASH_SUCCESS" = "false" ]; then
-        echo "$DASH_OUTPUT"
-    fi
-
-    write_result "Dashboard Tests" "$DASH_SUCCESS"
-else
-    echo -e "${YELLOW}[SKIP]${NC} Dashboard tests - node_modules not installed"
-    echo -e "${GRAY}       Run 'npm install' in apps/dashboard first${NC}"
-fi
-
-# =============================================================================
 # VS Code Extension Tests
 # =============================================================================
 write_section "VS Code Extension Tests"

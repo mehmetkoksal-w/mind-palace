@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "refactor-analysis",
+  "summary": "Refactoring analysis room with impact assessment.",
+  "entryPoints": ["src/"],
+  "artifacts": [
+    {
+      "name": "refactor-plan",
+      "description": "Detailed refactoring plan",
+      "pathHint": ".palace/outputs/refactor-plan.md"
+    }
+  ],
+  "capabilities": ["read.file", "search.text", "graph.deps", "symbols.lookup"],
+  "steps": [
+    {
+      "name": "Identify scope",
+      "description": "Determine what code needs refactoring"
+    },
+    {
+      "name": "Analyze dependencies",
+      "description": "Find all callers and dependencies",
+      "capability": "graph.deps"
+    },
+    {
+      "name": "Check test coverage",
+      "description": "Ensure adequate test coverage before refactoring"
+    },
+    {
+      "name": "Plan incremental steps",
+      "description": "Break refactoring into safe, incremental changes",
+      "evidence": "refactor-plan"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

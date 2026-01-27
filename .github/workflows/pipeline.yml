@@ -18,32 +18,8 @@ jobs:
   # ============================================================
   # STAGE 1: Build & Test (Automatic)
   # ============================================================
-  build-dashboard:
-    name: "Build: Dashboard"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "20"
-
-      - name: Install & Build
-        working-directory: apps/dashboard
-        run: |
-          npm install
-          npm run lint 2>/dev/null || echo "No lint configured"
-          npm run test
-          npm run build
-
-      - uses: actions/upload-artifact@v6
-        with:
-          name: dashboard-build
-          path: apps/dashboard/dist/dashboard/
-
   build-go:
     name: "Build: Go"
-    needs: build-dashboard
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -53,12 +29,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-
-      - name: Download Dashboard
-        uses: actions/download-artifact@v7
-        with:
-          name: dashboard-build
-          path: apps/cli/internal/dashboard/dist
 
       - name: Validate VERSION
         run: |
@@ -76,16 +46,14 @@ jobs:
       - name: Verify Version Sync
         run: |
           ROOT_VER=$(cat VERSION)
-          DASH_VER=$(jq -r '.version' apps/dashboard/package.json)
           VSCODE_VER=$(jq -r '.version' apps/vscode/package.json)
           DOCS_VER=$(jq -r '.version' apps/docs/package.json)
 
           echo "Root VERSION: $ROOT_VER"
-          echo "Dashboard: $DASH_VER"
           echo "VS Code: $VSCODE_VER"
           echo "Docs: $DOCS_VER"
 
-          if [ "$ROOT_VER" != "$DASH_VER" ] || [ "$ROOT_VER" != "$VSCODE_VER" ] || [ "$ROOT_VER" != "$DOCS_VER" ]; then
+          if [ "$ROOT_VER" != "$VSCODE_VER" ] || [ "$ROOT_VER" != "$DOCS_VER" ]; then
             echo "[ERROR] Version mismatch detected!"
             exit 1
           fi
@@ -140,7 +108,7 @@ jobs:
   # ============================================================
   check:
     name: "Check: Changes"
-    needs: [build-go, build-dashboard, build-vscode]
+    needs: [build-go, build-vscode]
     runs-on: ubuntu-latest
     outputs:
       docs_changed: ${{ steps.changes.outputs.docs }}
@@ -218,40 +186,6 @@ jobs:
   # ============================================================
   # STAGE 4: Release (Requires Approval)
   # ============================================================
-  release-dashboard:
-    name: "Release: Dashboard Assets"
-    needs: [check, deploy-docs]
-    if: |
-      always() &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/main' &&
-      needs.check.result == 'success' &&
-      needs.check.outputs.release_needed == 'true' &&
-      (needs.deploy-docs.result == 'success' || needs.deploy-docs.result == 'skipped')
-    runs-on: ubuntu-latest
-    environment: production-release
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-
-      - name: Build Dashboard
-        run: |
-          cd apps/dashboard && npm install && npm run build
-          mkdir -p ../../dashboard-dist
-          if [ -d "dist/dashboard/browser" ]; then
-            cp -r dist/dashboard/browser/* ../../dashboard-dist/
-          else
-            cp -r dist/dashboard/* ../../dashboard-dist/
-          fi
-
-      - uses: actions/upload-artifact@v6
-        with:
-          name: dashboard-assets
-          path: dashboard-dist/
-
   release-vscode:
     name: "Release: VS Code Extension"
     needs: [check, deploy-docs]
@@ -286,14 +220,14 @@ jobs:
 
   release-cli:
     name: "Release: CLI (${{ matrix.platform }})"
-    needs: [check, deploy-docs, release-dashboard]
+    needs: [check, deploy-docs]
     if: |
       always() &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref == 'refs/heads/main' &&
       needs.check.result == 'success' &&
       needs.check.outputs.release_needed == 'true' &&
-      needs.release-dashboard.result == 'success'
+      (needs.deploy-docs.result == 'success' || needs.deploy-docs.result == 'skipped')
     runs-on: ${{ matrix.os }}
     environment: production-release
     strategy:
@@ -341,11 +275,6 @@ jobs:
       - name: Add MinGW to PATH (Windows)
         if: matrix.installer == 'msi'
         run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - uses: actions/download-artifact@v7
-        with:
-          name: dashboard-assets
-          path: apps/cli/internal/dashboard/dist
 
       - name: Build Binary
         shell: bash

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "feature-planning",
+  "summary": "Strategic planning room for new features with impact analysis.",
+  "entryPoints": ["README.md"],
+  "artifacts": [
+    {
+      "name": "feature-spec",
+      "description": "Feature specification document",
+      "pathHint": ".palace/outputs/feature-spec.md"
+    }
+  ],
+  "capabilities": ["read.file", "search.text", "graph.deps"],
+  "steps": [
+    {
+      "name": "Understand requirements",
+      "description": "Review the feature request and clarify objectives"
+    },
+    {
+      "name": "Identify affected components",
+      "description": "Use graph.deps to find components that will be impacted",
+      "capability": "graph.deps"
+    },
+    {
+      "name": "Check existing patterns",
+      "description": "Search for similar implementations in the codebase",
+      "capability": "search.text"
+    },
+    {
+      "name": "Review learnings",
+      "description": "Check past decisions and learnings for relevant context"
+    },
+    {
+      "name": "Document plan",
+      "description": "Create feature specification with approach and risks",
+      "evidence": "feature-spec"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

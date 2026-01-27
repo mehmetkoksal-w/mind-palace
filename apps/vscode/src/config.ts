@@ -2,26 +2,14 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import * as jsonc from "jsonc-parser";
-import { logger } from "./services/logger";
 
 /**
  * VS Code extension configuration from .palace/palace.jsonc
  */
 export interface PalaceVSCodeConfig {
-  autoSync?: boolean;
-  autoSyncDelay?: number;
-  waitForCleanWorkspace?: boolean;
-  decorations?: {
-    enabled?: boolean;
-    style?: "gutter" | "inline" | "both";
-  };
   statusBar?: {
     position?: "left" | "right";
     priority?: number;
-  };
-  sidebar?: {
-    defaultView?: "tree" | "graph";
-    graphLayout?: "cose" | "circle" | "grid" | "breadthfirst";
   };
 }
 
@@ -31,20 +19,20 @@ export interface PalaceVSCodeConfig {
  */
 export interface MergedConfig {
   binaryPath: string;
-  autoSync: boolean;
-  autoSyncDelay: number;
-  waitForCleanWorkspace: boolean;
-  decorations: {
+  showStatusBarItem: boolean;
+  lsp: {
     enabled: boolean;
-    style: "gutter" | "inline" | "both";
+    diagnostics: {
+      patterns: boolean;
+      contracts: boolean;
+    };
+    codeLens: {
+      enabled: boolean;
+    };
   };
   statusBar: {
     position: "left" | "right";
     priority: number;
-  };
-  sidebar: {
-    defaultView: "tree" | "graph";
-    graphLayout: "cose" | "circle" | "grid" | "breadthfirst";
   };
 }
 
@@ -52,20 +40,20 @@ export interface MergedConfig {
  * Default configuration values
  */
 const DEFAULTS: Omit<MergedConfig, "binaryPath"> = {
-  autoSync: true,
-  autoSyncDelay: 1500,
-  waitForCleanWorkspace: false,
-  decorations: {
+  showStatusBarItem: true,
+  lsp: {
     enabled: true,
-    style: "gutter",
+    diagnostics: {
+      patterns: true,
+      contracts: true,
+    },
+    codeLens: {
+      enabled: true,
+    },
   },
   statusBar: {
     position: "left",
     priority: 100,
-  },
-  sidebar: {
-    defaultView: "tree",
-    graphLayout: "cose",
   },
 };
 
@@ -87,24 +75,24 @@ export function getConfig(): MergedConfig {
     // Binary path only comes from VS Code settings
     binaryPath: vsCodeConfig.get<string>("binaryPath") || "palace",
 
-    // Merged settings (project config > VS Code settings > defaults)
-    autoSync:
-      projectConfig?.autoSync ??
-      vsCodeConfig.get<boolean>("autoSync") ??
-      DEFAULTS.autoSync,
-    autoSyncDelay:
-      projectConfig?.autoSyncDelay ??
-      vsCodeConfig.get<number>("autoSyncDelay") ??
-      DEFAULTS.autoSyncDelay,
-    waitForCleanWorkspace:
-      projectConfig?.waitForCleanWorkspace ??
-      vsCodeConfig.get<boolean>("waitForCleanWorkspace") ??
-      DEFAULTS.waitForCleanWorkspace,
+    showStatusBarItem:
+      vsCodeConfig.get<boolean>("showStatusBarItem") ?? DEFAULTS.showStatusBarItem,
 
-    decorations: {
-      enabled:
-        projectConfig?.decorations?.enabled ?? DEFAULTS.decorations.enabled,
-      style: projectConfig?.decorations?.style ?? DEFAULTS.decorations.style,
+    lsp: {
+      enabled: vsCodeConfig.get<boolean>("lsp.enabled") ?? DEFAULTS.lsp.enabled,
+      diagnostics: {
+        patterns:
+          vsCodeConfig.get<boolean>("lsp.diagnostics.patterns") ??
+          DEFAULTS.lsp.diagnostics.patterns,
+        contracts:
+          vsCodeConfig.get<boolean>("lsp.diagnostics.contracts") ??
+          DEFAULTS.lsp.diagnostics.contracts,
+      },
+      codeLens: {
+        enabled:
+          vsCodeConfig.get<boolean>("lsp.codeLens.enabled") ??
+          DEFAULTS.lsp.codeLens.enabled,
+      },
     },
 
     statusBar: {
@@ -112,13 +100,6 @@ export function getConfig(): MergedConfig {
         projectConfig?.statusBar?.position ?? DEFAULTS.statusBar.position,
       priority:
         projectConfig?.statusBar?.priority ?? DEFAULTS.statusBar.priority,
-    },
-
-    sidebar: {
-      defaultView:
-        projectConfig?.sidebar?.defaultView ?? DEFAULTS.sidebar.defaultView,
-      graphLayout:
-        projectConfig?.sidebar?.graphLayout ?? DEFAULTS.sidebar.graphLayout,
     },
   };
 }
@@ -148,13 +129,13 @@ export function readProjectConfig(): PalaceVSCodeConfig | null {
     const parsed = jsonc.parse(content, errors);
 
     if (errors.length > 0) {
-      logger.warn("Errors parsing palace.jsonc", "Config", { errors });
+      console.warn("Errors parsing palace.jsonc:", errors);
       return null;
     }
 
     return parsed?.vscode ?? null;
   } catch (error) {
-    logger.error("Error reading palace.jsonc", error, "Config");
+    console.error("Error reading palace.jsonc:", error);
     return null;
   }
 }

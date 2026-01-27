@@ -306,6 +306,24 @@ func (s *MCPServer) dispatchConsolidatedTool(id any, params mcpToolCallParams) j
 	case "route":
 		return s.toolGetRoute(id, args)
 
+	// ============================================================
+	// ROOM - consolidated with action parameter
+	// ============================================================
+	case "room":
+		return s.dispatchRoom(id, args, action)
+
+	// ============================================================
+	// INDEX - consolidated with action parameter
+	// ============================================================
+	case "index":
+		return s.dispatchIndex(id, args, action)
+
+	// ============================================================
+	// PLAYBOOK - consolidated with action parameter
+	// ============================================================
+	case "playbook":
+		return s.dispatchPlaybook(id, args, action)
+
 	default:
 		return jsonRPCResponse{
 			JSONRPC: "2.0",

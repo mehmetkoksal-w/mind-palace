@@ -1,7 +1,6 @@
 package butler
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -10,8 +9,7 @@ import (
 )
 
 // toolStore stores a thought with auto-classification.
-// Phase 2: Creates a proposal instead of direct record for decisions/learnings.
-// Ideas are still stored directly (no governance for ideas).
+// All types are stored directly with audit trail.
 func (s *MCPServer) toolStore(id any, args map[string]interface{}) jsonRPCResponse {
 	content, _ := args["content"].(string)
 	if content == "" {
@@ -67,13 +65,10 @@ func (s *MCPServer) toolStore(id any, args map[string]interface{}) jsonRPCRespon
 
 	var recordID string
 	var err error
-	var isProposal bool
 
-	// Phase 2: Decisions and learnings go through proposal workflow
-	// Ideas are stored directly (no governance requirement)
+	// Store all types directly with audit trail
 	switch kind {
 	case memory.RecordKindIdea:
-		// Ideas are stored directly (backward compatible)
 		idea := memory.Idea{
 			Content:   content,
 			Context:   contextStr,
@@ -83,185 +78,117 @@ func (s *MCPServer) toolStore(id any, args map[string]interface{}) jsonRPCRespon
 		}
 		recordID, err = s.butler.AddIdea(idea)
 
-	case memory.RecordKindDecision, memory.RecordKindLearning:
-		// Decisions and learnings go through proposal workflow
-		isProposal = true
-		proposedAs := memory.ProposedAsDecision
-		if kind == memory.RecordKindLearning {
-			proposedAs = memory.ProposedAsLearning
+	case memory.RecordKindDecision:
+		dec := memory.Decision{
+			Content:   content,
+			Context:   contextStr,
+			Rationale: rationale,
+			Scope:     scope,
+			ScopePath: scopePath,
+			Source:    "agent",
+			Authority: string(memory.AuthorityApproved),
+		}
+		recordID, err = mem.AddDecision(dec)
+		if err == nil {
+			// Audit the write
+			_, _ = mem.AddAuditLog(memory.AuditLogEntry{
+				Action:     memory.AuditActionDirectWrite,
+				ActorType:  memory.AuditActorAgent,
+				ActorID:    "mcp",
+				TargetID:   recordID,
+				TargetKind: "decision",
+				Details:    fmt.Sprintf(`{"scope":"%s","scope_path":"%s","confidence":%.2f}`, scope, scopePath, classification.Confidence),
+			})
 		}
 
-		// Generate classification signals JSON
-		signalsJSON := "[]"
-		if len(classification.Signals) > 0 {
-			if data, err := json.Marshal(classification.Signals); err == nil {
-				signalsJSON = string(data)
-			}
+	case memory.RecordKindLearning:
+		learn := memory.Learning{
+			Content:    content,
+			Scope:      scope,
+			ScopePath:  scopePath,
+			Source:     "agent",
+			Confidence: classification.Confidence,
+			Authority:  string(memory.AuthorityApproved),
 		}
-
-		proposal := memory.Proposal{
-			ProposedAs:               proposedAs,
-			Content:                  content,
-			Context:                  contextStr,
-			Rationale:                rationale,
-			Scope:                    scope,
-			ScopePath:                scopePath,
-			Source:                   "agent",
-			ClassificationConfidence: classification.Confidence,
-			ClassificationSignals:    signalsJSON,
+		recordID, err = mem.AddLearning(learn)
+		if err == nil {
+			// Audit the write
+			_, _ = mem.AddAuditLog(memory.AuditLogEntry{
+				Action:     memory.AuditActionDirectWrite,
+				ActorType:  memory.AuditActorAgent,
+				ActorID:    "mcp",
+				TargetID:   recordID,
+				TargetKind: "learning",
+				Details:    fmt.Sprintf(`{"scope":"%s","scope_path":"%s","confidence":%.2f}`, scope, scopePath, classification.Confidence),
+			})
 		}
-
-		// Check for duplicates
-		dedupeKey := memory.GenerateDedupeKey(proposedAs, content, scope, scopePath)
-		existing, _ := mem.CheckDuplicateProposal(dedupeKey)
-		if existing != nil {
-			return s.toolError(id, fmt.Sprintf("duplicate proposal already exists: %s", existing.ID))
-		}
-		proposal.DedupeKey = dedupeKey
-
-		recordID, err = mem.AddProposal(proposal)
 	}
 
 	if err != nil {
 		return s.toolError(id, fmt.Sprintf("store %s failed: %v", kind, err))
 	}
 
-	// Set tags if any (only for ideas, proposals don't have tags yet)
-	if len(tags) > 0 && !isProposal {
+	// Set tags if any
+	if len(tags) > 0 {
 		s.butler.SetTags(recordID, string(kind), tags)
 	}
 
 	var output strings.Builder
-	if isProposal {
-		// Pre-check for contradictions if enabled (proactive warning for proposals)
-		var preCheckContradictions []memory.ContradictionResult
-		cfg := s.butler.Config()
-		if cfg != nil && cfg.Autonomy != nil && cfg.Autonomy.ContradictionPreCheck {
-			if llmClient, err := s.butler.GetLLMClient(); err == nil && llmClient != nil {
-				analyzer := memory.NewLLMContradictionAnalyzer(llmClient)
-				embedder := s.butler.GetEmbedder()
-				preCheckContradictions, _ = mem.PreCheckContradictions(content, string(kind), analyzer, embedder)
-			}
-		}
-
-		// Auto-approve: if threshold is set, confidence is high enough, and no contradictions
-		autoApproved := false
-		var promotedID string
-		if cfg != nil && cfg.Autonomy != nil && cfg.Autonomy.AutoApproveThreshold > 0 {
-			threshold := cfg.Autonomy.AutoApproveThreshold
-			if classification.Confidence >= threshold && len(preCheckContradictions) == 0 {
-				// Attempt auto-approve
-				if approved, approveErr := mem.ApproveProposal(recordID, "auto-approve", fmt.Sprintf("Auto-approved: confidence %.0f%% >= threshold %.0f%%", classification.Confidence*100, threshold*100)); approveErr == nil {
-					autoApproved = true
-					promotedID = approved
-				}
-			}
-		}
-
-		if autoApproved {
-			output.WriteString("# ✅ Proposal Auto-Approved\n\n")
-			fmt.Fprintf(&output, "**Proposal ID:** `%s`\n", recordID)
-			fmt.Fprintf(&output, "**Promoted Record ID:** `%s`\n", promotedID)
-			fmt.Fprintf(&output, "**Type:** %s\n", kind)
-			fmt.Fprintf(&output, "**Classification Confidence:** %.0f%%\n", classification.Confidence*100)
-			if len(classification.Signals) > 0 {
-				fmt.Fprintf(&output, "**Signals:** %v\n", classification.Signals)
-			}
-			fmt.Fprintf(&output, "**Scope:** %s", scope)
-			if scopePath != "" {
-				fmt.Fprintf(&output, " (%s)", scopePath)
-			}
-			output.WriteString("\n")
-			fmt.Fprintf(&output, "\n**Content:** %s\n", content)
-			output.WriteString("\n---\n")
-			output.WriteString("This proposal was automatically approved because:\n")
-			fmt.Fprintf(&output, "- Classification confidence (%.0f%%) >= auto-approve threshold (%.0f%%)\n", classification.Confidence*100, cfg.Autonomy.AutoApproveThreshold*100)
-			output.WriteString("- No contradictions were detected\n")
-		} else {
-			output.WriteString("# Proposal Created\n\n")
-			fmt.Fprintf(&output, "**ID:** `%s`\n", recordID)
-			fmt.Fprintf(&output, "**Type:** %s (proposal)\n", kind)
-			fmt.Fprintf(&output, "**Status:** pending\n")
-			fmt.Fprintf(&output, "**Classification Confidence:** %.0f%%\n", classification.Confidence*100)
-			if len(classification.Signals) > 0 {
-				fmt.Fprintf(&output, "**Signals:** %v\n", classification.Signals)
-			}
-			fmt.Fprintf(&output, "**Scope:** %s", scope)
-			if scopePath != "" {
-				fmt.Fprintf(&output, " (%s)", scopePath)
-			}
-			output.WriteString("\n")
-			fmt.Fprintf(&output, "\n**Content:** %s\n", content)
-
-			// Show contradiction warnings if any
-			if len(preCheckContradictions) > 0 {
-				output.WriteString("\n---\n\n")
-				output.WriteString("## ⚠️ Potential Contradictions Detected\n\n")
-				output.WriteString("The following existing records may contradict this proposal:\n\n")
-				for i, c := range preCheckContradictions {
-					fmt.Fprintf(&output, "### %d. `%s` (%.0f%% confidence)\n\n", i+1, c.Record2ID, c.Confidence*100)
-					fmt.Fprintf(&output, "**Type:** %s\n", c.ContradictType)
-					fmt.Fprintf(&output, "**Explanation:** %s\n\n", c.Explanation)
-				}
-				output.WriteString("Consider reviewing these records before approval.\n")
-			}
-
-			output.WriteString("\n---\n")
-			output.WriteString("This proposal requires human approval before becoming authoritative.\n")
-			output.WriteString("Use `palace proposals` to view pending proposals.\n")
-			output.WriteString("Use `palace approve <id>` to approve this proposal.\n")
-		}
-	} else {
-		output.WriteString("# Thought Remembered\n\n")
-		fmt.Fprintf(&output, "**ID:** `%s`\n", recordID)
-		fmt.Fprintf(&output, "**Type:** %s\n", kind)
-		fmt.Fprintf(&output, "**Confidence:** %.0f%%\n", classification.Confidence*100)
-		if len(classification.Signals) > 0 {
-			fmt.Fprintf(&output, "**Signals:** %v\n", classification.Signals)
-		}
-		fmt.Fprintf(&output, "**Scope:** %s", scope)
-		if scopePath != "" {
-			fmt.Fprintf(&output, " (%s)", scopePath)
-		}
-		output.WriteString("\n")
-		if len(tags) > 0 {
-			fmt.Fprintf(&output, "**Tags:** %s\n", strings.Join(tags, ", "))
-		}
-		fmt.Fprintf(&output, "\n**Content:** %s\n", content)
+	kindIcon := "💡"
+	switch kind {
+	case memory.RecordKindDecision:
+		kindIcon = "🔨"
+	case memory.RecordKindLearning:
+		kindIcon = "📝"
 	}
 
-	// Auto-check for contradictions if enabled (only for non-proposals)
-	if !isProposal {
-		var contradictions []memory.ContradictionResult
-		cfg := s.butler.Config()
-		if cfg != nil && cfg.ContradictionAutoCheck {
-			if llmClient, err := s.butler.GetLLMClient(); err == nil && llmClient != nil {
-				analyzer := memory.NewLLMContradictionAnalyzer(llmClient)
-				embedder := s.butler.GetEmbedder()
+	output.WriteString(fmt.Sprintf("# %s %s Stored\n\n", kindIcon, strings.Title(string(kind))))
+	fmt.Fprintf(&output, "**ID:** `%s`\n", recordID)
+	fmt.Fprintf(&output, "**Type:** %s\n", kind)
+	fmt.Fprintf(&output, "**Classification Confidence:** %.0f%%\n", classification.Confidence*100)
+	if len(classification.Signals) > 0 {
+		fmt.Fprintf(&output, "**Signals:** %v\n", classification.Signals)
+	}
+	fmt.Fprintf(&output, "**Scope:** %s", scope)
+	if scopePath != "" {
+		fmt.Fprintf(&output, " (%s)", scopePath)
+	}
+	output.WriteString("\n")
+	if len(tags) > 0 {
+		fmt.Fprintf(&output, "**Tags:** %s\n", strings.Join(tags, ", "))
+	}
+	fmt.Fprintf(&output, "\n**Content:** %s\n", content)
 
-				minConfidence := cfg.ContradictionMinConfidence
-				if minConfidence <= 0 {
-					minConfidence = 0.8
-				}
-				// Disable auto-linking in agent mode - requires human approval
-				autoLink := cfg.ContradictionAutoLink && s.mode == MCPModeHuman
+	// Auto-check for contradictions if enabled
+	var contradictions []memory.ContradictionResult
+	cfg := s.butler.Config()
+	if cfg != nil && cfg.ContradictionAutoCheck {
+		if llmClient, err := s.butler.GetLLMClient(); err == nil && llmClient != nil {
+			analyzer := memory.NewLLMContradictionAnalyzer(llmClient)
+			embedder := s.butler.GetEmbedder()
 
-				contradictions, _ = mem.AutoCheckContradictions(
-					recordID, string(kind), content,
-					analyzer, embedder, autoLink, minConfidence,
-				)
+			minConfidence := cfg.ContradictionMinConfidence
+			if minConfidence <= 0 {
+				minConfidence = 0.8
 			}
+			// Disable auto-linking in agent mode - requires human approval
+			autoLink := cfg.ContradictionAutoLink && s.mode == MCPModeHuman
+
+			contradictions, _ = mem.AutoCheckContradictions(
+				recordID, string(kind), content,
+				analyzer, embedder, autoLink, minConfidence,
+			)
 		}
+	}
 
-		// Add contradiction warnings to output
-		if len(contradictions) > 0 {
-			output.WriteString("\n---\n\n")
-			output.WriteString("## Contradictions Detected\n\n")
-			for i, c := range contradictions {
-				fmt.Fprintf(&output, "### %d. `%s` (%.0f%% confidence)\n\n", i+1, c.Record2ID, c.Confidence*100)
-				fmt.Fprintf(&output, "**Type:** %s\n", c.ContradictType)
-				fmt.Fprintf(&output, "**Explanation:** %s\n\n", c.Explanation)
-			}
+	// Add contradiction warnings to output
+	if len(contradictions) > 0 {
+		output.WriteString("\n---\n\n")
+		output.WriteString("## ⚠️ Contradictions Detected\n\n")
+		for i, c := range contradictions {
+			fmt.Fprintf(&output, "### %d. `%s` (%.0f%% confidence)\n\n", i+1, c.Record2ID, c.Confidence*100)
+			fmt.Fprintf(&output, "**Type:** %s\n", c.ContradictType)
+			fmt.Fprintf(&output, "**Explanation:** %s\n\n", c.Explanation)
 		}
 	}
 

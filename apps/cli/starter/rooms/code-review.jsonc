@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "code-review",
+  "summary": "Code review room with quality checks and documentation verification.",
+  "entryPoints": ["src/"],
+  "artifacts": [
+    {
+      "name": "review-checklist",
+      "description": "Completed review checklist",
+      "pathHint": ".palace/outputs/review-checklist.md"
+    }
+  ],
+  "capabilities": ["read.file", "lint.run", "tests.run"],
+  "steps": [
+    {
+      "name": "Run linter",
+      "description": "Check code style and potential issues",
+      "capability": "lint.run"
+    },
+    {
+      "name": "Run tests",
+      "description": "Ensure all tests pass",
+      "capability": "tests.run"
+    },
+    {
+      "name": "Check documentation",
+      "description": "Verify code comments and documentation are adequate"
+    },
+    {
+      "name": "Review for patterns",
+      "description": "Check code follows project patterns and conventions"
+    },
+    {
+      "name": "Complete checklist",
+      "description": "Document review findings",
+      "evidence": "review-checklist"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

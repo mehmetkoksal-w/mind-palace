@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/playbook",
+  "name": "bug-fix",
+  "summary": "Systematic bug investigation and fix workflow with regression prevention.",
+  "rooms": ["project-overview", "bug-investigation", "bug-fix", "code-review"],
+  "requiredEvidence": [
+    {
+      "id": "bug-analysis",
+      "description": "Root cause analysis",
+      "room": "bug-investigation"
+    },
+    {
+      "id": "test-results",
+      "description": "Regression test passes",
+      "room": "bug-fix"
+    },
+    {
+      "id": "fix-summary",
+      "description": "Fix documentation",
+      "room": "bug-fix"
+    }
+  ],
+  "verification": [
+    {
+      "name": "tests",
+      "expectation": "All tests pass including regression test",
+      "capability": "tests.run"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

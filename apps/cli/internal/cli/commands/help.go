@@ -40,14 +40,10 @@ SETUP & INDEX
 
 SERVICES
   serve     Start MCP server for AI agents
-  dashboard Start web dashboard for visualization
   lsp       Start Language Server Protocol server for editors
 
 AGENTS & SESSIONS
   session   Manage agent sessions
-
-GOVERNANCE
-  proposals Manage proposals (list, approve, reject)
 
 CROSS-WORKSPACE
   corridor  Cross-workspace knowledge sharing
@@ -79,11 +75,6 @@ STATUS EXAMPLES
   palace status --full                     # Detailed statistics
   palace status src/auth.go                # File-specific briefing
 
-PROPOSALS EXAMPLES
-  palace proposals                         # List pending proposals
-  palace proposals approve prop_abc123     # Approve a proposal
-  palace proposals reject prop_abc123      # Reject a proposal
-
 Run 'palace help <command>' for detailed help on a command.
 `)
 	return nil
@@ -98,14 +89,27 @@ func ShowHelpTopic(topic string) error {
 Usage: palace init [options]
 
 Options:
-  --root <path>     Workspace root (default: current directory)
-  --force           Overwrite existing curated files
-  --detect          Auto-detect project type and generate profile
-  --with-outputs    Also create generated outputs
+  --root <path>       Workspace root (default: current directory)
+  --force             Overwrite existing curated files
+  --skip-detect       Skip auto-detection of project type
+  --with-outputs      Also create generated outputs (context-pack)
+  --no-scan           Skip automatic scan after init
+  --with-agents <arg> Install agent configs: 'auto' or comma-separated list
+  --no-gitignore      Skip .gitignore updates
+  --no-hooks          Skip git hooks installation
+  --no-vscode         Skip VS Code integration (extensions.json)
+
+Agent Integration:
+  The --with-agents flag installs MCP server configuration and agent rules
+  for AI coding assistants. Use 'auto' to detect installed agents, or
+  specify a comma-separated list:
+    claude-code, cursor, vscode, windsurf, cline, zed, claude-desktop
 
 Examples:
-  palace init
-  palace init --detect
+  palace init                              # Basic init with auto-detect
+  palace init --with-agents auto           # Auto-detect and configure agents
+  palace init --with-agents cursor,vscode  # Configure specific agents
+  palace init --no-gitignore --no-hooks    # Skip integrations
 `)
 	case "index":
 		fmt.Print(`palace index - Manage the code index
@@ -135,14 +139,17 @@ Usage: palace index scan [options]
        palace scan [options]  (alias)
 
 Options:
-  --root <path>    Workspace root (default: current directory)
-  --full           Force full rescan
-  --incremental    Force git-based incremental scan
-  --deep           Enable LSP-based deep analysis for call tracking
-  --verbose, -v    Show detailed progress information
-  --debug          Show debug information (LSP communication, etc.)
+  --root <path>       Workspace root (default: current directory)
+  --full              Force full rescan
+  --incremental       Force git-based incremental scan
+  --deep              Enable LSP-based deep analysis for call tracking
+  --workers <n>, -j   Number of parallel workers (0 = auto-detect based on CPU)
+  --verbose, -v       Show detailed progress information
+  --debug             Show debug information (LSP communication, etc.)
 
 The scan command parses your codebase using Tree-sitter and builds a structural index.
+Parallel workers are used by default to speed up scanning on multi-core machines.
+
 By default, it auto-detects: if in a git repo with a previous scan, uses git diff
 to find changed files (faster). Otherwise, uses hash-based change detection.
 
@@ -151,6 +158,7 @@ For Dart/Flutter projects, deep analysis runs automatically to extract accurate 
 Examples:
   palace index scan                  # Auto-detect: git-based if possible
   palace index scan --full           # Force full rescan
+  palace index scan --full -j 4      # Full rescan with 4 parallel workers
   palace index scan --incremental    # Force git-based incremental
   palace scan -v                     # Show progress details (alias)
   palace scan --debug                # Debug mode for troubleshooting (alias)
@@ -204,24 +212,47 @@ Options:
   --scope <scope>      Scope: file, room, palace (default: palace)
   --path <path>        Scope path (file path or room name)
   --as <type>          Force type: decision, idea, or learning
+  --confidence <n>     Confidence for learnings, 0.0-1.0 (default: 0.5)
+  --tag <tags>         Comma-separated tags
 
-Content is auto-classified (e.g., "Let's..." -> decision).
+Content is auto-classified based on natural language signals:
+  - "Let's use...", "We should...", "Decision:" -> decision
+  - "What if...", "Maybe...", "Idea:" -> idea  
+  - "TIL...", "Learned that...", "Always..." -> learning
+
+Examples:
+  palace store "Use JWT for auth"                 # Auto: decision (95%)
+  palace store "What about caching?"              # Auto: idea
+  palace store "Always close DB connections"      # Auto: learning
+  palace store "Use Redis" --as decision          # Force type
+  palace store "Config tip" --scope file --path config.go
 `)
 	case "recall":
 		fmt.Print(`palace recall - Retrieve knowledge from the palace
 
 Usage: palace recall [query] [options]
+       palace recall <type>                    # Shorthand for --type
        palace recall update <decision-id> <outcome>
        palace recall link --<relation> <target> <source-id>
 
 Options:
   --root <path>       Workspace root (default: current directory)
   --type <type>       Filter by type: decision, idea, learning
+  --scope <scope>     Filter by scope: file, room, palace
+  --path <path>       Filter by scope path
   --pending           Show decisions awaiting outcome
+  --limit <n>         Maximum results (default: 10)
 
-Subcommands:
-  update    Record decision outcome
-  link      Create relationship between records
+Type shortcuts (first argument):
+  palace recall decisions   # Same as --type decision
+  palace recall ideas       # Same as --type idea
+  palace recall learnings   # Same as --type learning
+
+Examples:
+  palace recall                # Show all knowledge types
+  palace recall decisions      # Show only decisions
+  palace recall "auth"         # Search for 'auth'
+  palace recall --pending      # Decisions needing outcome
 `)
 	case "serve":
 		fmt.Print(`palace serve - Start MCP server for AI agents
@@ -317,12 +348,17 @@ Subcommands:
   list, link, unlink, personal, promote, search
 `)
 	case "dashboard":
-		fmt.Print(`palace dashboard - Web dashboard for visualization
+		fmt.Print(`palace dashboard - DEPRECATED
 
-Usage: palace dashboard [options]
+The dashboard has been removed in v0.4.2.
 
-Options:
-  --port <n>        Server port (default: 3001)
+Use CLI commands instead:
+  palace status           Show workspace status
+  palace recall           List knowledge
+  palace explore          Search codebase
+
+For AI agents, use the MCP server:
+  palace serve            Start MCP server
 `)
 	case "clean":
 		fmt.Print(`palace clean - Clean up stale data

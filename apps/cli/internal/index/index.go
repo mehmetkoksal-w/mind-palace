@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite" // sqlite driver for database/sql
@@ -281,47 +283,209 @@ func GetIndexSchemaVersion(db *sql.DB) (int, error) {
 }
 
 // BuildFileRecords scans the project and builds record summaries and analysis.
+// This is the sequential version, use BuildFileRecordsParallel for better performance.
 func BuildFileRecords(root string, guardrails config.Guardrails) ([]FileRecord, error) {
+	return BuildFileRecordsParallel(root, guardrails, 0) // 0 = auto-detect workers
+}
+
+// BuildFileRecordsParallel scans the project using parallel workers for improved performance.
+// Set workers to 0 or negative to auto-detect based on CPU count.
+// Each worker gets its own ParserRegistry to ensure thread-safety.
+func BuildFileRecordsParallel(root string, guardrails config.Guardrails, workers int) ([]FileRecord, error) {
 	files, err := fsutil.ListFiles(root, guardrails)
 	if err != nil {
 		return nil, err
 	}
 	sort.Strings(files)
+
+	if len(files) == 0 {
+		return []FileRecord{}, nil
+	}
+
+	// Auto-detect worker count if not specified
+	if workers <= 0 {
+		workers = runtime.NumCPU()
+		// Cap at 8 workers to avoid excessive memory usage from parser registries
+		if workers > 8 {
+			workers = 8
+		}
+	}
+
+	// For small file counts, don't bother with parallelism
+	if len(files) < workers*2 {
+		workers = 1
+	}
+
+	// If single worker, use simple sequential processing
+	if workers == 1 {
+		return buildFileRecordsSequential(root, files)
+	}
+
+	// Parallel processing with worker pool
+	return buildFileRecordsWorkerPool(root, files, workers)
+}
+
+// buildFileRecordsSequential processes files sequentially using tree-sitter only.
+// This avoids the overhead of spinning up LSP servers for small file counts.
+func buildFileRecordsSequential(root string, files []string) ([]FileRecord, error) {
+	// Use a single parser registry with LSP disabled for consistency
+	registry := analysis.NewParserRegistryWithPath(root)
+	registry.SetEnableLSP(false) // Use tree-sitter only for sequential mode too
+
 	records := make([]FileRecord, 0, len(files))
 	for _, rel := range files {
-		abs := filepath.Join(root, rel)
-		info, err := os.Stat(abs)
+		record, err := processFileWithRegistry(root, rel, registry)
 		if err != nil {
-			return nil, fmt.Errorf("stat %s: %w", rel, err)
+			return nil, err
 		}
-		data, err := os.ReadFile(abs)
-		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", rel, err)
-		}
-		h := sha256.Sum256(data)
-		chunks := fsutil.ChunkContent(string(data), 120, 8*1024)
-
-		// Perform language analysis
-		lang := analysis.DetectLanguage(rel)
-		var fileAnalysis *analysis.FileAnalysis
-		if lang != analysis.LangUnknown {
-			fa, err := analysis.Analyze(data, rel)
-			if err == nil {
-				fileAnalysis = fa
-			}
-		}
-
-		records = append(records, FileRecord{
-			Path:     rel,
-			Hash:     fmt.Sprintf("%x", h[:]),
-			Size:     info.Size(),
-			ModTime:  fsutil.NormalizeModTime(info.ModTime()),
-			Chunks:   chunks,
-			Language: string(lang),
-			Analysis: fileAnalysis,
-		})
+		records = append(records, record)
 	}
 	return records, nil
+}
+
+// fileProcessResult holds the result of processing a single file.
+type fileProcessResult struct {
+	index  int        // Original index for ordering
+	record FileRecord // The processed record
+	err    error      // Any error that occurred
+}
+
+// buildFileRecordsWorkerPool uses a worker pool for parallel file processing.
+// Each worker has its own ParserRegistry to ensure thread-safety.
+func buildFileRecordsWorkerPool(root string, files []string, workers int) ([]FileRecord, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Channel for distributing work
+	jobs := make(chan int, len(files))
+
+	// Channel for collecting results
+	results := make(chan fileProcessResult, len(files))
+
+	// Track first error for fail-fast behavior
+	var firstErr error
+	var errOnce sync.Once
+
+	// Start worker goroutines
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			// Each worker gets its own parser registry for thread-safety
+			// Disable LSP for workers to avoid spawning many gopls processes
+			registry := analysis.NewParserRegistryWithPath(root)
+			registry.SetEnableLSP(false) // Use tree-sitter only for parallel workers
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case idx, ok := <-jobs:
+					if !ok {
+						return // Channel closed
+					}
+
+					rel := files[idx]
+					record, err := processFileWithRegistry(root, rel, registry)
+
+					if err != nil {
+						errOnce.Do(func() {
+							firstErr = err
+							cancel() // Signal other workers to stop
+						})
+						results <- fileProcessResult{index: idx, err: err}
+						continue
+					}
+
+					results <- fileProcessResult{index: idx, record: record}
+				}
+			}
+		}()
+	}
+
+	// Send jobs to workers
+	go func() {
+		defer close(jobs)
+		for i := range files {
+			select {
+			case <-ctx.Done():
+				return
+			case jobs <- i:
+			}
+		}
+	}()
+
+	// Wait for workers to finish, then close results
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Collect results maintaining original order
+	records := make([]FileRecord, len(files))
+	resultCount := 0
+
+	for result := range results {
+		if result.err != nil {
+			// Continue collecting but we'll return the first error
+			continue
+		}
+		records[result.index] = result.record
+		resultCount++
+	}
+
+	// Return first error if any occurred
+	if firstErr != nil {
+		return nil, firstErr
+	}
+
+	// Verify we got all results
+	if resultCount != len(files) {
+		return nil, fmt.Errorf("internal error: expected %d results, got %d", len(files), resultCount)
+	}
+
+	return records, nil
+}
+
+// processFileWithRegistry processes a single file using the provided parser registry.
+func processFileWithRegistry(root, rel string, registry *analysis.ParserRegistry) (FileRecord, error) {
+	abs := filepath.Join(root, rel)
+
+	info, err := os.Stat(abs)
+	if err != nil {
+		return FileRecord{}, fmt.Errorf("stat %s: %w", rel, err)
+	}
+
+	data, err := os.ReadFile(abs)
+	if err != nil {
+		return FileRecord{}, fmt.Errorf("read %s: %w", rel, err)
+	}
+
+	h := sha256.Sum256(data)
+	chunks := fsutil.ChunkContent(string(data), 120, 8*1024)
+
+	// Perform language analysis using the provided registry
+	lang := analysis.DetectLanguage(rel)
+	var fileAnalysis *analysis.FileAnalysis
+	if lang != analysis.LangUnknown {
+		fa, err := registry.Parse(data, rel)
+		if err == nil {
+			fileAnalysis = fa
+		}
+		// Note: We intentionally ignore parse errors - some files may not parse cleanly
+	}
+
+	return FileRecord{
+		Path:     rel,
+		Hash:     fmt.Sprintf("%x", h[:]),
+		Size:     info.Size(),
+		ModTime:  fsutil.NormalizeModTime(info.ModTime()),
+		Chunks:   chunks,
+		Language: string(lang),
+		Analysis: fileAnalysis,
+	}, nil
 }
 
 // WriteScanOptions provides options for WriteScan.

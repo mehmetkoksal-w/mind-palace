@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "api-design",
+  "summary": "API design room for planning and documenting API changes.",
+  "entryPoints": ["src/"],
+  "artifacts": [
+    {
+      "name": "api-spec",
+      "description": "API specification document",
+      "pathHint": ".palace/outputs/api-spec.md"
+    }
+  ],
+  "capabilities": ["read.file", "search.text", "symbols.lookup"],
+  "steps": [
+    {
+      "name": "Review existing APIs",
+      "description": "Understand current API patterns and contracts",
+      "capability": "symbols.lookup"
+    },
+    {
+      "name": "Define requirements",
+      "description": "Document what the API needs to support"
+    },
+    {
+      "name": "Design endpoints",
+      "description": "Plan the API structure and contracts"
+    },
+    {
+      "name": "Document specification",
+      "description": "Create API specification document",
+      "evidence": "api-spec"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

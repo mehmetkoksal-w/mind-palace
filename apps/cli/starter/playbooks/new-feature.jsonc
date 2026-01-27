@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/playbook",
+  "name": "new-feature",
+  "summary": "Complete workflow for implementing a new feature from planning to review.",
+  "rooms": [
+    "project-overview",
+    "feature-planning",
+    "code-implementation",
+    "code-review"
+  ],
+  "requiredEvidence": [
+    {
+      "id": "feature-spec",
+      "description": "Feature specification document",
+      "room": "feature-planning"
+    },
+    {
+      "id": "test-results",
+      "description": "Passing test results",
+      "room": "code-implementation"
+    },
+    {
+      "id": "review-checklist",
+      "description": "Completed review checklist",
+      "room": "code-review"
+    }
+  ],
+  "verification": [
+    {
+      "name": "tests",
+      "expectation": "All tests pass",
+      "capability": "tests.run"
+    },
+    {
+      "name": "lint",
+      "expectation": "No lint errors",
+      "capability": "lint.run"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

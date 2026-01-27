@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "postmortem-room",
+  "summary": "Incident postmortem room for documenting and learning from failures.",
+  "entryPoints": ["src/"],
+  "artifacts": [
+    {
+      "name": "postmortem-doc",
+      "description": "Complete postmortem document",
+      "pathHint": ".palace/outputs/postmortem.md"
+    }
+  ],
+  "capabilities": ["read.file", "search.text"],
+  "steps": [
+    {
+      "name": "Document timeline",
+      "description": "Create a timeline of events leading to the incident"
+    },
+    {
+      "name": "Identify root cause",
+      "description": "Determine the underlying cause of the incident"
+    },
+    {
+      "name": "Review contributing factors",
+      "description": "Identify process or code issues that contributed"
+    },
+    {
+      "name": "Define action items",
+      "description": "Create actionable items to prevent recurrence"
+    },
+    {
+      "name": "Store learnings",
+      "description": "Document lessons learned for future reference",
+      "evidence": "postmortem-doc"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

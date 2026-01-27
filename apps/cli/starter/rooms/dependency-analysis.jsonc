@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "dependency-analysis",
+  "summary": "Dependency analysis room for evaluating and updating dependencies.",
+  "entryPoints": ["package.json", "go.mod", "requirements.txt", "Cargo.toml"],
+  "artifacts": [
+    {
+      "name": "dependency-report",
+      "description": "Dependency analysis report",
+      "pathHint": ".palace/outputs/dependency-report.md"
+    }
+  ],
+  "capabilities": ["read.file", "search.text"],
+  "steps": [
+    {
+      "name": "Inventory dependencies",
+      "description": "List current dependencies and their versions"
+    },
+    {
+      "name": "Check for updates",
+      "description": "Identify available updates and security patches"
+    },
+    {
+      "name": "Assess impact",
+      "description": "Evaluate breaking changes and compatibility"
+    },
+    {
+      "name": "Document plan",
+      "description": "Create update plan with prioritized changes",
+      "evidence": "dependency-report"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

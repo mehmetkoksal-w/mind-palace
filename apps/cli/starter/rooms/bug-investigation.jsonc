@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "bug-investigation",
+  "summary": "Bug investigation room with systematic debugging approach.",
+  "entryPoints": ["src/"],
+  "artifacts": [
+    {
+      "name": "bug-analysis",
+      "description": "Root cause analysis document",
+      "pathHint": ".palace/outputs/bug-analysis.md"
+    }
+  ],
+  "capabilities": ["read.file", "search.text", "graph.deps", "tests.run"],
+  "steps": [
+    {
+      "name": "Reproduce the bug",
+      "description": "Understand and confirm the bug behavior"
+    },
+    {
+      "name": "Search for related code",
+      "description": "Find relevant files and functions",
+      "capability": "search.text"
+    },
+    {
+      "name": "Trace dependencies",
+      "description": "Understand the call graph and data flow",
+      "capability": "graph.deps"
+    },
+    {
+      "name": "Check past incidents",
+      "description": "Review postmortems and learnings for similar issues"
+    },
+    {
+      "name": "Identify root cause",
+      "description": "Document the root cause analysis",
+      "evidence": "bug-analysis"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

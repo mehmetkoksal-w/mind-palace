@@ -1,7 +1,7 @@
 package butler
 
 // buildConsolidatedToolsList returns the consolidated list of MCP tools.
-// Consolidated from 89 tools to 23 tools using action-based dispatching.
+// Consolidated from 89 tools to 26 tools using action-based dispatching.
 //
 // Tool categories:
 //   - Composite: session_init, file_context (critical workflows)
@@ -12,6 +12,7 @@ package butler
 //   - Cross-workspace: corridor
 //   - Analysis: pattern, contract, analytics
 //   - Governance: govern, route
+//   - Management: room, index, playbook
 func buildConsolidatedToolsList() []mcpTool {
 	return []mcpTool{
 		// ============================================================
@@ -66,6 +67,13 @@ func buildConsolidatedToolsList() []mcpTool {
 		// ============================================================
 		buildGovernTool(),
 		buildRouteTool(),
+
+		// ============================================================
+		// MANAGEMENT TOOLS - Room, Index, and Playbook management
+		// ============================================================
+		buildRoomTool(),
+		buildIndexTool(),
+		buildPlaybookTool(),
 	}
 }
 
@@ -1055,6 +1063,150 @@ Returns an ordered path through rooms, files, decisions, and learnings.`,
 				},
 			},
 			"required": []string{"intent"},
+		},
+	}
+}
+
+// ============================================================
+// MANAGEMENT TOOLS - Room and Index management
+// ============================================================
+
+func buildRoomTool() mcpTool {
+	return mcpTool{
+		Name: "room",
+		Description: `🟡 **IMPORTANT** Manage Mind Palace rooms.
+
+Rooms are logical groupings of code with entry points and capabilities.
+
+Actions:
+- list: List all rooms (default)
+- show: Show room details
+- create: Create a new room
+- update: Update room properties
+- delete: Delete a room
+
+Use rooms to organize your codebase and provide context for different features.`,
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"action": map[string]interface{}{
+					"type":        "string",
+					"enum":        []string{"list", "show", "create", "update", "delete"},
+					"description": "Room action (default: list)",
+					"default":     "list",
+				},
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Room name (required for show/create/update/delete)",
+				},
+				"summary": map[string]interface{}{
+					"type":        "string",
+					"description": "Room summary (required for create, optional for update)",
+				},
+				"entry_points": map[string]interface{}{
+					"type":        "array",
+					"items":       map[string]interface{}{"type": "string"},
+					"description": "Entry point paths (required for create, optional for update)",
+				},
+				"capabilities": map[string]interface{}{
+					"type":        "array",
+					"items":       map[string]interface{}{"type": "string"},
+					"description": "Room capabilities (optional)",
+				},
+			},
+		},
+		Autonomy: &mcpToolAutonomy{
+			Level:     "recommended",
+			Triggers:  []string{"organizing_code", "feature_scoping"},
+			Frequency: "as_needed",
+		},
+	}
+}
+
+func buildIndexTool() mcpTool {
+	return mcpTool{
+		Name: "index",
+		Description: `🟡 **IMPORTANT** Manage the code index.
+
+The index contains parsed files, symbols, and relationships.
+
+Actions:
+- status: Get index freshness status (default)
+- scan: Trigger incremental scan
+- rescan: Force full rescan (clears existing index)
+- stats: Get detailed index statistics
+
+Use this tool to ensure the index is up-to-date before searching.`,
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"action": map[string]interface{}{
+					"type":        "string",
+					"enum":        []string{"status", "scan", "rescan", "stats"},
+					"description": "Index action (default: status)",
+					"default":     "status",
+				},
+				"workers": map[string]interface{}{
+					"type":        "integer",
+					"description": "Number of parallel workers for scan/rescan (0=auto)",
+					"default":     0,
+				},
+			},
+		},
+		Autonomy: &mcpToolAutonomy{
+			Level:     "recommended",
+			Triggers:  []string{"stale_results", "index_outdated", "before_search"},
+			Frequency: "as_needed",
+		},
+	}
+}
+
+func buildPlaybookTool() mcpTool {
+	return mcpTool{
+		Name: "playbook",
+		Description: `🟡 **IMPORTANT** Execute guided task playbooks.
+
+Playbooks are sequences of rooms with steps to complete high-level goals.
+
+Actions:
+- list: List all available playbooks (default)
+- show: Show playbook details
+- start: Start playbook execution
+- status: Get current execution status
+- guidance: Get guidance for current step
+- advance: Mark current step complete, move to next
+- evidence: Record evidence collected
+- verify: Run verification checks
+- complete: Mark playbook complete, clear state
+
+Playbooks guide agents through structured workflows with rooms, steps, and evidence collection.`,
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"action": map[string]interface{}{
+					"type":        "string",
+					"enum":        []string{"list", "show", "start", "status", "guidance", "advance", "evidence", "verify", "complete"},
+					"description": "Playbook action (default: list)",
+					"default":     "list",
+				},
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Playbook name (for show/start)",
+				},
+				"evidence_id": map[string]interface{}{
+					"type":        "string",
+					"description": "Evidence ID to record (for evidence action)",
+				},
+				"value": map[string]interface{}{
+					"type":        "string",
+					"description": "Evidence value (for evidence action)",
+				},
+			},
+		},
+		Autonomy: &mcpToolAutonomy{
+			Level:     "recommended",
+			Triggers:  []string{"onboarding", "guided_task", "structured_workflow"},
+			Frequency: "as_needed",
 		},
 	}
 }

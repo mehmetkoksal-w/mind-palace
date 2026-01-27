@@ -30,7 +30,7 @@ describe("Extension Activation Tests", () => {
     expect(ext?.isActive).to.be.true;
   });
 
-  it("should register all required commands", async () => {
+  it("should register required commands", async () => {
     // Ensure extension is activated
     const ext = vscode.extensions.getExtension(
       "mind-palace.mind-palace-vscode"
@@ -42,36 +42,13 @@ describe("Extension Activation Tests", () => {
     const commands = await vscode.commands.getCommands(true);
 
     const requiredCommands = [
-      "mindPalace.openBlueprint",
-      "mindPalace.storeIdea",
-      "mindPalace.storeDecision",
-      "mindPalace.storeLearning",
-      "mindPalace.quickStore",
-      "mindPalace.startSession",
-      "mindPalace.endSession",
-      "mindPalace.semanticSearch",
-      "mindPalace.showKnowledgeGraph",
+      "mindPalace.checkStatus",
+      "mindPalace.restartLsp",
     ];
 
     for (const cmd of requiredCommands) {
       expect(commands).to.include(cmd, `Command ${cmd} should be registered`);
     }
-
-    // Note: some commands (e.g., checkStatus, heal, refreshKnowledge) may not appear
-    // in getCommands() during test due to activation timing
-  });
-
-  it("should create tree data providers", async () => {
-    // Verify extension has activated and providers are registered
-    const ext = vscode.extensions.getExtension(
-      "mind-palace.mind-palace-vscode"
-    );
-    if (ext && !ext.isActive) {
-      await ext.activate();
-    }
-
-    // Tree providers are registered during activation
-    expect(ext?.isActive).to.be.true;
   });
 
   it("should handle command execution without errors", async () => {
@@ -89,17 +66,5 @@ describe("Extension Activation Tests", () => {
       // Expected to fail if CLI is not available, but should not crash
       expect(error).to.exist;
     }
-  });
-
-  it("should register webview providers", async () => {
-    const ext = vscode.extensions.getExtension(
-      "mind-palace.mind-palace-vscode"
-    );
-    if (ext && !ext.isActive) {
-      await ext.activate();
-    }
-
-    // Webview providers are registered, verify through extension activation
-    expect(ext?.isActive).to.be.true;
   });
 });

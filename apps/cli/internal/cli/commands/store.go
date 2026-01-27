@@ -3,7 +3,6 @@ package commands
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -34,7 +33,6 @@ type StoreOptions struct {
 	Tags       []string
 	AsType     string  // Force type: decision, idea, learning
 	Confidence float64 // For learnings
-	Direct     bool    // Direct write bypass (human-only)
 }
 
 // RunStore executes the store command with parsed arguments.
@@ -70,7 +68,6 @@ func RunStore(args []string) error {
 	tag := fs.String("tag", "", "comma-separated tags")
 	asType := fs.String("as", "", "force type: decision, idea, or learning")
 	confidence := fs.Float64("confidence", 0.5, "confidence for learnings (0.0-1.0)")
-	direct := fs.Bool("direct", false, "direct write (bypass proposals) for decisions/learnings; audited, human-only")
 	if err := fs.Parse(flagArgs); err != nil {
 		return err
 	}
@@ -98,7 +95,6 @@ Options:
   --tag <tags>          Comma-separated tags
   --as <type>           Force type: decision, idea, or learning
   --confidence <n>      Confidence for learnings, 0.0-1.0 (default: 0.5)
-	--direct              Direct write (bypass proposals) for decisions/learnings; audited, human-only
 
 Examples:
   palace store "Let's use JWT for authentication"     # Auto-classified as decision
@@ -128,7 +124,6 @@ Examples:
 		Tags:       tags,
 		AsType:     *asType,
 		Confidence: *confidence,
-		Direct:     *direct,
 	})
 }
 
@@ -165,11 +160,23 @@ func ExecuteStore(opts StoreOptions) error {
 		classification = memory.Classify(opts.Content)
 		kind = classification.Kind
 
-		// If low confidence, inform user
+		// Reject very low quality input (under 40% confidence with no signals)
+		if classification.Confidence < 0.4 && len(classification.Signals) == 0 {
+			return fmt.Errorf("input too ambiguous (%.0f%% confidence, no signals detected)\n\n"+
+				"Tip: Add context to help classification:\n"+
+				"  - Decision: \"Let's use X\", \"We should X\", \"Decision: X\"\n"+
+				"  - Idea: \"What if X?\", \"Maybe we could X\", \"Idea: X\"\n"+
+				"  - Learning: \"TIL X\", \"Always X\", \"Note: X\"\n\n"+
+				"Or use --as decision, --as idea, or --as learning to force a type.",
+				classification.Confidence*100)
+		}
+
+		// If low confidence, inform user but proceed
 		if classification.NeedsConfirmation() {
-			fmt.Printf("Auto-classified as %s (%.0f%% confidence)\n", kind, classification.Confidence*100)
+			fmt.Printf("⚠️  Auto-classified as %s (%.0f%% confidence)\n", kind, classification.Confidence*100)
 			fmt.Printf("Signals: %v\n", classification.Signals)
 			fmt.Println("Use --as decision, --as idea, or --as learning to override.")
+			fmt.Println()
 		}
 	}
 
@@ -177,8 +184,7 @@ func ExecuteStore(opts StoreOptions) error {
 	extractedTags := memory.ExtractTags(opts.Content)
 	opts.Tags = append(opts.Tags, extractedTags...)
 
-	// Store based on kind
-	// Governance: decisions/learnings default to proposals unless --direct
+	// Store based on kind - all types stored directly with audit trail
 	var id string
 	switch kind {
 	case memory.RecordKindIdea:
@@ -189,37 +195,18 @@ func ExecuteStore(opts StoreOptions) error {
 			Source:    "cli",
 		}
 		id, err = mem.AddIdea(idea)
-	case memory.RecordKindDecision, memory.RecordKindLearning:
-		if opts.Direct {
-			// Direct write path (audited)
-			if kind == memory.RecordKindDecision {
-				dec := memory.Decision{
-					Content:   opts.Content,
-					Scope:     opts.Scope,
-					ScopePath: opts.ScopePath,
-					Source:    "cli",
-					Authority: string(memory.AuthorityApproved),
-				}
-				id, err = mem.AddDecision(dec)
-			} else {
-				learn := memory.Learning{
-					Content:    opts.Content,
-					Scope:      opts.Scope,
-					ScopePath:  opts.ScopePath,
-					Source:     "cli",
-					Confidence: opts.Confidence,
-					Authority:  string(memory.AuthorityApproved),
-				}
-				id, err = mem.AddLearning(learn)
-			}
-			if err != nil {
-				return fmt.Errorf("store %s: %w", kind, err)
-			}
-			// Audit direct write
-			targetKind := "decision"
-			if kind == memory.RecordKindLearning {
-				targetKind = "learning"
-			}
+
+	case memory.RecordKindDecision:
+		dec := memory.Decision{
+			Content:   opts.Content,
+			Scope:     opts.Scope,
+			ScopePath: opts.ScopePath,
+			Source:    "cli",
+			Authority: string(memory.AuthorityApproved),
+		}
+		id, err = mem.AddDecision(dec)
+		if err == nil {
+			// Audit the write
 			hash := sha256.Sum256([]byte(opts.Content))
 			contentHash := hex.EncodeToString(hash[:])
 			_, _ = mem.AddAuditLog(memory.AuditLogEntry{
@@ -227,42 +214,33 @@ func ExecuteStore(opts StoreOptions) error {
 				ActorType:  memory.AuditActorHuman,
 				ActorID:    "cli",
 				TargetID:   id,
-				TargetKind: targetKind,
+				TargetKind: "decision",
 				Details:    fmt.Sprintf(`{"scope":"%s","scope_path":"%s","content_hash":"%s"}`, opts.Scope, opts.ScopePath, contentHash),
 			})
-		} else {
-			// Proposal path (default)
-			proposedAs := memory.ProposedAsDecision
-			if kind == memory.RecordKindLearning {
-				proposedAs = memory.ProposedAsLearning
-			}
+		}
 
-			// Build classification signals JSON if auto-classified
-			signalsJSON := "[]"
-			if opts.AsType == "" && len(classification.Signals) > 0 {
-				if data, mErr := json.Marshal(classification.Signals); mErr == nil {
-					signalsJSON = string(data)
-				}
-			}
-
-			prop := memory.Proposal{
-				ProposedAs:               proposedAs,
-				Content:                  opts.Content,
-				Scope:                    opts.Scope,
-				ScopePath:                opts.ScopePath,
-				Source:                   "cli",
-				ClassificationConfidence: classification.Confidence,
-				ClassificationSignals:    signalsJSON,
-			}
-
-			// Dedupe check
-			dedupeKey := memory.GenerateDedupeKey(prop.ProposedAs, prop.Content, prop.Scope, prop.ScopePath)
-			if existing, _ := mem.CheckDuplicateProposal(dedupeKey); existing != nil {
-				return fmt.Errorf("duplicate proposal already exists: %s", existing.ID)
-			}
-			prop.DedupeKey = dedupeKey
-
-			id, err = mem.AddProposal(prop)
+	case memory.RecordKindLearning:
+		learn := memory.Learning{
+			Content:    opts.Content,
+			Scope:      opts.Scope,
+			ScopePath:  opts.ScopePath,
+			Source:     "cli",
+			Confidence: opts.Confidence,
+			Authority:  string(memory.AuthorityApproved),
+		}
+		id, err = mem.AddLearning(learn)
+		if err == nil {
+			// Audit the write
+			hash := sha256.Sum256([]byte(opts.Content))
+			contentHash := hex.EncodeToString(hash[:])
+			_, _ = mem.AddAuditLog(memory.AuditLogEntry{
+				Action:     memory.AuditActionDirectWrite,
+				ActorType:  memory.AuditActorHuman,
+				ActorID:    "cli",
+				TargetID:   id,
+				TargetKind: "learning",
+				Details:    fmt.Sprintf(`{"scope":"%s","scope_path":"%s","content_hash":"%s"}`, opts.Scope, opts.ScopePath, contentHash),
+			})
 		}
 	}
 
@@ -278,38 +256,26 @@ func ExecuteStore(opts StoreOptions) error {
 	}
 
 	// Output
-	if kind == memory.RecordKindIdea || opts.Direct {
-		kindIcon := "💡"
-		switch kind {
-		case memory.RecordKindDecision:
-			kindIcon = "🔨"
-		case memory.RecordKindLearning:
-			kindIcon = "📝"
-		}
-		fmt.Printf("%s Stored as %s: %s\n", kindIcon, kind, id)
-		if opts.AsType == "" {
-			fmt.Printf("  Classification: %.0f%% confidence\n", classification.Confidence*100)
-		}
-		fmt.Printf("  Scope: %s", opts.Scope)
-		if opts.ScopePath != "" {
-			fmt.Printf(" (%s)", opts.ScopePath)
-		}
-		fmt.Println()
-		if len(opts.Tags) > 0 {
-			fmt.Printf("  Tags: %s\n", strings.Join(opts.Tags, ", "))
-		}
-		fmt.Printf("  Content: %s\n", util.TruncateLine(opts.Content, 60))
-	} else {
-		// Proposal output
-		fmt.Printf("📥 Proposal created (%s): %s\n", kind, id)
-		fmt.Printf("  Scope: %s", opts.Scope)
-		if opts.ScopePath != "" {
-			fmt.Printf(" (%s)", opts.ScopePath)
-		}
-		fmt.Println()
-		fmt.Printf("  Classification: %.0f%% confidence\n", classification.Confidence*100)
-		fmt.Printf("  Content: %s\n", util.TruncateLine(opts.Content, 60))
-		fmt.Println("  Use 'palace proposals' to review and approve.")
+	kindIcon := "💡"
+	switch kind {
+	case memory.RecordKindDecision:
+		kindIcon = "🔨"
+	case memory.RecordKindLearning:
+		kindIcon = "📝"
 	}
+	fmt.Printf("%s Stored as %s: %s\n", kindIcon, kind, id)
+	if opts.AsType == "" {
+		fmt.Printf("  Classification: %.0f%% confidence\n", classification.Confidence*100)
+	}
+	fmt.Printf("  Scope: %s", opts.Scope)
+	if opts.ScopePath != "" {
+		fmt.Printf(" (%s)", opts.ScopePath)
+	}
+	fmt.Println()
+	if len(opts.Tags) > 0 {
+		fmt.Printf("  Tags: %s\n", strings.Join(opts.Tags, ", "))
+	}
+	fmt.Printf("  Content: %s\n", util.TruncateLine(opts.Content, 60))
+
 	return nil
 }

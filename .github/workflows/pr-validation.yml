@@ -25,24 +25,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Create Dashboard Embed Stub
-        run: |
-          # Create minimal dist folder for embed.go to compile
-          mkdir -p apps/cli/internal/dashboard/dist
-          cat > apps/cli/internal/dashboard/dist/index.html <<'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <title>Mind Palace Dashboard (Stub)</title>
-          </head>
-          <body>
-            <app-root></app-root>
-            <script src="main-stub.js"></script>
-          </body>
-          </html>
-          EOF
-
       - name: Run Go Tests
         run: |
           go test -v -race -coverprofile=coverage.out ./apps/cli/internal/...
@@ -54,36 +36,6 @@ jobs:
         with:
           name: go-coverage
           path: coverage.out
-          retention-days: 7
-
-  test-dashboard:
-    name: "Test: Dashboard (Angular)"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-
-      - name: Install Dependencies
-        working-directory: apps/dashboard
-        run: npm install
-
-      - name: Lint
-        working-directory: apps/dashboard
-        run: npm run lint || echo "Lint not configured, skipping"
-
-      - name: Run Tests with Coverage
-        working-directory: apps/dashboard
-        run: npm run test:coverage
-
-      - name: Upload Coverage Artifact
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: dashboard-coverage
-          path: apps/dashboard/coverage/
           retention-days: 7
 
   test-vscode:
@@ -150,23 +102,6 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Create Dashboard Embed Stub
-        run: |
-          mkdir -p apps/cli/internal/dashboard/dist
-          cat > apps/cli/internal/dashboard/dist/index.html <<'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <title>Mind Palace Dashboard (Stub)</title>
-          </head>
-          <body>
-            <app-root></app-root>
-            <script src="main-stub.js"></script>
-          </body>
-          </html>
-          EOF
-
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
@@ -180,7 +115,7 @@ jobs:
   build-all:
     name: "Build: All Components"
     runs-on: ubuntu-latest
-    needs: [test-go, test-dashboard, test-vscode]
+    needs: [test-go, test-vscode]
     steps:
       - uses: actions/checkout@v6
 
@@ -193,22 +128,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Build Dashboard
-        working-directory: apps/dashboard
-        run: |
-          npm install
-          npm run build
-
       - name: Build VS Code Extension
         working-directory: apps/vscode
         run: |
           npm install
           npm run compile
-
-      - name: Download Dashboard Artifact
-        run: |
-          mkdir -p apps/cli/internal/dashboard/dist
-          cp -r apps/dashboard/dist/dashboard/* apps/cli/internal/dashboard/dist/
 
       - name: Build Go CLI
         run: |
@@ -298,7 +222,7 @@ jobs:
   pr-summary:
     name: "Summary: Test Results"
     runs-on: ubuntu-latest
-    needs: [test-go, test-dashboard, test-vscode, build-all, test-e2e]
+    needs: [test-go, test-vscode, build-all, test-e2e]
     if: always()
     steps:
       - name: Create PR Comment
@@ -313,7 +237,6 @@ jobs:
             
             const testResults = {
               go: '${{ needs.test-go.result }}',
-              dashboard: '${{ needs.test-dashboard.result }}',
               vscode: '${{ needs.test-vscode.result }}',
               build: '${{ needs.build-all.result }}',
               e2e: '${{ needs.test-e2e.result }}'
@@ -333,7 +256,6 @@ jobs:
             | Component | Status |
             |-----------|--------|
             | Go CLI Tests | ${statusEmoji(testResults.go)} ${testResults.go} |
-            | Dashboard Tests | ${statusEmoji(testResults.dashboard)} ${testResults.dashboard} |
             | VS Code Extension Tests | ${statusEmoji(testResults.vscode)} ${testResults.vscode} |
             | Build All | ${statusEmoji(testResults.build)} ${testResults.build} |
             | End-to-End Tests | ${statusEmoji(testResults.e2e)} ${testResults.e2e} |

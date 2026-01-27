@@ -19,6 +19,18 @@ func init() {
 	butler.SetJSONCDecoder(jsonc.DecodeFile)
 }
 
+// wantsHelp checks if args contains a help flag and returns true if so.
+// This allows us to intercept --help/-h before Go's flag package and show
+// our custom help instead.
+func wantsHelp(args []string) bool {
+	for _, arg := range args {
+		if arg == "-h" || arg == "--help" || arg == "-help" {
+			return true
+		}
+	}
+	return false
+}
+
 // ============================================================================
 // Validation Helpers - delegating to flags package
 // ============================================================================
@@ -120,21 +132,33 @@ func usage() error {
 
 // cmdExplore delegates to commands.RunExplore
 func cmdExplore(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("explore")
+	}
 	return commands.RunExplore(args)
 }
 
 // cmdStore delegates to commands.RunStore
 func cmdStore(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("store")
+	}
 	return commands.RunStore(args)
 }
 
 // cmdRecall delegates to commands.RunRecall
 func cmdRecall(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("recall")
+	}
 	return commands.RunRecall(args)
 }
 
 // cmdStatus delegates to commands.RunStatus
 func cmdStatus(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("status")
+	}
 	return commands.RunStatus(args)
 }
 
@@ -144,11 +168,17 @@ func cmdStatus(args []string) error {
 
 // cmdInit delegates to commands.RunInit (enter command)
 func cmdInit(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("init")
+	}
 	return commands.RunInit(args)
 }
 
 // cmdIndex delegates to commands.RunIndex
 func cmdIndex(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("index")
+	}
 	return commands.RunIndex(args)
 }
 
@@ -158,16 +188,25 @@ func cmdIndex(args []string) error {
 
 // cmdServe delegates to commands.RunServe
 func cmdServe(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("serve")
+	}
 	return commands.RunServe(args)
 }
 
 // cmdDashboard delegates to commands.RunDashboard
 func cmdDashboard(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("dashboard")
+	}
 	return commands.RunDashboard(args)
 }
 
 // cmdLSP delegates to commands.RunLSP
 func cmdLSP(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("lsp")
+	}
 	return commands.RunLSP(args)
 }
 
@@ -177,11 +216,17 @@ func cmdLSP(args []string) error {
 
 // cmdSession delegates to commands.RunSession
 func cmdSession(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("session")
+	}
 	return commands.RunSession(args)
 }
 
 // cmdCorridor delegates to commands.RunCorridor
 func cmdCorridor(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("corridor")
+	}
 	return commands.RunCorridor(args)
 }
 
@@ -198,16 +243,25 @@ func cmdProposals(args []string) error {
 
 // cmdClean delegates to commands.RunClean (maintenance command)
 func cmdClean(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("clean")
+	}
 	return commands.RunClean(args)
 }
 
 // cmdMCPConfig delegates to commands.RunMCPConfig
 func cmdMCPConfig(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("mcp-config")
+	}
 	return commands.RunMCPConfig(args)
 }
 
 // cmdUpdate delegates to commands.RunUpdate
 func cmdUpdate(args []string) error {
+	if wantsHelp(args) {
+		return commands.ShowHelpTopic("update")
+	}
 	commands.BuildVersion = GetVersion()
 	return commands.RunUpdate(args)
 }
@@ -252,6 +306,7 @@ func checkForUpdates(args []string) {
 		return
 	}
 	cmd := args[0]
+	// Skip update check for these commands
 	if cmd == "version" || cmd == "--version" || cmd == "-v" || cmd == "update" {
 		return
 	}
@@ -267,7 +322,12 @@ func checkForUpdates(args []string) {
 	}
 
 	if result.UpdateAvailable {
-		fmt.Fprintf(os.Stderr, "Update available: v%s -> v%s (run 'palace update')\n\n", result.CurrentVersion, result.LatestVersion)
+		// Always show on init, otherwise respect 24h cooldown
+		isInit := cmd == "init" || cmd == "build" || cmd == "enter"
+		if isInit || update.ShouldShowNotice(cacheDir) {
+			fmt.Fprintf(os.Stderr, "Update available: v%s -> v%s (run 'palace update')\n\n", result.CurrentVersion, result.LatestVersion)
+			update.MarkNoticeShown(cacheDir)
+		}
 	}
 }
 

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/room",
+  "name": "bug-fix",
+  "summary": "Bug fix room with regression prevention.",
+  "entryPoints": ["src/"],
+  "artifacts": [
+    {
+      "name": "fix-summary",
+      "description": "Bug fix summary and regression test",
+      "pathHint": ".palace/outputs/fix-summary.md"
+    }
+  ],
+  "capabilities": ["read.file", "tests.run"],
+  "steps": [
+    {
+      "name": "Write regression test",
+      "description": "Create a test that reproduces the bug",
+      "capability": "tests.run"
+    },
+    {
+      "name": "Implement fix",
+      "description": "Apply the minimal fix for the root cause"
+    },
+    {
+      "name": "Run tests",
+      "description": "Verify fix and ensure no regressions",
+      "capability": "tests.run",
+      "evidence": "test-results"
+    },
+    {
+      "name": "Store learning",
+      "description": "Document the fix for future reference",
+      "evidence": "fix-summary"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

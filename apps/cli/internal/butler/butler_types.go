@@ -44,6 +44,13 @@ type EnhancedContextOptions struct {
 	IncludeIdeas     bool   `json:"includeIdeas"`
 	IncludeDecisions bool   `json:"includeDecisions"`
 	SessionID        string `json:"sessionId,omitempty"`
+
+	// Smart context options
+	EnableSmartContext bool `json:"enableSmartContext"` // Enable smart context expansion
+	ExpandDependencies bool `json:"expandDependencies"` // Expand to include imported files
+	DependencyDepth    int  `json:"dependencyDepth"`    // How many levels of imports to follow
+	PrioritizeByUsage  bool `json:"prioritizeByUsage"`  // Rank heavily-used files higher
+	BoostRecentEdits   bool `json:"boostRecentEdits"`   // Boost recently edited files
 }
 
 // EnhancedContextResult includes code context plus memory data.

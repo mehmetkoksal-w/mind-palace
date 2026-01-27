@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [dashboard, vscode, docs]
+        app: [vscode, docs]
     steps:
       - uses: actions/checkout@v6
 

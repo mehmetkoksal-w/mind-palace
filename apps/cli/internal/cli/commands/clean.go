@@ -73,6 +73,8 @@ func ExecuteClean(opts CleanOptions) error {
 				fmt.Fprintf(os.Stderr, "Warning: Failed to cleanup sessions: %v\n", err)
 			} else if n > 0 {
 				fmt.Printf("✓ Marked %d abandoned sessions\n", n)
+			} else {
+				fmt.Println("  Sessions: all healthy")
 			}
 		}
 
@@ -85,6 +87,8 @@ func ExecuteClean(opts CleanOptions) error {
 				fmt.Fprintf(os.Stderr, "Warning: Failed to cleanup agents: %v\n", err)
 			} else if n > 0 {
 				fmt.Printf("✓ Removed %d stale agents\n", n)
+			} else {
+				fmt.Println("  Agents: none stale")
 			}
 		}
 
@@ -97,6 +101,8 @@ func ExecuteClean(opts CleanOptions) error {
 				fmt.Fprintf(os.Stderr, "Warning: Failed to decay learnings: %v\n", err)
 			} else if n > 0 {
 				fmt.Printf("✓ Decayed %d unused learnings\n", n)
+			} else {
+				fmt.Println("  Learnings: all recently used")
 			}
 		}
 
@@ -109,6 +115,8 @@ func ExecuteClean(opts CleanOptions) error {
 				fmt.Fprintf(os.Stderr, "Warning: Failed to prune learnings: %v\n", err)
 			} else if n > 0 {
 				fmt.Printf("✓ Pruned %d low-confidence learnings\n", n)
+			} else {
+				fmt.Println("  Confidence: all above threshold")
 			}
 		}
 	}
@@ -137,6 +145,8 @@ func ExecuteClean(opts CleanOptions) error {
 					fmt.Printf("✓ Removed %d stale corridor links\n", len(pruned))
 				}
 			}
+		} else {
+			fmt.Println("  Corridor links: all valid")
 		}
 	}
 

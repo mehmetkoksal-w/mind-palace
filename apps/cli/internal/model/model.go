@@ -117,11 +117,37 @@ type Room struct {
 
 // Playbook is a sequence of rooms to be visited for a high-level goal.
 type Playbook struct {
-	SchemaVersion string   `json:"schemaVersion"`
-	Kind          string   `json:"kind"`
-	Name          string   `json:"name"`
-	Summary       string   `json:"summary"`
-	Rooms         []string `json:"rooms"`
+	SchemaVersion    string             `json:"schemaVersion"`
+	Kind             string             `json:"kind"`
+	Name             string             `json:"name"`
+	Summary          string             `json:"summary"`
+	Rooms            []string           `json:"rooms"`
+	RequiredEvidence []PlaybookEvidence `json:"requiredEvidence,omitempty"`
+	Verification     []PlaybookVerify   `json:"verification,omitempty"`
+	Provenance       Provenance         `json:"provenance,omitempty"`
+}
+
+// PlaybookEvidence defines evidence to collect during playbook execution.
+type PlaybookEvidence struct {
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	Room        string `json:"room,omitempty"` // Which room should collect this
+}
+
+// PlaybookVerify defines a post-playbook validation step.
+type PlaybookVerify struct {
+	Name        string `json:"name"`
+	Expectation string `json:"expectation"`
+	Capability  string `json:"capability,omitempty"` // e.g., "lint.run", "tests.run"
+}
+
+// LoadPlaybook loads a playbook from a JSONC file.
+func LoadPlaybook(path string) (Playbook, error) {
+	var pb Playbook
+	if err := jsonc.DecodeFile(path, &pb); err != nil {
+		return pb, err
+	}
+	return pb, nil
 }
 
 // RoomArtifact describes a specific file or object produced/consumed in a room.

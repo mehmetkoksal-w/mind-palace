@@ -9,14 +9,23 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
 const sqliteSignature = "SQLite format 3\x00"
 
+// exeName returns the platform-appropriate executable name
+func exeName(name string) string {
+	if runtime.GOOS == "windows" {
+		return name + ".exe"
+	}
+	return name
+}
+
 func TestPalaceLifecycle(t *testing.T) {
 	repoRoot := repoRoot(t)
-	binPath := filepath.Join(t.TempDir(), "palace")
+	binPath := filepath.Join(t.TempDir(), exeName("palace"))
 	buildPalace(t, repoRoot, binPath)
 
 	workspace := t.TempDir()
@@ -65,8 +74,25 @@ func repoRoot(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("getwd: %v", err)
 	}
-	// tests/ is at apps/cli/tests/, so go up 3 levels to repo root
-	return filepath.Dir(filepath.Dir(filepath.Dir(cwd)))
+
+	// Walk up the directory tree to find repo root (contains go.mod with our module)
+	dir := cwd
+	for {
+		goModPath := filepath.Join(dir, "go.mod")
+		if data, err := os.ReadFile(goModPath); err == nil {
+			// Check if this is the right go.mod (root module)
+			if bytes.Contains(data, []byte("module github.com/mehmetkoksal-w/mind-palace")) {
+				return dir
+			}
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached filesystem root without finding repo
+			t.Fatalf("could not find repo root from %s", cwd)
+		}
+		dir = parent
+	}
 }
 
 func buildPalace(t *testing.T, repoRoot, binPath string) {

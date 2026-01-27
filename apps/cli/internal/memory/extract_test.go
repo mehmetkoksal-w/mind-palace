@@ -31,13 +31,13 @@ func TestStubExtractor(t *testing.T) {
 func TestExtractRecords(t *testing.T) {
 	messages := []Message{
 		{Role: "user", Content: "We should use PostgreSQL", Timestamp: time.Now()},
-		{Role: "assistant", Content: "Agreed, I learned that PostgreSQL handles JSON well", Timestamp: time.Now()},
+		{Role: "assistant", Content: "I learned that PostgreSQL handles JSON well", Timestamp: time.Now()},
 	}
 
 	records := ExtractRecords(messages)
 
 	// ExtractRecords now uses keyword-based classification
-	// The assistant message contains "learned" which triggers learning extraction
+	// The assistant message starts with "I learned that" which triggers learning extraction
 	if len(records) != 1 {
 		t.Errorf("Expected 1 extracted record, got %d", len(records))
 	}

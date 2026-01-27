@@ -437,3 +437,29 @@ func (g *GlobalCorridor) PruneStaleLinks() ([]string, error) {
 	}
 	return stale, nil
 }
+
+// CleanLowConfidenceLearnings removes learnings below a confidence threshold that haven't been used.
+func (g *GlobalCorridor) CleanLowConfidenceLearnings(minConfidence float64, minUseCount int) (int, error) {
+	result, err := g.db.ExecContext(context.Background(), `
+		DELETE FROM learnings 
+		WHERE confidence < ? AND use_count <= ?
+	`, minConfidence, minUseCount)
+	if err != nil {
+		return 0, err
+	}
+	affected, _ := result.RowsAffected()
+	return int(affected), nil
+}
+
+// CleanByPattern removes learnings matching a content pattern.
+func (g *GlobalCorridor) CleanByPattern(pattern string) (int, error) {
+	result, err := g.db.ExecContext(context.Background(), `
+		DELETE FROM learnings 
+		WHERE content LIKE ?
+	`, "%"+pattern+"%")
+	if err != nil {
+		return 0, err
+	}
+	affected, _ := result.RowsAffected()
+	return int(affected), nil
+}

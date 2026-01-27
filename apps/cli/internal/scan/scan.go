@@ -17,6 +17,11 @@ import (
 	"github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/validate"
 )
 
+// RunOptions contains options for running a scan.
+type RunOptions struct {
+	Workers int // Number of parallel workers (0 = auto-detect)
+}
+
 // resolveAndValidateRoot converts a path to absolute and verifies it exists.
 func resolveAndValidateRoot(root string) (string, error) {
 	rootPath, err := filepath.Abs(root)
@@ -199,7 +204,7 @@ func RunIncrementalGit(root string) (index.IncrementalScanSummary, error) {
 }
 
 // filterFiles filters a list of file paths based on guardrails.
-func filterFiles(files []string, rootPath string, guardrails config.Guardrails) []string {
+func filterFiles(files []string, _ string, guardrails config.Guardrails) []string {
 	var result []string
 	for _, file := range files {
 		// Check if file matches guardrails (should be excluded)
@@ -210,8 +215,13 @@ func filterFiles(files []string, rootPath string, guardrails config.Guardrails) 
 	return result
 }
 
-// Run performs a full scan of the workspace
+// Run performs a full scan of the workspace with default options.
 func Run(root string) (index.ScanSummary, int, error) {
+	return RunWithOptions(root, RunOptions{})
+}
+
+// RunWithOptions performs a full scan of the workspace with configurable options.
+func RunWithOptions(root string, opts RunOptions) (index.ScanSummary, int, error) {
 	rootPath, err := resolveAndValidateRoot(root)
 	if err != nil {
 		return index.ScanSummary{}, 0, err
@@ -224,7 +234,7 @@ func Run(root string) (index.ScanSummary, int, error) {
 	guardrails := config.LoadGuardrails(rootPath)
 	startedAt := time.Now().UTC()
 
-	records, err := index.BuildFileRecords(rootPath, guardrails)
+	records, err := index.BuildFileRecordsParallel(rootPath, guardrails, opts.Workers)
 	if err != nil {
 		return index.ScanSummary{}, 0, err
 	}

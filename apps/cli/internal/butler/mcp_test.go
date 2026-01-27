@@ -283,8 +283,8 @@ func TestMCPToolHandlersMemory(t *testing.T) {
 		"scope":   "palace",
 		"as":      "learning",
 	})
-	// Phase 2: Learnings go through proposal workflow
-	if text := toolText(t, resp); !strings.Contains(text, "Proposal Created") {
+	// Learnings are now stored directly with audit trail
+	if text := toolText(t, resp); !strings.Contains(text, "Learning Stored") {
 		t.Fatalf("store learning output unexpected: %s", text)
 	}
 
@@ -377,18 +377,18 @@ func TestMCPToolHandlersBrain(t *testing.T) {
 		"content": "Test idea content",
 		"as":      "idea",
 	})
-	if text := toolText(t, resp); !strings.Contains(text, "Remembered") {
+	if text := toolText(t, resp); !strings.Contains(text, "Idea Stored") {
 		t.Fatalf("toolStore idea output unexpected: %s", text)
 	}
 
-	// toolStore - stores a decision (Phase 2: goes through proposal workflow)
+	// toolStore - stores a decision (directly, no proposal workflow)
 	resp = server.toolStore(2, map[string]interface{}{
 		"content":   "Test decision content",
 		"as":        "decision",
 		"status":    "active",
 		"rationale": "Because testing",
 	})
-	if text := toolText(t, resp); !strings.Contains(text, "Proposal Created") {
+	if text := toolText(t, resp); !strings.Contains(text, "Decision Stored") {
 		t.Fatalf("toolStore decision output unexpected: %s", text)
 	}
 
@@ -398,13 +398,15 @@ func TestMCPToolHandlersBrain(t *testing.T) {
 		t.Fatalf("toolRecallIdeas output unexpected: %s", text)
 	}
 
-	// toolRecallDecisions - Phase 2: decisions from toolStore are proposals,
-	// so they won't show up in recallDecisions until approved
+	// toolRecallDecisions - decisions are now stored directly (no proposal workflow)
 	resp = server.toolRecallDecisions(4, map[string]interface{}{"limit": float64(10)})
 	if text := toolText(t, resp); !strings.Contains(text, "Decisions") {
 		t.Fatalf("toolRecallDecisions output unexpected: %s", text)
 	}
-	// Note: We don't check for "Test decision" here because it's now a proposal, not an approved decision
+	// Check that the decision we stored appears
+	if text := toolText(t, resp); !strings.Contains(text, "Test decision") {
+		t.Fatalf("toolRecallDecisions should contain stored decision: %s", text)
+	}
 }
 
 func TestMCPToolHandlersLinks(t *testing.T) {
@@ -871,6 +873,10 @@ func TestMCPStoreDirectHumanMode(t *testing.T) {
 }
 
 func TestMCPApproveRejectHumanMode(t *testing.T) {
+	// Skip this test - the proposal workflow has been removed.
+	// Decisions and learnings are now stored directly with audit trail.
+	t.Skip("Proposal workflow removed - decisions/learnings are stored directly")
+
 	humanServer, butler := setupMCPServerWithMode(t, MCPModeHuman)
 	mem := butler.Memory()
 

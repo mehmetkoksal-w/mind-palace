@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/playbook",
+  "name": "postmortem",
+  "summary": "Incident postmortem workflow for learning from failures.",
+  "rooms": ["project-overview", "bug-investigation", "postmortem-room"],
+  "requiredEvidence": [
+    {
+      "id": "bug-analysis",
+      "description": "Root cause analysis",
+      "room": "bug-investigation"
+    },
+    {
+      "id": "postmortem-doc",
+      "description": "Complete postmortem document",
+      "room": "postmortem-room"
+    }
+  ],
+  "verification": [
+    {
+      "name": "learnings",
+      "expectation": "Postmortem learnings stored in Mind Palace"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

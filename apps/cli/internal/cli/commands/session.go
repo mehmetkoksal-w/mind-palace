@@ -131,13 +131,14 @@ func RunSessionEnd(args []string) error {
 	}
 
 	remaining := fs.Args()
-	if len(remaining) == 0 {
-		return errors.New("usage: palace session end SESSION_ID [--state completed|abandoned] [--summary \"...\"]")
+	sessionID := ""
+	if len(remaining) > 0 {
+		sessionID = remaining[0]
 	}
 
 	return ExecuteSessionEnd(SessionEndOptions{
 		Root:      *root,
-		SessionID: remaining[0],
+		SessionID: sessionID,
 		State:     *state,
 		Summary:   *summary,
 	})
@@ -156,11 +157,46 @@ func ExecuteSessionEnd(opts SessionEndOptions) error {
 	}
 	defer mem.Close()
 
-	if err := mem.EndSession(opts.SessionID, opts.State, opts.Summary); err != nil {
+	sessionID := opts.SessionID
+
+	// If no session ID provided, try to find the only active session
+	if sessionID == "" {
+		sessions, err := mem.ListSessions(true, 10) // Get active sessions
+		if err != nil {
+			return fmt.Errorf("list sessions: %w", err)
+		}
+
+		activeSessions := []memory.Session{}
+		for i := range sessions {
+			if sessions[i].State == "active" {
+				activeSessions = append(activeSessions, sessions[i])
+			}
+		}
+
+		switch len(activeSessions) {
+		case 0:
+			return errors.New("no active sessions found")
+		case 1:
+			sessionID = activeSessions[0].ID
+			fmt.Printf("Auto-selected session: %s (%s)\n", sessionID, activeSessions[0].AgentType)
+		default:
+			fmt.Printf("Multiple active sessions found:\n")
+			for _, s := range activeSessions {
+				goal := ""
+				if s.Goal != "" {
+					goal = fmt.Sprintf(" - %s", util.TruncateLine(s.Goal, 40))
+				}
+				fmt.Printf("  • %s [%s]%s\n", s.ID, s.AgentType, goal)
+			}
+			return errors.New("multiple active sessions - specify which one: palace session end <SESSION_ID>")
+		}
+	}
+
+	if err := mem.EndSession(sessionID, opts.State, opts.Summary); err != nil {
 		return fmt.Errorf("end session: %w", err)
 	}
 
-	fmt.Printf("Session %s ended (state: %s)\n", opts.SessionID, opts.State)
+	fmt.Printf("Session %s ended (state: %s)\n", sessionID, opts.State)
 	return nil
 }
 

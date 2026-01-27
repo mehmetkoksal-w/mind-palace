@@ -119,7 +119,7 @@ func ExecuteBrief(opts BriefOptions) error {
 			if a.CurrentFile != "" {
 				currentFile = fmt.Sprintf(" working on %s", a.CurrentFile)
 			}
-			fmt.Printf("  • %s (%s)%s\n", a.AgentType, a.SessionID[:12], currentFile)
+			fmt.Printf("  • %s (%s)%s\n", a.AgentType, util.TruncateID(a.SessionID, 12), currentFile)
 		}
 	}
 
@@ -141,7 +141,7 @@ func ExecuteBrief(opts BriefOptions) error {
 				if s.Goal != "" {
 					goal = fmt.Sprintf(" - %s", util.TruncateLine(s.Goal, 30))
 				}
-				fmt.Printf("  %s %s [%s]%s\n", stateIcon, s.ID[:12], s.AgentType, goal)
+				fmt.Printf("  %s %s [%s]%s\n", stateIcon, util.TruncateID(s.ID, 12), s.AgentType, goal)
 			}
 		}
 	}
@@ -152,7 +152,7 @@ func ExecuteBrief(opts BriefOptions) error {
 		if err == nil && conflict != nil {
 			fmt.Printf("\n⚠️  Conflict Warning:\n")
 			fmt.Printf("  Another agent (%s) touched this file recently\n", conflict.OtherAgent)
-			fmt.Printf("  Session: %s | Last touched: %s\n", conflict.OtherSession[:12], conflict.LastTouched.Format("15:04:05"))
+			fmt.Printf("  Session: %s | Last touched: %s\n", util.TruncateID(conflict.OtherSession, 12), conflict.LastTouched.Format("15:04:05"))
 		}
 
 		// Show file intel

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/playbook",
+  "name": "api-change",
+  "summary": "API design and implementation workflow with contract verification.",
+  "rooms": [
+    "project-overview",
+    "api-design",
+    "code-implementation",
+    "code-review"
+  ],
+  "requiredEvidence": [
+    {
+      "id": "api-spec",
+      "description": "API specification document",
+      "room": "api-design"
+    },
+    {
+      "id": "test-results",
+      "description": "API tests pass",
+      "room": "code-implementation"
+    },
+    {
+      "id": "review-checklist",
+      "description": "Review confirmation",
+      "room": "code-review"
+    }
+  ],
+  "verification": [
+    {
+      "name": "tests",
+      "expectation": "All API tests pass",
+      "capability": "tests.run"
+    },
+    {
+      "name": "contracts",
+      "expectation": "API contracts verified"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}

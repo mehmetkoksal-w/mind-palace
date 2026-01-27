@@ -29,7 +29,19 @@ type InitOptions struct {
 	Force       bool
 	WithOutputs bool
 	SkipDetect  bool
-	NoScan      bool // Skip automatic scan after init
+	NoScan      bool   // Skip automatic scan after init
+	WithAgents  string // Comma-separated agent names or "auto" for auto-detect
+	NoGitignore bool   // Skip .gitignore updates
+	NoHooks     bool   // Skip git hooks installation
+	NoVSCode    bool   // Skip VS Code integration
+}
+
+// DetectedAgent represents an auto-detected AI tool in the environment
+type DetectedAgent struct {
+	Name       string
+	Key        string // The key used in supportedTools map
+	Confidence string // "high", "medium", "low"
+	Indicator  string // What we detected
 }
 
 // RunInit initializes a new Mind Palace in the specified directory.
@@ -40,6 +52,10 @@ func RunInit(args []string) error {
 	withOutputs := fs.Bool("with-outputs", false, "also create generated outputs (context-pack)")
 	skipDetect := fs.Bool("skip-detect", false, "skip auto-detection of project type")
 	noScan := fs.Bool("no-scan", false, "skip automatic scan after init (not recommended)")
+	withAgents := fs.String("with-agents", "", "install agent configs: 'auto' for auto-detect, or comma-separated list (claude-code,cursor,vscode)")
+	noGitignore := fs.Bool("no-gitignore", false, "skip .gitignore updates")
+	noHooks := fs.Bool("no-hooks", false, "skip git hooks installation")
+	noVSCode := fs.Bool("no-vscode", false, "skip VS Code integration (extensions.json)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -50,6 +66,10 @@ func RunInit(args []string) error {
 		WithOutputs: *withOutputs,
 		SkipDetect:  *skipDetect,
 		NoScan:      *noScan,
+		WithAgents:  *withAgents,
+		NoGitignore: *noGitignore,
+		NoHooks:     *noHooks,
+		NoVSCode:    *noVSCode,
 	}
 
 	return ExecuteInit(opts)
@@ -71,7 +91,7 @@ func ExecuteInit(opts InitOptions) error {
 
 	// Auto-detect project type by default
 	language := "unknown"
-	var monorepoRooms []MonorepoRoom
+	var monorepoInfo *project.MonorepoInfo
 	if !opts.SkipDetect {
 		profile := project.BuildProfile(rootPath)
 		profilePath := filepath.Join(rootPath, ".palace", "project-profile.json")
@@ -83,10 +103,20 @@ func ExecuteInit(opts InitOptions) error {
 		}
 		fmt.Printf("detected project type: %s\n", language)
 
-		// Detect monorepo structure and auto-generate rooms
-		monorepoRooms = detectMonorepoRooms(rootPath)
-		if len(monorepoRooms) > 0 {
-			fmt.Printf("detected monorepo structure with %d subprojects\n", len(monorepoRooms))
+		// Detect monorepo structure using the new comprehensive detection
+		monorepoInfo = project.DetectMonorepo(rootPath, nil)
+		if monorepoInfo.IsMonorepo {
+			managerStr := ""
+			if monorepoInfo.Manager != "" {
+				managerStr = fmt.Sprintf(" (%s)", monorepoInfo.Manager)
+			}
+			fmt.Printf("detected monorepo structure%s with %d subprojects\n", managerStr, len(monorepoInfo.Projects))
+
+			// Write monorepo info to file for reference
+			monorepoPath := filepath.Join(rootPath, ".palace", "monorepo.json")
+			if err := config.WriteJSON(monorepoPath, monorepoInfo); err != nil {
+				fmt.Printf("warning: could not write monorepo.json: %v\n", err)
+			}
 		}
 	}
 
@@ -102,15 +132,28 @@ func ExecuteInit(opts InitOptions) error {
 	}
 
 	// Write auto-detected monorepo rooms
-	for _, room := range monorepoRooms {
-		roomPath := filepath.Join(rootPath, ".palace", "rooms", room.Name+".jsonc")
-		if _, err := os.Stat(roomPath); err == nil && !opts.Force {
-			continue // Don't overwrite existing rooms
-		}
-		if err := writeMonorepoRoom(roomPath, room); err != nil {
-			fmt.Printf("warning: could not create room %s: %v\n", room.Name, err)
-		} else {
-			fmt.Printf("  created room: %s (%s)\n", room.Name, room.RelPath)
+	if monorepoInfo != nil && monorepoInfo.IsMonorepo {
+		for _, proj := range monorepoInfo.Projects {
+			room := MonorepoRoom{
+				Name:        proj.Name,
+				RelPath:     proj.Path,
+				Category:    proj.Category,
+				EntryPoints: proj.EntryPoints,
+				DependsOn:   proj.DependsOn,
+			}
+			roomPath := filepath.Join(rootPath, ".palace", "rooms", room.Name+".jsonc")
+			if _, err := os.Stat(roomPath); err == nil && !opts.Force {
+				continue // Don't overwrite existing rooms
+			}
+			if err := writeMonorepoRoom(roomPath, room); err != nil {
+				fmt.Printf("warning: could not create room %s: %v\n", room.Name, err)
+			} else {
+				depsInfo := ""
+				if len(room.DependsOn) > 0 {
+					depsInfo = fmt.Sprintf(" (depends on: %s)", strings.Join(room.DependsOn, ", "))
+				}
+				fmt.Printf("  created room: %s (%s)%s\n", room.Name, room.RelPath, depsInfo)
+			}
 		}
 	}
 
@@ -138,6 +181,34 @@ func ExecuteInit(opts InitOptions) error {
 	}
 
 	fmt.Printf("initialized palace in %s\n", filepath.Join(rootPath, ".palace"))
+
+	// Update .gitignore unless disabled
+	if !opts.NoGitignore {
+		if err := updateGitignore(rootPath, opts.Force); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not update .gitignore: %v\n", err)
+		}
+	}
+
+	// Install VS Code integration unless disabled
+	if !opts.NoVSCode {
+		if err := installVSCodeIntegration(rootPath, opts.Force); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not set up VS Code integration: %v\n", err)
+		}
+	}
+
+	// Install git hooks unless disabled
+	if !opts.NoHooks {
+		if err := installGitHooks(rootPath, opts.Force); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not install git hooks: %v\n", err)
+		}
+	}
+
+	// Install agent configs if requested
+	if opts.WithAgents != "" {
+		if err := installAgentConfigs(rootPath, opts.WithAgents, opts.Force); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not install agent configs: %v\n", err)
+		}
+	}
 
 	// Auto-scan unless explicitly disabled
 	if !opts.NoScan {
@@ -179,159 +250,10 @@ type MonorepoRoom struct {
 	RelPath     string   // Relative path (e.g., "apps/driver_app")
 	Category    string   // Category (e.g., "apps", "packages")
 	EntryPoints []string // Detected entry points
+	DependsOn   []string // Names of projects this depends on
 }
 
-// detectMonorepoRooms looks for common monorepo patterns and returns rooms for each subproject
-func detectMonorepoRooms(root string) []MonorepoRoom {
-	var rooms []MonorepoRoom
-
-	// Common monorepo directory patterns
-	patterns := []struct {
-		dir      string
-		category string
-	}{
-		{"apps", "application"},
-		{"packages", "package"},
-		{"libs", "library"},
-		{"modules", "module"},
-		{"services", "service"},
-	}
-
-	for _, pattern := range patterns {
-		patternDir := filepath.Join(root, pattern.dir)
-		entries, err := os.ReadDir(patternDir)
-		if err != nil {
-			continue // Directory doesn't exist
-		}
-
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-
-			subDir := filepath.Join(patternDir, entry.Name())
-			entryPoints := detectEntryPoints(subDir, entry.Name())
-			if len(entryPoints) == 0 {
-				continue // Not a valid subproject
-			}
-
-			// Normalize room name (snake_case to kebab-case, etc.)
-			roomName := normalizeRoomName(entry.Name())
-
-			rooms = append(rooms, MonorepoRoom{
-				Name:        roomName,
-				RelPath:     filepath.Join(pattern.dir, entry.Name()),
-				Category:    pattern.category,
-				EntryPoints: entryPoints,
-			})
-		}
-	}
-
-	return rooms
-}
-
-// detectEntryPoints finds common entry point files in a subproject directory
-func detectEntryPoints(dir, name string) []string {
-	var entryPoints []string
-
-	// Check for common project manifest files (indicates valid subproject)
-	manifests := []string{
-		"pubspec.yaml",     // Dart/Flutter
-		"package.json",     // Node.js
-		"Cargo.toml",       // Rust
-		"go.mod",           // Go
-		"pom.xml",          // Maven (Java)
-		"build.gradle",     // Gradle (Java/Kotlin)
-		"build.gradle.kts", // Gradle Kotlin DSL
-		"pyproject.toml",   // Python
-		"setup.py",         // Python legacy
-		"Gemfile",          // Ruby
-		"composer.json",    // PHP
-		"Package.swift",    // Swift
-		"CMakeLists.txt",   // C/C++
-		"*.csproj",         // .NET
-	}
-
-	hasManifest := false
-	for _, manifest := range manifests {
-		if strings.Contains(manifest, "*") {
-			// Handle glob patterns like *.csproj
-			matches, _ := filepath.Glob(filepath.Join(dir, manifest))
-			if len(matches) > 0 {
-				hasManifest = true
-				break
-			}
-		} else if _, err := os.Stat(filepath.Join(dir, manifest)); err == nil {
-			hasManifest = true
-			break
-		}
-	}
-
-	if !hasManifest {
-		return nil // Not a valid subproject
-	}
-
-	// Add relative paths for common entry points
-	commonEntries := []string{
-		"lib/main.dart",         // Flutter
-		"lib/" + name + ".dart", // Dart package
-		"src/index.ts",          // TypeScript
-		"src/index.tsx",         // React TypeScript
-		"src/index.js",          // JavaScript
-		"src/main.ts",           // Angular/other
-		"src/App.tsx",           // React
-		"src/App.vue",           // Vue
-		"index.ts",              // Root index
-		"index.js",              // Root index JS
-		"main.go",               // Go
-		"cmd/main.go",           // Go cmd pattern
-		"src/main.rs",           // Rust
-		"src/lib.rs",            // Rust library
-		"__init__.py",           // Python
-		"app.py",                // Python Flask
-		"main.py",               // Python
-	}
-
-	for _, entry := range commonEntries {
-		if _, err := os.Stat(filepath.Join(dir, entry)); err == nil {
-			entryPoints = append(entryPoints, entry)
-		}
-	}
-
-	// If no specific entry points found, add README if exists
-	if len(entryPoints) == 0 {
-		if _, err := os.Stat(filepath.Join(dir, "README.md")); err == nil {
-			entryPoints = append(entryPoints, "README.md")
-		}
-	}
-
-	// If still no entry points but has manifest, add the manifest
-	if len(entryPoints) == 0 {
-		for _, manifest := range []string{"pubspec.yaml", "package.json", "Cargo.toml", "go.mod"} {
-			if _, err := os.Stat(filepath.Join(dir, manifest)); err == nil {
-				entryPoints = append(entryPoints, manifest)
-				break
-			}
-		}
-	}
-
-	return entryPoints
-}
-
-// normalizeRoomName converts directory names to kebab-case room names
-func normalizeRoomName(name string) string {
-	// Replace underscores with hyphens
-	name = strings.ReplaceAll(name, "_", "-")
-	// Convert camelCase to kebab-case
-	var result strings.Builder
-	for i, r := range name {
-		if i > 0 && r >= 'A' && r <= 'Z' {
-			result.WriteRune('-')
-		}
-		result.WriteRune(r)
-	}
-	return strings.ToLower(result.String())
-}
+// Note: detectMonorepoRooms was removed - use project.DetectMonorepo instead
 
 // RoomConfig represents the JSON structure for a room file
 type RoomConfig struct {
@@ -341,6 +263,7 @@ type RoomConfig struct {
 	Summary       string     `json:"summary"`
 	EntryPoints   []string   `json:"entryPoints"`
 	Capabilities  []string   `json:"capabilities"`
+	DependsOn     []string   `json:"dependsOn,omitempty"`
 	Provenance    Provenance `json:"provenance"`
 }
 
@@ -358,6 +281,11 @@ func writeMonorepoRoom(path string, room MonorepoRoom) error {
 		entryPoints = append(entryPoints, filepath.Join(room.RelPath, ep))
 	}
 
+	// If no entry points detected, use the root of the subproject
+	if len(entryPoints) == 0 {
+		entryPoints = []string{room.RelPath}
+	}
+
 	roomConfig := RoomConfig{
 		SchemaVersion: "1.0.0",
 		Kind:          "palace/room",
@@ -365,6 +293,7 @@ func writeMonorepoRoom(path string, room MonorepoRoom) error {
 		Summary:       fmt.Sprintf("Auto-detected %s at %s", room.Category, room.RelPath),
 		EntryPoints:   entryPoints,
 		Capabilities:  []string{"read.file", "search.text"},
+		DependsOn:     room.DependsOn,
 		Provenance: Provenance{
 			CreatedBy: "palace init --detect",
 			CreatedAt: time.Now().UTC().Format(time.RFC3339),
@@ -377,4 +306,361 @@ func writeMonorepoRoom(path string, room MonorepoRoom) error {
 	}
 
 	return os.WriteFile(path, data, 0o600)
+}
+
+// updateGitignore adds Mind Palace entries to .gitignore
+func updateGitignore(root string, _ bool) error {
+	gitignorePath := filepath.Join(root, ".gitignore")
+
+	// Entries to add
+	entries := []string{
+		"",
+		"# Mind Palace",
+		".palace/scan/",
+		".palace/outputs/",
+		".palace/cache/",
+		".palace/sessions/",
+	}
+
+	// Check if .gitignore exists
+	content, err := os.ReadFile(gitignorePath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("reading .gitignore: %w", err)
+	}
+
+	existingContent := string(content)
+
+	// Check if already configured
+	if strings.Contains(existingContent, "# Mind Palace") {
+		return nil // Already configured
+	}
+
+	// Append entries
+	newContent := existingContent
+	if len(existingContent) > 0 && !strings.HasSuffix(existingContent, "\n") {
+		newContent += "\n"
+	}
+	newContent += strings.Join(entries, "\n") + "\n"
+
+	if err := os.WriteFile(gitignorePath, []byte(newContent), 0o644); err != nil {
+		return fmt.Errorf("writing .gitignore: %w", err)
+	}
+
+	fmt.Println("✓ Updated .gitignore with Mind Palace entries")
+	return nil
+}
+
+// installVSCodeIntegration sets up VS Code extensions.json and settings
+func installVSCodeIntegration(root string, force bool) error {
+	vscodeDir := filepath.Join(root, ".vscode")
+
+	// Only set up if .vscode directory exists (VS Code project)
+	if _, err := os.Stat(vscodeDir); os.IsNotExist(err) {
+		return nil // Not a VS Code project, skip silently
+	}
+
+	extensionsPath := filepath.Join(vscodeDir, "extensions.json")
+
+	// Check if extensions.json already exists
+	if _, err := os.Stat(extensionsPath); err == nil && !force {
+		// File exists, try to merge
+		return mergeVSCodeExtensions(extensionsPath)
+	}
+
+	// Create new extensions.json
+	extensions := map[string]interface{}{
+		"recommendations": []string{
+			"mind-palace.vscode-mind-palace",
+		},
+	}
+
+	data, err := json.MarshalIndent(extensions, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshaling extensions.json: %w", err)
+	}
+
+	if err := os.WriteFile(extensionsPath, data, 0o644); err != nil {
+		return fmt.Errorf("writing extensions.json: %w", err)
+	}
+
+	fmt.Println("✓ Created .vscode/extensions.json with Mind Palace extension")
+	return nil
+}
+
+// mergeVSCodeExtensions adds Mind Palace extension to existing extensions.json
+func mergeVSCodeExtensions(path string) error {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	var extensions map[string]interface{}
+	if err := json.Unmarshal(content, &extensions); err != nil {
+		return err
+	}
+
+	// Get or create recommendations array
+	recommendations, ok := extensions["recommendations"].([]interface{})
+	if !ok {
+		recommendations = []interface{}{}
+	}
+
+	// Check if already present
+	for _, rec := range recommendations {
+		if rec == "mind-palace.vscode-mind-palace" {
+			return nil // Already present
+		}
+	}
+
+	// Add Mind Palace extension
+	recommendations = append(recommendations, "mind-palace.vscode-mind-palace")
+	extensions["recommendations"] = recommendations
+
+	data, err := json.MarshalIndent(extensions, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return err
+	}
+
+	fmt.Println("✓ Added Mind Palace to .vscode/extensions.json recommendations")
+	return nil
+}
+
+// installGitHooks sets up git hooks for Mind Palace
+func installGitHooks(root string, force bool) error {
+	gitDir := filepath.Join(root, ".git")
+
+	// Check if this is a git repository
+	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
+		return nil // Not a git repo, skip silently
+	}
+
+	hooksDir := filepath.Join(gitDir, "hooks")
+	if err := os.MkdirAll(hooksDir, 0o755); err != nil {
+		return fmt.Errorf("creating hooks directory: %w", err)
+	}
+
+	// Install post-commit hook to update scan on significant changes
+	postCommitPath := filepath.Join(hooksDir, "post-commit")
+
+	// Check if hook already exists
+	if _, err := os.Stat(postCommitPath); err == nil && !force {
+		// Check if it already contains our hook
+		content, err := os.ReadFile(postCommitPath)
+		if err == nil && strings.Contains(string(content), "mind-palace") {
+			return nil // Already installed
+		}
+		// Append to existing hook
+		return appendToGitHook(postCommitPath, getPalaceHookContent())
+	}
+
+	// Create new hook
+	hookContent := `#!/bin/sh
+# Mind Palace post-commit hook
+# Auto-refreshes the code index after commits
+
+` + getPalaceHookContent()
+
+	if err := os.WriteFile(postCommitPath, []byte(hookContent), 0o755); err != nil {
+		return fmt.Errorf("writing post-commit hook: %w", err)
+	}
+
+	fmt.Println("✓ Installed git post-commit hook for auto-index refresh")
+	return nil
+}
+
+// getPalaceHookContent returns the Mind Palace hook content
+func getPalaceHookContent() string {
+	return `# Mind Palace: Refresh index on commit (runs in background)
+if command -v palace >/dev/null 2>&1; then
+  palace scan --quiet &
+fi
+`
+}
+
+// appendToGitHook appends content to an existing git hook
+func appendToGitHook(path, content string) error {
+	existing, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	newContent := string(existing)
+	if !strings.HasSuffix(newContent, "\n") {
+		newContent += "\n"
+	}
+	newContent += "\n" + content
+
+	if err := os.WriteFile(path, []byte(newContent), 0o755); err != nil {
+		return err
+	}
+
+	fmt.Println("✓ Added Mind Palace to existing post-commit hook")
+	return nil
+}
+
+// installAgentConfigs installs agent configurations based on the --with-agents flag
+func installAgentConfigs(root string, agentsArg string, _ bool) error {
+	var agents []string
+
+	if agentsArg == "auto" {
+		// Auto-detect installed agents
+		detected := detectInstalledAgents(root)
+		if len(detected) == 0 {
+			fmt.Println("ℹ No AI coding agents detected - skipping agent config installation")
+			fmt.Println("  Run 'palace mcp-config install --list' to see supported agents")
+			return nil
+		}
+
+		for _, d := range detected {
+			agents = append(agents, d.Key)
+		}
+		fmt.Printf("✓ Detected %d AI coding agent(s): %s\n", len(agents), strings.Join(agents, ", "))
+	} else {
+		// Parse comma-separated list
+		for _, agent := range strings.Split(agentsArg, ",") {
+			agent = strings.TrimSpace(agent)
+			if agent != "" {
+				agents = append(agents, agent)
+			}
+		}
+	}
+
+	if len(agents) == 0 {
+		return nil
+	}
+
+	// Install configs for each agent
+	fmt.Printf("\nInstalling agent configurations...\n")
+	for _, agent := range agents {
+		opts := MCPConfigOptions{
+			For:     agent,
+			Root:    root,
+			Install: true,
+		}
+		if err := ExecuteMCPConfig(opts); err != nil {
+			fmt.Fprintf(os.Stderr, "  warning: failed to install config for %s: %v\n", agent, err)
+		}
+	}
+
+	return nil
+}
+
+// detectInstalledAgents detects which AI coding agents are installed
+func detectInstalledAgents(root string) []DetectedAgent {
+	var detected []DetectedAgent
+
+	// Agent detection rules
+	detectionRules := []struct {
+		Key        string
+		Name       string
+		Indicators []string // Files/directories that indicate this agent
+	}{
+		{
+			Key:  "cursor",
+			Name: "Cursor",
+			Indicators: []string{
+				".cursor",
+				".cursorrules",
+			},
+		},
+		{
+			Key:  "vscode",
+			Name: "VS Code",
+			Indicators: []string{
+				".vscode",
+			},
+		},
+		{
+			Key:  "windsurf",
+			Name: "Windsurf",
+			Indicators: []string{
+				".windsurf",
+				".windsurfrules",
+			},
+		},
+		{
+			Key:  "claude-code",
+			Name: "Claude Code",
+			Indicators: []string{
+				"CLAUDE.md",
+				".claude",
+			},
+		},
+		{
+			Key:  "zed",
+			Name: "Zed",
+			Indicators: []string{
+				".zed",
+			},
+		},
+		{
+			Key:  "cline",
+			Name: "Cline",
+			Indicators: []string{
+				".clinerules",
+				".cline",
+			},
+		},
+	}
+
+	for _, rule := range detectionRules {
+		for _, indicator := range rule.Indicators {
+			indicatorPath := filepath.Join(root, indicator)
+			if _, err := os.Stat(indicatorPath); err == nil {
+				detected = append(detected, DetectedAgent{
+					Key:        rule.Key,
+					Name:       rule.Name,
+					Indicator:  indicator,
+					Confidence: "high",
+				})
+				break // Only add once per agent
+			}
+		}
+	}
+
+	// Also check for global installations (home directory)
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		globalIndicators := []struct {
+			Key       string
+			Name      string
+			Path      string
+			Subfolder string
+		}{
+			{Key: "claude-desktop", Name: "Claude Desktop", Path: ".config/claude", Subfolder: ""},
+			{Key: "cursor", Name: "Cursor", Path: ".cursor", Subfolder: ""},
+			{Key: "vscode", Name: "VS Code", Path: ".vscode", Subfolder: ""},
+		}
+
+		for _, gi := range globalIndicators {
+			globalPath := filepath.Join(homeDir, gi.Path)
+			if gi.Subfolder != "" {
+				globalPath = filepath.Join(globalPath, gi.Subfolder)
+			}
+			if _, err := os.Stat(globalPath); err == nil {
+				// Check if already detected
+				found := false
+				for _, d := range detected {
+					if d.Key == gi.Key {
+						found = true
+						break
+					}
+				}
+				if !found {
+					detected = append(detected, DetectedAgent{
+						Key:        gi.Key,
+						Name:       gi.Name,
+						Indicator:  gi.Path + " (global)",
+						Confidence: "medium", // Lower confidence for global detection
+					})
+				}
+			}
+		}
+	}
+
+	return detected
 }

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "palace/playbook",
+  "name": "code-review",
+  "summary": "Thorough code review workflow for pull requests and changes.",
+  "rooms": ["project-overview", "code-review"],
+  "requiredEvidence": [
+    {
+      "id": "review-checklist",
+      "description": "Completed review checklist",
+      "room": "code-review"
+    }
+  ],
+  "verification": [
+    {
+      "name": "tests",
+      "expectation": "All tests pass",
+      "capability": "tests.run"
+    },
+    {
+      "name": "lint",
+      "expectation": "No lint errors",
+      "capability": "lint.run"
+    }
+  ],
+  "provenance": {
+    "createdBy": "palace init",
+    "createdAt": "{{createdAt}}"
+  }
+}
