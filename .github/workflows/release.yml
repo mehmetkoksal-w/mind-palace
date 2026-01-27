@@ -1,0 +1,312 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "release-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  # ============================================================
+  # Build & Test
+  # ============================================================
+  build:
+    name: "Build & Test"
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.version.outputs.tag }}
+      release_needed: ${{ steps.version.outputs.needed }}
+      docs_changed: ${{ steps.changes.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Validate VERSION
+        run: |
+          if [ ! -f VERSION ]; then
+            echo "::error::VERSION file missing"
+            exit 1
+          fi
+          VER=$(cat VERSION | tr -d '[:space:]')
+          if [[ ! "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "::error::Invalid VERSION format: $VER"
+            exit 1
+          fi
+
+      - name: Verify Version Sync
+        run: |
+          ROOT_VER=$(cat VERSION)
+          VSCODE_VER=$(jq -r '.version' apps/vscode/package.json)
+          DOCS_VER=$(jq -r '.version' apps/docs/package.json)
+          if [ "$ROOT_VER" != "$VSCODE_VER" ] || [ "$ROOT_VER" != "$DOCS_VER" ]; then
+            echo "::error::Version mismatch"
+            exit 1
+          fi
+
+      - name: Check Release Needed
+        id: version
+        run: |
+          VER=$(cat VERSION | tr -d '[:space:]')
+          TAG="v$VER"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "needed=false" >> $GITHUB_OUTPUT
+          else
+            echo "needed=true" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check Docs Changes
+        id: changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -qE '^apps/docs/'; then
+            echo "docs=true" >> $GITHUB_OUTPUT
+          else
+            echo "docs=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Test Go
+        run: go test -v -race ./apps/cli/internal/...
+
+      - name: Build & Test VS Code
+        working-directory: apps/vscode
+        run: |
+          npm install
+          npm run compile
+          sudo apt-get update && sudo apt-get install -y xvfb
+          xvfb-run -a npm test
+
+  # ============================================================
+  # Deploy Docs (Auto - no approval needed)
+  # ============================================================
+  deploy-docs:
+    name: "Deploy Docs"
+    needs: build
+    if: needs.build.outputs.docs_changed == 'true' || needs.build.outputs.release_needed == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Build Docs
+        working-directory: apps/docs
+        run: |
+          npm install
+          npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: apps/docs/out
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ============================================================
+  # Release (Single Approval for All Products)
+  # ============================================================
+  release-cli:
+    name: "Release CLI (${{ matrix.platform }})"
+    needs: build
+    if: needs.build.outputs.release_needed == 'true'
+    runs-on: ${{ matrix.os }}
+    environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-13
+            platform: darwin-amd64
+            goarch: amd64
+            installer: pkg
+          - os: macos-latest
+            platform: darwin-arm64
+            goarch: arm64
+            installer: pkg
+          - os: ubuntu-latest
+            platform: linux-amd64
+            goarch: amd64
+            installer: deb
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64
+            goarch: arm64
+            installer: deb
+          - os: windows-latest
+            platform: windows-amd64
+            goarch: amd64
+            installer: msi
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Setup MinGW (Windows)
+        if: matrix.installer == 'msi'
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils
+
+      - name: Add MinGW to PATH (Windows)
+        if: matrix.installer == 'msi'
+        run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Build Binary
+        shell: bash
+        env:
+          CGO_ENABLED: "1"
+          VERSION: ${{ needs.build.outputs.version_tag }}
+        run: |
+          COMMIT=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          BINARY_NAME="palace"
+          if [ "${{ matrix.installer }}" = "msi" ]; then
+            BINARY_NAME="palace.exe"
+          fi
+          go build -ldflags="-s -w -X github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/cli.buildVersion=$VERSION -X github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/cli.buildCommit=$COMMIT -X github.com/mehmetkoksal-w/mind-palace/apps/cli/internal/cli.buildDate=$DATE" \
+            -o "$BINARY_NAME" ./apps/cli
+
+      - name: Create PKG (macOS)
+        if: matrix.installer == 'pkg'
+        env:
+          VERSION: ${{ needs.build.outputs.version_tag }}
+        run: |
+          chmod +x packaging/macos/create-pkg.sh
+          ./packaging/macos/create-pkg.sh ./palace "$VERSION" "palace-${{ matrix.platform }}.pkg"
+          tar -czvf "palace-${{ matrix.platform }}.tar.gz" palace
+
+      - name: Create DEB (Linux)
+        if: matrix.installer == 'deb'
+        env:
+          VERSION: ${{ needs.build.outputs.version_tag }}
+        run: |
+          chmod +x packaging/linux/create-deb.sh
+          ./packaging/linux/create-deb.sh ./palace "$VERSION" "${{ matrix.goarch }}" "palace-${{ matrix.platform }}.deb"
+          tar -czvf "palace-${{ matrix.platform }}.tar.gz" palace
+
+      - name: Install WiX (Windows)
+        if: matrix.installer == 'msi'
+        run: |
+          dotnet tool install --global wix --version 4.0.4
+          wix extension add WixToolset.UI.wixext/4.0.4
+
+      - name: Create MSI (Windows)
+        if: matrix.installer == 'msi'
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.build.outputs.version_tag }}
+        run: |
+          $version = $env:VERSION -replace '^v', ''
+          if ($version -match '^(\d+\.\d+\.\d+)') { $msiVersion = $matches[1] } else { $msiVersion = "0.0.1" }
+          wix build packaging/windows/palace.wxs -ext WixToolset.UI.wixext -d Version="$msiVersion" -d BinaryPath="$(Get-Location)\palace.exe" -b packaging/windows -o "palace-${{ matrix.platform }}.msi"
+          Compress-Archive -Path palace.exe -DestinationPath "palace-${{ matrix.platform }}.zip"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: installer-${{ matrix.platform }}
+          path: |
+            palace-${{ matrix.platform }}.pkg
+            palace-${{ matrix.platform }}.deb
+            palace-${{ matrix.platform }}.msi
+            palace-${{ matrix.platform }}.tar.gz
+            palace-${{ matrix.platform }}.zip
+          if-no-files-found: ignore
+
+  release-vscode:
+    name: "Release VS Code Extension"
+    needs: build
+    if: needs.build.outputs.release_needed == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Build Extension
+        run: |
+          cd apps/vscode
+          npm install
+          npm run compile
+          npx vsce package --no-dependencies
+          mv *.vsix ../..
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: vscode-extension
+          path: "*.vsix"
+
+  # ============================================================
+  # Publish GitHub Release
+  # ============================================================
+  publish:
+    name: "Publish Release"
+    needs: [build, release-cli, release-vscode]
+    if: needs.build.outputs.release_needed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Prepare Release
+        run: |
+          mkdir -p release
+          find dist -name "palace-*" -type f -exec cp {} release/ \;
+          find dist -name "*.vsix" -type f -exec cp {} release/ \;
+          cd release && sha256sum * > SHA256SUMS 2>/dev/null || shasum -a 256 * > SHA256SUMS
+          ls -la
+
+      - name: Extract Notes
+        env:
+          VERSION: ${{ needs.build.outputs.version_tag }}
+        run: |
+          VER="${VERSION#v}"
+          go run ./scripts/extract_changelog.go "$VER" > release-notes.txt 2>/dev/null || echo "Release $VERSION" > release-notes.txt
+
+      - name: Create Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.build.outputs.version_tag }}
+        run: |
+          COMMIT_SHA=$(git rev-parse HEAD)
+          gh api repos/${{ github.repository }}/git/refs -f ref="refs/tags/$TAG" -f sha="$COMMIT_SHA" || true
+          gh release create "$TAG" ./release/* --title "$TAG" --notes-file release-notes.txt

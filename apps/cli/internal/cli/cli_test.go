@@ -547,10 +547,12 @@ func TestCmdServeInvalidFlag(t *testing.T) {
 	}
 }
 
-func TestCmdDashboardInvalidFlag(t *testing.T) {
+func TestCmdDashboard(t *testing.T) {
+	// Dashboard has been removed in v0.4.2 and now just shows a deprecation message.
+	// Verify it returns nil regardless of arguments.
 	err := cmdDashboard([]string{"--invalid-flag"})
-	if err == nil {
-		t.Error("expected error for invalid flag")
+	if err != nil {
+		t.Errorf("expected no error for deprecated command, got: %v", err)
 	}
 }
 
