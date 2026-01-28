@@ -140,10 +140,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-15-large
+          - os: ubuntu-latest
             platform: darwin-amd64
+            goos: darwin
             goarch: amd64
-            installer: pkg
+            installer: tar
           - os: macos-latest
             platform: darwin-arm64
             goarch: arm64
@@ -181,7 +182,9 @@ jobs:
       - name: Build Binary
         shell: bash
         env:
-          CGO_ENABLED: "1"
+          CGO_ENABLED: ${{ matrix.goos && '0' || '1' }}
+          GOOS: ${{ matrix.goos || '' }}
+          GOARCH: ${{ matrix.goarch }}
           VERSION: ${{ needs.build.outputs.version_tag }}
         run: |
           COMMIT=$(git rev-parse --short HEAD)
@@ -200,6 +203,11 @@ jobs:
         run: |
           chmod +x packaging/macos/create-pkg.sh
           ./packaging/macos/create-pkg.sh ./palace "$VERSION" "palace-${{ matrix.platform }}.pkg"
+          tar -czvf "palace-${{ matrix.platform }}.tar.gz" palace
+
+      - name: Create TAR (cross-compiled)
+        if: matrix.installer == 'tar'
+        run: |
           tar -czvf "palace-${{ matrix.platform }}.tar.gz" palace
 
       - name: Create DEB (Linux)
