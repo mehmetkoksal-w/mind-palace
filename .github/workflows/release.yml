@@ -140,7 +140,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
+          - os: macos-15-large
             platform: darwin-amd64
             goarch: amd64
             installer: pkg

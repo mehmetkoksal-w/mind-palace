@@ -78,7 +78,7 @@ palace store "<content>" [options]
 - "What if...", "Maybe...", "Idea:" → idea
 - "TIL...", "Always...", "Note:" → learning
 
-**Input Validation**: Ambiguous input (<40% confidence with no signals) is rejected with helpful tips.
+**Input Validation**: Ambiguous input (less than 40% confidence with no signals) is rejected with helpful tips.
 
 ---
 
@@ -225,7 +225,7 @@ Performs the following maintenance tasks:
 - **Sessions**: Marks sessions inactive for >24h as abandoned
 - **Agents**: Removes agents with no heartbeat for >5 minutes  
 - **Learnings**: Decays confidence of learnings unused for >30 days
-- **Pruning**: Removes learnings with confidence <0.1
+- **Pruning**: Removes learnings with confidence below 0.1
 - **Corridor Links**: Validates and removes stale workspace links
 
 Shows status for each category even when nothing needs cleanup.
