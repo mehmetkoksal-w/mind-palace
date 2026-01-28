@@ -3,6 +3,38 @@
 Track the architectural evolution and release milestones of Mind Palace.
 
 ---
+## [0.4.2-alpha] - 2026-01-27
+
+### Added
+
+- **Recall Type Shortcuts**: `palace recall decisions`, `palace recall ideas`, `palace recall learnings` now work as shortcuts for `--type` filter
+- **Entry Point Detection**: `palace explore --map main` now explains that entry points (main, init, Test*, handlers) are called by the runtime
+- **Low-Confidence Input Rejection**: Store command now rejects ambiguous input (<40% confidence with no signals) with helpful classification tips
+- **Explore Flag Reordering**: `palace explore "query" --full` now works (flags can come after positional arguments)
+- **Clean Command Feedback**: Shows detailed status even when nothing needs cleanup (Sessions: all healthy, Agents: none stale, etc.)
+- **Unified Help System**: `--help` flag now shows the same formatted help as `palace help <command>`
+
+### Changed
+
+- **Store Help**: Updated to document `--confidence` and `--tag` flags with examples
+- **Recall Help**: Updated to document type shortcuts and all filtering options
+- **Main Help**: Removed vestigial GOVERNANCE/proposals section (workflow deprecated)
+- **Confidence Display**: Learnings in compact recall view now show percentage (50%) instead of bar chart for consistency
+- **VS Code Extension**: Slimmed down to status bar + LSP only (removed sidebar views)
+
+### Removed
+
+- **Dashboard**: Web dashboard removed - use CLI commands (`palace status`, `palace recall`, `palace explore`) instead
+- **VS Code Sidebar**: Blueprint, Knowledge, Sessions, and Corridor views removed
+- **VS Code Commands**: Removed sidebar-related commands (store, sessions, knowledge graph, etc.)
+
+### Fixed
+
+- **Recall Type Filter**: `palace recall decisions` no longer incorrectly treated as a search query
+- **Explore --full**: Flag after query no longer consumed as part of query string
+- **Help Consistency**: `palace store --help` now matches `palace help store` output
+
+---
 
 ## 0.4.1-alpha (2026-01-17)
 
