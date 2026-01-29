@@ -140,11 +140,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            platform: darwin-amd64
-            goos: darwin
-            goarch: amd64
-            installer: tar
           - os: macos-latest
             platform: darwin-arm64
             goarch: arm64
