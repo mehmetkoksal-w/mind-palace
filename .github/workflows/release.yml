@@ -231,7 +231,7 @@ jobs:
           wix build packaging/windows/palace.wxs -ext WixToolset.UI.wixext -d Version="$msiVersion" -d BinaryPath="$(Get-Location)\palace.exe" -b packaging/windows -o "palace-${{ matrix.platform }}.msi"
           Compress-Archive -Path palace.exe -DestinationPath "palace-${{ matrix.platform }}.zip"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.platform }}
           path: |
@@ -263,7 +263,7 @@ jobs:
           npx vsce package --no-dependencies
           mv *.vsix ../..
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: vscode-extension
           path: "*.vsix"
