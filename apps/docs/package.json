@@ -12,11 +12,11 @@
     "next": "^16.2.4",
     "nextra": "^4.6.1",
     "nextra-theme-docs": "^4.6.1",
-    "react": "^19.2.4",
+    "react": "^19.2.5",
     "react-dom": "^19.2.3"
   },
   "devDependencies": {
     "@types/node": "25.0.9",
-    "@types/react": "19.2.10"
+    "@types/react": "19.2.14"
   }
 }
