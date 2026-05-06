@@ -169,10 +169,10 @@ func (s *MCPServer) toolSessionInit(id any, args map[string]interface{}) jsonRPC
 	output.WriteString("## Next Steps\n\n")
 	nextSteps := []string{
 		fmt.Sprintf("Use session ID `%s` for all subsequent calls", session.ID),
-		"Call `explore({intent: '...'})` to find relevant code",
+		"Call `explore({action: 'search', query: '...'})` to find relevant code",
 		"Call `file_context({file_path: '...'})` before editing any file",
 		"Call `store({content: '...', as: 'learning|decision|idea'})` to save knowledge",
-		fmt.Sprintf("Call `session_end({sessionId: '%s', outcome: '...'})` when done", session.ID),
+		fmt.Sprintf("Call `session({action: 'end', sessionId: '%s', outcome: 'completed|failed', summary: '...'})` when done", session.ID),
 	}
 	for _, step := range nextSteps {
 		fmt.Fprintf(&output, "1. %s\n", step)
@@ -202,6 +202,9 @@ func (s *MCPServer) toolFileContext(id any, args map[string]interface{}) jsonRPC
 	sessionID, _ := args["session_id"].(string)
 	if sessionID == "" {
 		sessionID, _ = args["sessionId"].(string) // fallback
+	}
+	if sessionID == "" {
+		sessionID = s.currentSessionID
 	}
 
 	var output strings.Builder
@@ -317,13 +320,13 @@ func (s *MCPServer) toolFileContext(id any, args map[string]interface{}) jsonRPC
 	if hasConflict {
 		nextSteps = []string{
 			"Wait for the other agent to finish, OR",
-			"Coordinate via `session_log` to avoid conflicts",
-			"If proceeding, make changes quickly and call `session_log` immediately after",
+			"Coordinate via `session({action: 'log', ...})` to avoid conflicts",
+			"If proceeding, make changes quickly and call `session({action: 'log', ...})` immediately after",
 		}
 	} else {
 		nextSteps = []string{
 			"You are clear to edit this file",
-			"After editing, call `session_log({activity: 'file_edit', path: '...', description: '...'})`",
+			"After editing, call `session({action: 'log', kind: 'file_edit', target: '...', details: '...'})`",
 			"If you learn something, call `store({content: '...', as: 'learning'})`",
 		}
 	}

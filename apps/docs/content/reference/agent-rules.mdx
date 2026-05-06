@@ -63,23 +63,21 @@ All rules files contain the same core instructions adapted for each agent's nami
 ### Core Workflow
 
 ```
-Session → Brief → Context → Work → End
+Session Init → File Context → Work → Log/Store → End
 ```
 
-1. **session_start**: Start every task with a session
-2. **brief**: Get workspace context immediately
-3. **context_auto_inject**: Get file context before editing
-4. **session_conflict**: Check for other agents working on same files
-5. **store**: Save learnings, decisions, and ideas
-6. **session_log**: Log activities for audit trail
-7. **session_end**: End session when task is complete
+1. **session_init**: Start every task with full session + workspace context
+2. **file_context**: Get file context (including conflict checks) before editing
+3. **store**: Save learnings, decisions, and ideas as you work
+4. **session** with `action: "log"`: Record major activities for audit trail
+5. **session** with `action: "end"`: End session when task is complete
 
 ### Priority System
 
-- **CRITICAL**: Must do (session_start, brief, context_auto_inject, session_end)
-- **IMPORTANT**: Should do (store, session_log, session_conflict)
+- **CRITICAL**: Must do (session_init, file_context, session with action=end)
+- **IMPORTANT**: Should do (store, session with action=log)
 - **RECOMMENDED**: Optional but valuable (recall, explore, postmortems)
-- **ADMIN**: Human-mode only (approve, reject, store_direct)
+- **ADMIN**: Human-mode only (govern approve/reject, store with direct=true)
 
 ## Claude Code Configuration
 
@@ -170,9 +168,9 @@ Modify the priority system based on your team's needs:
 ```markdown
 ## Priority System
 
-- **CRITICAL**: session_start, brief, context_auto_inject, session_end, store (for our team, always store learnings)
-- **IMPORTANT**: session_log, session_conflict, recall
-- **RECOMMENDED**: explore, postmortems, semantic search
+- **CRITICAL**: session_init, file_context, session(action=end), store (for our team, always store learnings)
+- **IMPORTANT**: session(action=log), recall, session(action=conflict)
+- **RECOMMENDED**: explore, postmortem, search
 ```
 
 ## Combining with Existing Rules

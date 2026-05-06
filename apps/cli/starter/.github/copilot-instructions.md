@@ -38,7 +38,7 @@ This single call:
 1. session_init({agent_name: "copilot", task: "Add JWT refresh token support"})
    → Get session ID, workspace context, project structure
 
-2. explore({intent: "authentication jwt"})
+2. explore({action: "search", query: "authentication jwt"})
    → Find relevant code
 
 3. file_context({file_path: "auth/jwt.ts", session_id: "..."})
@@ -46,13 +46,13 @@ This single call:
 
 4. [Make your changes]
 
-5. session_log({activity: "file_edit", path: "auth/jwt.ts", description: "Added refresh token logic"})
+5. session({action: "log", sessionId: "...", kind: "file_edit", target: "auth/jwt.ts", outcome: "success", details: "Added refresh token logic"})
    → Log what you did
 
 6. store({content: "JWT refresh tokens should expire in 7 days", as: "decision"})
    → Save knowledge for future
 
-7. session_end({sessionId: "...", outcome: "success", summary: "Added JWT refresh token support"})
+7. session({action: "end", sessionId: "...", outcome: "completed", summary: "Added JWT refresh token support"})
    → End session when done
 ```
 
@@ -73,30 +73,30 @@ store({content: "description", as: "learning|decision|idea"})
 
 ```
 recall({query: "authentication"})           # Find related learnings
-recall_decisions({query: "validation"})     # Find active decisions
-get_postmortems({severity: "high"})         # Learn from past failures
+recall({action: "get", type: "decisions", query: "validation"}) # Find active decisions
+postmortem({action: "list", status: "open"})                     # Learn from past failures
 ```
 
 ## Exploration Tools
 
 ```
-explore({intent: "authentication logic"})   # Search by intent
-explore_rooms()                              # List project structure
-explore_symbol({query: "authenticateUser"}) # Find symbol
-explore_impact({path: "auth/jwt.ts"})       # Analyze change impact
+explore({action: "search", query: "authentication logic"}) # Search by intent
+explore({action: "rooms"})                                # List project structure
+explore({action: "symbol", name: "authenticateUser"})   # Find symbol
+explore({action: "impact", target: "auth/jwt.ts"})      # Analyze change impact
 ```
 
 ## Priority System
 
-- **CRITICAL**: `session_init` (first), `file_context` (before edits), `session_end` (last)
-- **IMPORTANT**: `store`, `session_log`
-- **RECOMMENDED**: `recall`, `explore`, `get_postmortems`
+- **CRITICAL**: `session_init` (first), `file_context` (before edits), `session` with `action: "end"` (last)
+- **IMPORTANT**: `store`, `session` with `action: "log"`
+- **RECOMMENDED**: `recall`, `explore`, `postmortem`
 
 ## Anti-Patterns
 
 - Starting work without `session_init`
 - Editing files without `file_context`
-- Forgetting to call `session_end`
+- Forgetting to call `session` with `action: "end"`
 - Ignoring conflict warnings
 - Storing vague learnings ("this is good" - too generic)
 

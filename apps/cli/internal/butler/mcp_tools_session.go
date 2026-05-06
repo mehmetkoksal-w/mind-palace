@@ -12,11 +12,20 @@ import (
 func (s *MCPServer) toolSessionStart(id any, args map[string]interface{}) jsonRPCResponse {
 	agentType, _ := args["agentType"].(string)
 	if agentType == "" {
+		agentType, _ = args["agent_name"].(string)
+	}
+	if agentType == "" {
 		return s.toolError(id, "agentType is required")
 	}
 
 	agentID, _ := args["agentId"].(string)
+	if agentID == "" {
+		agentID, _ = args["agent_id"].(string)
+	}
 	goal, _ := args["goal"].(string)
+	if goal == "" {
+		goal, _ = args["task"].(string)
+	}
 
 	session, err := s.butler.StartSession(agentType, agentID, goal)
 	if err != nil {
@@ -50,17 +59,35 @@ func (s *MCPServer) toolSessionStart(id any, args map[string]interface{}) jsonRP
 func (s *MCPServer) toolSessionLog(id any, args map[string]interface{}) jsonRPCResponse {
 	sessionID, _ := args["sessionId"].(string)
 	if sessionID == "" {
+		sessionID, _ = args["session_id"].(string)
+	}
+	if sessionID == "" {
+		sessionID = s.currentSessionID
+	}
+	if sessionID == "" {
 		return s.toolError(id, "sessionId is required")
 	}
 
 	kind, _ := args["kind"].(string)
 	if kind == "" {
+		kind, _ = args["activity"].(string)
+	}
+	if kind == "" {
 		return s.toolError(id, "kind is required")
 	}
 
 	target, _ := args["target"].(string)
+	if target == "" {
+		target, _ = args["path"].(string)
+	}
+	if target == "" {
+		target, _ = args["file_path"].(string)
+	}
 	outcome, _ := args["outcome"].(string)
 	details, _ := args["details"].(string)
+	if details == "" {
+		details, _ = args["description"].(string)
+	}
 
 	if outcome == "" {
 		outcome = "unknown"
@@ -94,6 +121,12 @@ func (s *MCPServer) toolSessionLog(id any, args map[string]interface{}) jsonRPCR
 func (s *MCPServer) toolSessionEnd(id any, args map[string]interface{}) jsonRPCResponse {
 	sessionID, _ := args["sessionId"].(string)
 	if sessionID == "" {
+		sessionID, _ = args["session_id"].(string)
+	}
+	if sessionID == "" {
+		sessionID = s.currentSessionID
+	}
+	if sessionID == "" {
 		return s.toolError(id, "sessionId is required")
 	}
 
@@ -101,7 +134,7 @@ func (s *MCPServer) toolSessionEnd(id any, args map[string]interface{}) jsonRPCR
 	summary, _ := args["summary"].(string)
 
 	state := "completed"
-	if outcome == "failure" {
+	if outcome == "failure" || outcome == "failed" || outcome == "abandoned" {
 		state = "abandoned"
 	}
 
@@ -840,10 +873,22 @@ func (s *MCPServer) toolSessionStatus(id any, _ map[string]interface{}) jsonRPCR
 func (s *MCPServer) toolSessionConflict(id any, args map[string]interface{}) jsonRPCResponse {
 	path, _ := args["path"].(string)
 	if path == "" {
+		path, _ = args["file_path"].(string)
+	}
+	if path == "" {
+		path, _ = args["target"].(string)
+	}
+	if path == "" {
 		return s.toolError(id, "path is required")
 	}
 
 	sessionID, _ := args["sessionId"].(string)
+	if sessionID == "" {
+		sessionID, _ = args["session_id"].(string)
+	}
+	if sessionID == "" {
+		sessionID = s.currentSessionID
+	}
 
 	conflict, err := s.butler.CheckConflict(sessionID, path)
 	if err != nil {

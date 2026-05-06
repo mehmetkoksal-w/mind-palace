@@ -472,7 +472,7 @@ func (s *MCPServer) ensureSession(agentName string) (string, bool, error) {
 	}
 	// StartSession takes (agentType, agentID, goal)
 	agentID := fmt.Sprintf("auto-%s-%d", agentName, time.Now().UnixNano())
-	session, err := s.butler.Memory().StartSession(agentName, agentID, "auto-created session")
+	session, err := s.butler.StartSession(agentName, agentID, "auto-created session")
 	if err != nil {
 		return "", false, err
 	}
@@ -580,25 +580,30 @@ func (s *MCPServer) handleToolsList(req jsonRPCRequest) jsonRPCResponse {
 	}
 }
 
-// toolsRequiringSession lists tools that benefit from session tracking.
-// These are tools that perform actions (not just queries) and need context.
-var toolsRequiringSession = map[string]bool{
-	// Legacy tool names
-	"file_context":        true,
-	"store":               true,
-	"store_direct":        true,
-	"recall_outcome":      true,
-	"recall_link":         true,
-	"recall_unlink":       true,
-	"recall_obsolete":     true,
-	"recall_archive":      true,
-	"session_log":         true,
-	"context_auto_inject": true,
-	// Consolidated tool names (same tools, action-based)
-	"recall":  true, // Actions: outcome, link, unlink, obsolete, archive
-	"session": true, // Actions: log, end, etc.
-	"context": true, // Actions: auto_inject
-	"govern":  true, // Actions: approve, reject
+// shouldAutoCreateSession returns true if the tool call should transparently auto-start a session.
+// This keeps memory tracking active without forcing explicit session management for every agent.
+func shouldAutoCreateSession(toolName string, args map[string]interface{}) bool {
+	if toolsCreatingSession[toolName] {
+		return false
+	}
+
+	// Session listing/status should remain read-only and never create sessions.
+	if toolName == "session_list" || toolName == "session_status" {
+		return false
+	}
+
+	if toolName == "session" {
+		action, _ := args["action"].(string)
+		switch action {
+		case "", "start", "list", "status", "resume", "end":
+			return false
+		default:
+			return true
+		}
+	}
+
+	// For all other tool calls, prefer seamless tracking.
+	return true
 }
 
 // toolsCreatingSession lists tools that create their own sessions.
@@ -693,21 +698,18 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 		s.sessionAutoEndedMsg = ""
 	}
 
-	// Auto-session: create session if needed for tools that benefit from tracking
-	var autoSessionWarning string
-	if toolsRequiringSession[params.Name] && !toolsCreatingSession[params.Name] {
+	// Auto-session: create session silently for most tool calls to keep memory tracking automatic.
+	if shouldAutoCreateSession(params.Name, params.Arguments) {
 		agentName := "unknown"
 		if name, ok := params.Arguments["agent_name"].(string); ok && name != "" {
 			agentName = name
 		} else if name, ok := params.Arguments["agentType"].(string); ok && name != "" {
 			agentName = name
 		}
-		sessionID, wasCreated, err := s.ensureSession(agentName)
+		_, _, err := s.ensureSession(agentName)
 		if err != nil {
-			// Log but don't fail - auto-session is a convenience feature
-			autoSessionWarning = fmt.Sprintf("⚠️ Warning: Could not auto-create session: %v\n\n", err)
-		} else if wasCreated {
-			autoSessionWarning = fmt.Sprintf("⚠️ **Auto-Session Created** (ID: `%s`)\n\nFor better tracking, call `session_init` at the start of your work.\n\n---\n\n", sessionID)
+			// Log but don't fail - auto-session is a convenience feature.
+			fmt.Fprintf(os.Stderr, "Warning: auto-session creation failed: %v\n", err)
 		}
 	}
 
@@ -747,9 +749,6 @@ func (s *MCPServer) handleToolsCall(req jsonRPCRequest) jsonRPCResponse {
 			}
 			if briefingUpdates != "" {
 				prefix.WriteString(briefingUpdates)
-			}
-			if autoSessionWarning != "" {
-				prefix.WriteString(autoSessionWarning)
 			}
 			if prefix.Len() > 0 {
 				result.Content[0].Text = prefix.String() + result.Content[0].Text

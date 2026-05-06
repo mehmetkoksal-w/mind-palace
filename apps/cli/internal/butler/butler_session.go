@@ -20,7 +20,16 @@ func (b *Butler) StartSession(agentType, agentID, goal string) (*memory.Session,
 	if b.memory == nil {
 		return nil, fmt.Errorf("session memory not available")
 	}
-	return b.memory.StartSession(agentType, agentID, goal)
+
+	session, err := b.memory.StartSession(agentType, agentID, goal)
+	if err != nil {
+		return nil, err
+	}
+
+	// Best-effort active agent registration for real-time conflict detection.
+	_ = b.memory.RegisterAgent(session.AgentType, resolveActiveAgentID(session), session.ID)
+
+	return session, nil
 }
 
 // EndSession ends a session.
@@ -29,9 +38,17 @@ func (b *Butler) EndSession(sessionID, state, summary string) error {
 		return fmt.Errorf("session memory not available")
 	}
 
+	// Capture session metadata before ending for agent registry cleanup.
+	sess, _ := b.memory.GetSession(sessionID)
+
 	// End the session first
 	if err := b.memory.EndSession(sessionID, state, summary); err != nil {
 		return err
+	}
+
+	// Best-effort cleanup from active agent registry.
+	if sess != nil {
+		_ = b.memory.UnregisterAgent(resolveActiveAgentID(sess))
 	}
 
 	// Auto-extract if enabled and LLM is configured
@@ -84,7 +101,28 @@ func (b *Butler) LogActivity(sessionID string, act memory.Activity) error {
 	if b.memory == nil {
 		return fmt.Errorf("session memory not available")
 	}
-	return b.memory.LogActivity(sessionID, act)
+
+	if err := b.memory.LogActivity(sessionID, act); err != nil {
+		return err
+	}
+
+	// Keep active-agent heartbeat and current file fresh without manual calls.
+	sess, err := b.memory.GetSession(sessionID)
+	if err == nil && sess != nil {
+		agentID := resolveActiveAgentID(sess)
+		switch act.Kind {
+		case "file_edit", "file_read", "file_focus":
+			if act.Target != "" {
+				_ = b.memory.SetCurrentFile(agentID, act.Target)
+			} else {
+				_ = b.memory.Heartbeat(agentID)
+			}
+		default:
+			_ = b.memory.Heartbeat(agentID)
+		}
+	}
+
+	return nil
 }
 
 // RecordOutcome records session outcome.
@@ -157,6 +195,16 @@ func (b *Butler) GetRelevantLearnings(filePath, query string, limit int) ([]memo
 		return nil, fmt.Errorf("session memory not available")
 	}
 	return b.memory.GetRelevantLearnings(filePath, query, limit)
+}
+
+func resolveActiveAgentID(session *memory.Session) string {
+	if session == nil {
+		return ""
+	}
+	if session.AgentID != "" {
+		return session.AgentID
+	}
+	return "session-" + session.ID
 }
 
 // GetActiveAgents returns currently active agents.

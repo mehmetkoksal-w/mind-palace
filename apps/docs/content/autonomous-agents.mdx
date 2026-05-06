@@ -103,7 +103,7 @@ const init = await session_init({
 - **Pending handoffs** (tasks waiting to be picked up)
 - Project structure (rooms and entry points)
 
-**Why:** This single call replaces session_start + brief + explore_rooms. It tracks your work, prevents conflicts, and gives you full context immediately.
+**Why:** This single call replaces separate session start, workspace briefing, and room discovery calls. It tracks your work, prevents conflicts, and gives you full context immediately.
 
 ### 1b. (Alternative) Resume Previous Session
 
@@ -503,23 +503,23 @@ await corridor_reinforce({ learningId: "l_corridor456" });
 
 ## Anti-Patterns (Don't Do This)
 
-❌ Start work without `session_start`  
-❌ Edit files without `context_auto_inject`  
-❌ Forget to call `session_end`  
-❌ Work without calling `brief` first  
-❌ Ignore `session_conflict` warnings  
+❌ Start work without `session_init`  
+❌ Edit files without `file_context`  
+❌ Forget to call `session({action: "end"})`  
+❌ Skip activity logging with `session({action: "log"})`  
+❌ Ignore conflict warnings from `file_context` or `session({action: "conflict"})`  
 ❌ Store vague learnings ("this is good" - too generic)  
 ❌ Never log activities (breaks audit trail)  
 ❌ Apply decay without preview + approval
 
 ## Best Practices
 
-✅ Start with `session_start`, `brief`  
+✅ Start with `session_init`  
 ✅ Get context before every file edit  
 ✅ Check conflicts before editing  
 ✅ Store specific, actionable learnings  
-✅ Log major activities  
-✅ End session when done  
+✅ Log major activities with `session({action: "log"})`  
+✅ End session with `session({action: "end"})`  
 ✅ Learn from postmortems  
 ✅ Use explore tools to understand codebase  
 ✅ Check decisions before implementing  
