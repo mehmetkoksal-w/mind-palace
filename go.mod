@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.9.2
-	github.com/fsnotify/fsnotify v1.9.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/google/uuid v1.6.0
 	github.com/muhammadmuzzammil1998/jsonc v1.0.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
