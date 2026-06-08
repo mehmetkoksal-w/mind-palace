@@ -106,6 +106,6 @@
   },
   "dependencies": {
     "jsonc-parser": "^3.3.1",
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^10.0.0"
   }
 }
